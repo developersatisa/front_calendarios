@@ -2,11 +2,17 @@ import {lazy, FC, Suspense} from 'react'
 import {Route, Routes, Navigate} from 'react-router-dom'
 import {MasterLayout} from '../../_metronic/layout/MasterLayout'
 import TopBarProgress from 'react-topbar-progress-indicator'
-import {DashboardWrapper} from '../pages/dashboard/DashboardWrapper'
+
+import EntityDashboard from '../pages/dashboard/EntityDashboard'
+
 import {MenuTestPage} from '../pages/MenuTestPage'
 import {getCSSVariableValue} from '../../_metronic/assets/ts/_utils'
 import {WithChildren} from '../../_metronic/helpers'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
+import PlantillaList from '../modules/plantillas/PlantillaList'
+import PlantillaForm from '../modules/plantillas/PlantillaForm'
+import PlantillaDetail from '../modules/plantillas/PlantillaDetail'
+
 
 const PrivateRoutes = () => {
   const ProfilePage = lazy(() => import('../modules/profile/ProfilePage'))
@@ -22,7 +28,11 @@ const PrivateRoutes = () => {
         {/* Redirect to Dashboard after success login/registartion */}
         <Route path='auth/*' element={<Navigate to='/dashboard' />} />
         {/* Pages */}
-        <Route path='dashboard' element={<DashboardWrapper />} />
+        <Route path='dashboard' element={<EntityDashboard />} />
+        <Route path='plantillas' element={<PlantillaList />} />
+        <Route path='plantillas/crear' element={<PlantillaForm />} />
+        <Route path='plantillas/editar/:id' element={<PlantillaForm />} />
+        <Route path='plantillas/ver/:id' element={<PlantillaDetail />} />
         <Route path='builder' element={<BuilderPageWrapper />} />
         <Route path='menu-test' element={<MenuTestPage />} />
         {/* Lazy Modules */}
