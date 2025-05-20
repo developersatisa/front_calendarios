@@ -22,7 +22,8 @@ const {BASE_URL} = import.meta.env
 const AppRoutes: FC = () => {
   const {currentUser} = useAuth()
   return (
-    <BrowserRouter basename={BASE_URL}>
+    //<BrowserRouter basename={BASE_URL}>
+    <BrowserRouter>
       <Routes>
         <Route element={<App />}>
           <Route path='error/*' element={<ErrorsPage />} />
