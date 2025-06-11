@@ -4,14 +4,20 @@ import {MasterLayout} from '../../_metronic/layout/MasterLayout'
 import TopBarProgress from 'react-topbar-progress-indicator'
 
 import EntityDashboard from '../pages/dashboard/EntityDashboard'
+import ClientesList from '../pages/dashboard/ClientesList'
+import ProcesosList from '../pages/dashboard/ProcesosList'
+import HitosList from '../pages/dashboard/HitosList'
 
 import {MenuTestPage} from '../pages/MenuTestPage'
 import {getCSSVariableValue} from '../../_metronic/assets/ts/_utils'
 import {WithChildren} from '../../_metronic/helpers'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
-import PlantillaList from '../modules/plantillas/PlantillaList'
-import PlantillaForm from '../modules/plantillas/PlantillaForm'
-import PlantillaDetail from '../modules/plantillas/PlantillaDetail'
+import PlantillasList from '../pages/dashboard/PlantillasList'
+import ClienteProcesosList from '../pages/dashboard/ClienteProcesosList'
+import ClienteProcesoHitosList from '../pages/dashboard/ClienteProcesoHitosList'
+import ClientesDocumentalCalendarioList from '../pages/dashboard/ClientesDocumentalCalendarioList'
+import CalendarioEmpresa from '../pages/dashboard/components/calendario/CalendarioEmpresa'
+
 
 
 const PrivateRoutes = () => {
@@ -29,12 +35,16 @@ const PrivateRoutes = () => {
         <Route path='auth/*' element={<Navigate to='/dashboard' />} />
         {/* Pages */}
         <Route path='dashboard' element={<EntityDashboard />} />
-        <Route path='plantillas' element={<PlantillaList />} />
-        <Route path='plantillas/crear' element={<PlantillaForm />} />
-        <Route path='plantillas/editar/:id' element={<PlantillaForm />} />
-        <Route path='plantillas/ver/:id' element={<PlantillaDetail />} />
         <Route path='builder' element={<BuilderPageWrapper />} />
         <Route path='menu-test' element={<MenuTestPage />} />
+        <Route path='clientes' element={<ClientesList />} />
+        <Route path='procesos' element={<ProcesosList />} />
+        <Route path='hitos' element={<HitosList />} />
+        <Route path='plantillas' element={<PlantillasList />} />
+        <Route path='cliente-procesos' element={<ClienteProcesosList />} />
+        <Route path='cliente-hitos' element={<ClienteProcesoHitosList />} />
+        <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
+        <Route path='/cliente-calendario/:clienteId' element={<CalendarioEmpresa clienteId={''} />} />
         {/* Lazy Modules */}
         <Route
           path='crafted/pages/profile/*'

@@ -5,14 +5,10 @@ import { KTSVG } from '../../../_metronic/helpers';
 import { Link } from 'react-router-dom';
 
 const entities = [
-  { name: 'Clientes', route: '/clientes', icon: 'user' },
-  { name: 'Procesos', route: '/procesos', icon: 'flow' },
-  { name: 'Cliente Procesos', route: '/cliente-procesos', icon: 'settings' },
-  { name: 'Cliente Hitos', route: '/cliente-hitos', icon: 'calendar' },
   { name: 'Hitos', route: '/hitos', icon: 'flag' },
+  { name: 'Procesos', route: '/procesos', icon: 'flow' },
   { name: 'Plantillas', route: '/plantillas', icon: 'copy' },
-  { name: 'Plantilla Procesos', route: '/plantilla-procesos', icon: 'cog' },
-  { name: 'Proceso Hito Maestro', route: '/proceso-hitos-maestro', icon: 'star' },
+  { name: 'Clientes', route: '/clientes', icon: 'user' }
 ];
 
 const EntityDashboard = () => {
