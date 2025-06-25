@@ -13,8 +13,6 @@ import {getCSSVariableValue} from '../../_metronic/assets/ts/_utils'
 import {WithChildren} from '../../_metronic/helpers'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 import PlantillasList from '../pages/dashboard/PlantillasList'
-import ClienteProcesosList from '../pages/dashboard/ClienteProcesosList'
-import ClienteProcesoHitosList from '../pages/dashboard/ClienteProcesoHitosList'
 import ClientesDocumentalCalendarioList from '../pages/dashboard/ClientesDocumentalCalendarioList'
 import CalendarioEmpresa from '../pages/dashboard/components/calendario/CalendarioEmpresa'
 
@@ -41,8 +39,6 @@ const PrivateRoutes = () => {
         <Route path='procesos' element={<ProcesosList />} />
         <Route path='hitos' element={<HitosList />} />
         <Route path='plantillas' element={<PlantillasList />} />
-        <Route path='cliente-procesos' element={<ClienteProcesosList />} />
-        <Route path='cliente-hitos' element={<ClienteProcesoHitosList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioEmpresa clienteId={''} />} />
         {/* Lazy Modules */}
