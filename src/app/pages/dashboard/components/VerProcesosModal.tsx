@@ -3,7 +3,8 @@ import {Modal, Accordion} from 'react-bootstrap'
 import {Cliente} from '../../../api/clientes'
 import {ClienteProceso} from '../../../api/clienteProcesos'
 import {Proceso} from '../../../api/procesos'
-import SharedPagination from '../../../components/pagination/SharedPagination'
+import { getClienteProcesoHitosByProceso, ClienteProcesoHito } from '../../../api/clienteProcesoHitos'
+import { Hito, getAllHitos } from '../../../api/hitos'
 
 interface Props {
   show: boolean
@@ -14,16 +15,13 @@ interface Props {
 }
 
 const VerProcesosModal: FC<Props> = ({show, onHide, cliente, procesos, procesosList}) => {
-  // Obtener el período actual en formato YYYY-MM
-  const getCurrentPeriod = () => {
-    const today = new Date();
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    return `${today.getFullYear()}-${month}`;
-  };
 
-  const [currentPage, setCurrentPage] = useState(1)
   const [selectedPeriod, setSelectedPeriod] = useState<string>('')
-  const itemsPerPage = 10
+  const [showHitosModal, setShowHitosModal] = useState(false)
+  const [hitos, setHitos] = useState<ClienteProcesoHito[]>([])
+  const [loadingHitos, setLoadingHitos] = useState(false)
+  const [selectedProceso, setSelectedProceso] = useState<ClienteProceso | null>(null)
+  const [hitosMaestro, setHitosMaestro] = useState<Hito[]>([])
 
   // Obtener períodos únicos
   const periodos = useMemo(() => {
@@ -111,9 +109,29 @@ const VerProcesosModal: FC<Props> = ({show, onHide, cliente, procesos, procesosL
     return meses[mes - 1] || '-'
   }
 
-  const handleVerHitos = (proceso: ClienteProceso) => {
-    // TODO: Implementar lógica para ver hitos
-    console.log('Ver hitos del proceso:', proceso)
+  useEffect(() => {
+    if (showHitosModal) {
+      // Cargar hitos maestros para mostrar nombres
+      getAllHitos().then((res) => setHitosMaestro(res.hitos || []))
+    }
+  }, [showHitosModal])
+
+  const handleVerHitos = async (proceso: ClienteProceso) => {
+    setSelectedProceso(proceso)
+    setLoadingHitos(true)
+    setShowHitosModal(true)
+    try {
+      const hitosData = await getClienteProcesoHitosByProceso(proceso.id)
+      setHitos(hitosData)
+    } catch (e) {
+      setHitos([])
+    }
+    setLoadingHitos(false)
+  }
+
+  const getNombreHito = (hito_id: number) => {
+    const hito = hitosMaestro.find(h => h.id === hito_id)
+    return hito ? hito.nombre : `Hito ${hito_id}`
   }
 
   const formatDate = (date: string) => {
@@ -125,89 +143,126 @@ const VerProcesosModal: FC<Props> = ({show, onHide, cliente, procesos, procesosL
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>
-          Procesos de {cliente?.razsoc}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="mb-4 position-relative">
-          <div className="d-flex gap-2 overflow-auto pb-2 justify-content-end" style={{ scrollbarWidth: 'thin' }}>
-            {periodos.map((periodo) => {
-              const [year, month] = periodo.split('-');
+    <>
+      <Modal show={show} onHide={onHide} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Procesos de {cliente?.razsoc}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-4 position-relative">
+            <div className="d-flex gap-2 overflow-auto pb-2 justify-content-end" style={{ scrollbarWidth: 'thin' }}>
+              {periodos.map((periodo) => {
+                const [year, month] = periodo.split('-');
+                return (
+                  <button
+                    key={periodo}
+                    className={`btn btn-sm ${selectedPeriod === periodo ? 'btn-primary' : 'btn-light-primary'}`}
+                    onClick={() => setSelectedPeriod(periodo)}
+                  >
+                    {getMesName(parseInt(month))} {year}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Accordion defaultActiveKey="0">
+            {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
+              const procesosFiltradosPorPeriodo = selectedPeriod
+                ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
+                : Object.entries(grupo.periodos);
+
+              if (procesosFiltradosPorPeriodo.length === 0) return null;
+
               return (
-                <button
-                  key={periodo}
-                  className={`btn btn-sm ${selectedPeriod === periodo ? 'btn-primary' : 'btn-light-primary'}`}
-                  onClick={() => setSelectedPeriod(periodo)}
-                >
-                  {getMesName(parseInt(month))} {year}
-                </button>
+                <Accordion.Item key={nombreProceso} eventKey={index.toString()}>
+                  <Accordion.Header>
+                    <div className='d-flex justify-content-between w-100 me-3'>
+                      <span>{nombreProceso}</span>
+                      <span className='badge badge-light-primary'>
+                        {procesosFiltradosPorPeriodo.reduce((total, [, periodo]) => total + periodo.items.length, 0)}
+                      </span>
+                    </div>
+                  </Accordion.Header>
+                  <Accordion.Body>
+                    {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
+                      <div key={periodoKey} className='mb-5'>
+                        <h3 className='fs-5 text-gray-800 mb-3'>
+                          {getMesName(periodo.mes || 0)} {periodo.anio || '-'}
+                        </h3>
+                        <div className='table-responsive'>
+                          <table className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0'>
+                            <thead>
+                              <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
+                                <th>Fecha Inicio</th>
+                                <th className='text-end'>Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {periodo.items.map((proceso) => (
+                                <tr key={proceso.id}>
+                                  <td>{formatDate(proceso.fecha_inicio)}</td>
+                                  <td className='text-end'>
+                                    <button
+                                      className='btn btn-sm btn-icon btn-light-primary'
+                                      onClick={() => handleVerHitos(proceso)}
+                                      title='Ver hitos'
+                                    >
+                                      <i className='bi bi-list-check fs-5'></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </Accordion.Body>
+                </Accordion.Item>
               );
             })}
-          </div>
-        </div>
-
-        <Accordion defaultActiveKey="0">
-          {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
-            const procesosFiltradosPorPeriodo = selectedPeriod
-              ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
-              : Object.entries(grupo.periodos);
-
-            if (procesosFiltradosPorPeriodo.length === 0) return null;
-
-            return (
-              <Accordion.Item key={nombreProceso} eventKey={index.toString()}>
-                <Accordion.Header>
-                  <div className='d-flex justify-content-between w-100 me-3'>
-                    <span>{nombreProceso}</span>
-                    <span className='badge badge-light-primary'>
-                      {procesosFiltradosPorPeriodo.reduce((total, [, periodo]) => total + periodo.items.length, 0)}
-                    </span>
-                  </div>
-                </Accordion.Header>
-                <Accordion.Body>
-                  {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
-                    <div key={periodoKey} className='mb-5'>
-                      <h3 className='fs-5 text-gray-800 mb-3'>
-                        {getMesName(periodo.mes || 0)} {periodo.anio || '-'}
-                      </h3>
-                      <div className='table-responsive'>
-                        <table className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0'>
-                          <thead>
-                            <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                              <th>Fecha Inicio</th>
-                              <th className='text-end'>Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {periodo.items.map((proceso) => (
-                              <tr key={proceso.id}>
-                                <td>{formatDate(proceso.fecha_inicio)}</td>
-                                <td className='text-end'>
-                                  <button
-                                    className='btn btn-sm btn-icon btn-light-primary'
-                                    onClick={() => handleVerHitos(proceso)}
-                                    title='Ver hitos'
-                                  >
-                                    <i className='bi bi-list-check fs-5'></i>
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </Accordion.Body>
-              </Accordion.Item>
-            );
-          })}
-        </Accordion>
-      </Modal.Body>
-    </Modal>
+          </Accordion>
+        </Modal.Body>
+      </Modal>
+      <Modal show={showHitosModal} onHide={() => setShowHitosModal(false)} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Hitos del proceso</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {loadingHitos ? (
+            <div className="text-center py-4">Cargando hitos...</div>
+          ) : hitos.length === 0 ? (
+            <div className="text-center py-4">No hay hitos para este proceso.</div>
+          ) : (
+            <table className="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0">
+              <thead>
+                <tr className="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                  <th>Nombre Hito</th>
+                  <th>Estado</th>
+                  <th>Fecha Estado</th>
+                  <th>Fecha Inicio</th>
+                  <th>Fecha Fin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hitos.map(hito => (
+                  <tr key={hito.id}>
+                    <td>{getNombreHito(hito.hito_id)}</td>
+                    <td>{hito.estado}</td>
+                    <td>{hito.fecha_estado ? formatDate(hito.fecha_estado) : '-'}</td>
+                    <td>{formatDate(hito.fecha_inicio)}</td>
+                    <td>{hito.fecha_fin ? formatDate(hito.fecha_fin) : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Modal.Body>
+      </Modal>
+    </>
   )
 }
 

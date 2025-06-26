@@ -37,3 +37,8 @@ export const updateClienteProcesoHito = async (id: number, clienteProcesoHito: O
 export const deleteClienteProcesoHito = async (id: number) => {
   return await api.delete(`/cliente-proceso-hitos/${id}`)
 }
+
+export const getClienteProcesoHitosByProceso = async (idClienteProceso: number) => {
+  const response = await api.get<ClienteProcesoHito[]>(`/cliente-proceso-hitos/cliente-proceso/${idClienteProceso}`)
+  return response.data
+}
