@@ -57,3 +57,8 @@ export const getClienteByCIF = async (cif: string) => {
   const response = await api.get<Cliente>(`/clientes/cif/${cif}`)
   return response.data
 }
+
+export const getClienteById = async (id: string) => {
+  const response = await api.get<Cliente>(`/clientes/${id}`)
+  return response.data
+}

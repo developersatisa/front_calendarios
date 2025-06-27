@@ -1,5 +1,5 @@
 import {lazy, FC, Suspense} from 'react'
-import {Route, Routes, Navigate} from 'react-router-dom'
+import {Route, Routes, Navigate, useParams} from 'react-router-dom'
 import {MasterLayout} from '../../_metronic/layout/MasterLayout'
 import TopBarProgress from 'react-topbar-progress-indicator'
 
@@ -14,7 +14,7 @@ import {WithChildren} from '../../_metronic/helpers'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 import PlantillasList from '../pages/dashboard/PlantillasList'
 import ClientesDocumentalCalendarioList from '../pages/dashboard/ClientesDocumentalCalendarioList'
-import CalendarioEmpresa from '../pages/dashboard/components/calendario/CalendarioEmpresa'
+import CalendarioCliente from '../pages/dashboard/components/calendario/CalendarioCliente'
 
 
 
@@ -40,7 +40,7 @@ const PrivateRoutes = () => {
         <Route path='hitos' element={<HitosList />} />
         <Route path='plantillas' element={<PlantillasList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
-        <Route path='/cliente-calendario/:clienteId' element={<CalendarioEmpresa clienteId={''} />} />
+        <Route path='/cliente-calendario/:clienteId' element={<CalendarioCliente clienteId={''} />} />
         {/* Lazy Modules */}
         <Route
           path='crafted/pages/profile/*'
@@ -107,6 +107,13 @@ const SuspensedView: FC<WithChildren> = ({children}) => {
     shadowBlur: 5,
   })
   return <Suspense fallback={<TopBarProgress />}>{children}</Suspense>
+}
+
+// Componente wrapper para extraer el clienteId de la URL y pasarlo como prop
+const CalendarioClienteWrapper: FC = () => {
+  const { clienteId } = useParams<{ clienteId: string }>()
+  if (!clienteId) return null
+  return <CalendarioCliente clienteId={clienteId} />
 }
 
 export {PrivateRoutes}
