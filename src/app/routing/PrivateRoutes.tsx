@@ -15,6 +15,7 @@ import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 import PlantillasList from '../pages/dashboard/PlantillasList'
 import ClientesDocumentalCalendarioList from '../pages/dashboard/ClientesDocumentalCalendarioList'
 import CalendarioCliente from '../pages/dashboard/components/calendario/CalendarioCliente'
+import MetricasList from '../pages/dashboard/MetricasList'
 
 
 
@@ -41,6 +42,7 @@ const PrivateRoutes = () => {
         <Route path='plantillas' element={<PlantillasList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioCliente clienteId={''} />} />
+        <Route path='metricas' element={<MetricasList />} />
         {/* Lazy Modules */}
         <Route
           path='crafted/pages/profile/*'

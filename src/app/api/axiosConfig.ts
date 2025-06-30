@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://10.150.22.15:8049'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 // Funciones de manejo de tokens
 const getAccessToken = () => localStorage.getItem('access_token')
