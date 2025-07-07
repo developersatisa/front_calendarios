@@ -16,10 +16,17 @@ export interface HitosResponse {
   total: number
 }
 
-export const getAllHitos = async (page?: number, limit?: number) => {
+export const getAllHitos = async (
+  page?: number,
+  limit?: number,
+  sortField?: string,
+  sortDirection?: 'asc' | 'desc'
+) => {
   const params = new URLSearchParams();
   if (page) params.append('page', page.toString());
   if (limit) params.append('limit', limit.toString());
+  if (sortField) params.append('sort_field', sortField);
+  if (sortDirection) params.append('sort_direction', sortDirection);
 
   const response = await api.get(`/hitos?${params.toString()}`)
   return response.data

@@ -1,12 +1,11 @@
 import {FC, useState, useEffect} from 'react'
 import {useNavigate} from 'react-router-dom'
-import {KTCard, KTCardBody, KTSVG} from '../../../_metronic/helpers'
+import {KTCard, KTCardBody} from '../../../_metronic/helpers'
 import ProcesoModal from './components/ProcesoModal'
 import ProcesoHitosMaestroModal from './components/ProcesoHitosMaestroModal'
 import {Proceso, getAllProcesos, createProceso, updateProceso, deleteProceso} from '../../api/procesos'
-import {ProcesoHitos, getAllProcesoHitosMaestro, createProcesoHitosMaestro, deleteProcesoHitosMaestro} from '../../api/procesoHitosMaestro'
+import {ProcesoHitos, getAllProcesoHitosMaestro, createProcesoHitosMaestro} from '../../api/procesoHitosMaestro'
 import {Hito, getAllHitos} from '../../api/hitos'
-import {getPageNumbers} from '../../utils/pagination'
 import SharedPagination from '../../components/pagination/SharedPagination'
 
 const ProcesosList: FC = () => {
@@ -20,6 +19,8 @@ const ProcesosList: FC = () => {
   const [total, setTotal] = useState(0)
   const limit = 10
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortField, setSortField] = useState<string>('id')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [hitos, setHitos] = useState<Hito[]>([])
   const [procesoHitos, setProcesoHitos] = useState<ProcesoHitos[]>([])
   const [showHitosModal, setShowHitosModal] = useState(false)
@@ -27,13 +28,46 @@ const ProcesosList: FC = () => {
 
   useEffect(() => {
     loadAll()
-  }, [page])
+  }, [page, sortField, sortDirection])
+
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1)
+    } else {
+      loadAll()
+    }
+  }, [searchTerm])
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+    setPage(1) // Reset to first page when sorting changes
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return (
+        <span className='ms-1 text-muted'>
+          <i className='bi bi-arrow-down-up' style={{ fontSize: '12px' }}></i>
+        </span>
+      )
+    }
+    return (
+      <span className='ms-1 text-primary'>
+        <i className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`} style={{ fontSize: '12px' }}></i>
+      </span>
+    )
+  }
 
   const loadAll = async () => {
     try {
       setLoading(true)
       const [procesosData, hitosData, procesoHitosData] = await Promise.all([
-        getAllProcesos(page, limit),
+        getAllProcesos(page, limit, sortField, sortDirection),
         getAllHitos(),
         getAllProcesoHitosMaestro()
       ])
@@ -41,9 +75,18 @@ const ProcesosList: FC = () => {
       setTotal(procesosData.total)
       setHitos(hitosData.hitos || [])
       setProcesoHitos(procesoHitosData.ProcesoHitos || [])
-    } catch (error) {
-      setError('Error al cargar los datos')
-      console.error('Error:', error)
+      setError(null) // Limpiar errores previos
+    } catch (error: any) {
+      // Si es un error 404, mostrar tabla vacía (no hay procesos)
+      if (error?.response?.status === 404) {
+        setProcesos([])
+        setTotal(0)
+        setError(null)
+      } else {
+        // Para otros errores, mostrar mensaje de error
+        setError('Error al cargar los datos')
+        console.error('Error:', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -65,13 +108,19 @@ const ProcesosList: FC = () => {
   }
 
   const handleEliminar = async (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este proceso?')) {
+    if (confirm('¿Está seguro de eliminar este proceso?')) {
       try {
         await deleteProceso(id)
         loadAll()
-      } catch (error) {
-        console.error('Error al eliminar:', error)
-        // Implementar manejo de errores
+      } catch (error: any) {
+        // Extraer el mensaje de error del backend
+        let errorMessage = 'Error al eliminar el proceso'
+        if (error?.response?.data?.detail) {
+          errorMessage = error.response.data.detail
+        } else if (error?.message) {
+          errorMessage = error.message
+        }
+        alert(errorMessage)
       }
     }
   }
@@ -94,17 +143,6 @@ const ProcesosList: FC = () => {
       setShowHitosModal(false)
     } catch (error) {
       console.error('Error al guardar hitos:', error)
-    }
-  }
-
-  const handleDeleteHito = async (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este hito del proceso?')) {
-      try {
-        await deleteProcesoHitosMaestro(id)
-        loadAll()
-      } catch (error) {
-        console.error('Error al eliminar:', error)
-      }
     }
   }
 
@@ -140,10 +178,7 @@ const ProcesosList: FC = () => {
       <div className='card-header border-0 pt-6'>
         <div className='card-title'>
           <div className='d-flex align-items-center position-relative my-1'>
-            <KTSVG
-              path='/media/icons/duotune/general/gen021.svg'
-              className='svg-icon-1 position-absolute ms-6'
-            />
+            <i className='bi bi-search position-absolute ms-6'></i>
             <input
               type='text'
               className='form-control form-control-solid w-250px ps-14'
@@ -160,10 +195,7 @@ const ProcesosList: FC = () => {
               className='btn btn-light'
               onClick={() => navigate('/dashboard')}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr063.svg'
-                className='svg-icon-2'
-              />
+              <i className="bi bi-arrow-left"></i>
               Volver
             </button>
             <button
@@ -171,11 +203,8 @@ const ProcesosList: FC = () => {
               className='btn btn-primary'
               onClick={handleCrear}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr075.svg'
-                className='svg-icon-2'
-              />
-              Añadir Proceso
+              <i className="bi bi-plus-circle"></i>
+              Nuevo Proceso
             </button>
           </div>
         </div>
@@ -195,29 +224,69 @@ const ProcesosList: FC = () => {
               <table className='table align-middle table-row-dashed fs-6 gy-5'>
                 <thead>
                   <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                    <th>Proceso</th>
-                    <th>Descripción</th>
-                    <th>Frecuencia</th>
-                    <th>Temporalidad</th>
-                    <th>Fecha Inicio</th>
-                    <th>Fecha Fin</th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('id')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      ID {getSortIcon('id')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('nombre')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Proceso {getSortIcon('nombre')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('descripcion')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Descripción {getSortIcon('descripcion')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('frecuencia')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Frecuencia {getSortIcon('frecuencia')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('temporalidad')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Temporalidad {getSortIcon('temporalidad')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('fecha_inicio')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Fecha Inicio {getSortIcon('fecha_inicio')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('fecha_fin')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Fecha Fin {getSortIcon('fecha_fin')}
+                    </th>
                     <th>Hitos Asociados</th>
-                    <th className='text-end'>Acciones</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody className='text-gray-600 fw-semibold'>
                   {filteredProcesos.map((proceso) => (
                     <tr key={proceso.id}>
+                      <td>{proceso.id}</td>
                       <td>{proceso.nombre}</td>
                       <td>{proceso.descripcion || '-'}</td>
                       <td>{proceso.frecuencia}</td>
-                      <td>
-                        <span className='badge badge-light-primary'>
-                          {proceso.temporalidad}
-                        </span>
-                      </td>
-                      <td>{new Date(proceso.fecha_inicio).toLocaleDateString()}</td>
-                      <td>{proceso.fecha_fin ? new Date(proceso.fecha_fin).toLocaleDateString() : '-'}</td>
+                      <td className='text-capitalize'>{proceso.temporalidad}</td>
+                      <td>{new Date(proceso.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                      <td>{proceso.fecha_fin ? new Date(proceso.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                       <td>
                         <div className='d-flex flex-column gap-2' style={{ maxHeight: '150px', overflowY: 'auto' }}>
                           {groupedProcesoHitos[proceso.id]?.map((ph) => (
@@ -228,27 +297,19 @@ const ProcesosList: FC = () => {
                                 </span>
                                 <span>{ph.hitoData.nombre}</span>
                               </div>
-                              <button
-                                className='btn btn-sm btn-icon btn-light-danger'
-                                onClick={() => handleDeleteHito(ph.id)}
-                                title='Eliminar hito'
-                              >
-                                <KTSVG path='/media/icons/duotune/general/gen027.svg' className='svg-icon-1' />
-                              </button>
                             </div>
                           ))}
                         </div>
                       </td>
-                      <td className='text-end'>
-                        <div className='d-flex justify-content-end gap-2'>
+                      <td>
+                        <div className='d-flex gap-2'>
                           <button
                             className='btn btn-sm btn-light-primary'
                             onClick={() => handleAddHitos(proceso)}
                           >
-                            <KTSVG path='/media/icons/duotune/arrows/arr075.svg' className='svg-icon-2 me-2' />
-                            Añadir Hitos
+                            Administrar Hitos
                           </button>
-                          <div className='dropdown'>
+                          <div className='dropdown' style={{ position: 'static' }}>
                             <button
                               className='btn btn-sm btn-light btn-active-light-primary'
                               type='button'
@@ -256,18 +317,16 @@ const ProcesosList: FC = () => {
                               aria-expanded='false'
                             >
                               Acciones
-                              <KTSVG
-                                path='/media/icons/duotune/arrows/arr072.svg'
-                                className='svg-icon-5 m-0'
-                              />
+                              <i className='bi bi-chevron-down ms-2'></i>
                             </button>
-                            <ul className='dropdown-menu menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
+                            <ul className='dropdown-menu dropdown-menu-end menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
                               <li className='menu-item px-3'>
                                 <a
                                   href='#'
                                   className='menu-link px-3'
                                   onClick={() => handleEditar(proceso)}
                                 >
+                                  <i className="bi bi-pencil-square me-2"></i>
                                   Editar
                                 </a>
                               </li>
@@ -277,6 +336,7 @@ const ProcesosList: FC = () => {
                                   className='menu-link px-3 text-danger'
                                   onClick={() => handleEliminar(proceso.id)}
                                 >
+                                  <i className="bi bi-trash3 me-2"></i>
                                   Eliminar
                                 </a>
                               </li>

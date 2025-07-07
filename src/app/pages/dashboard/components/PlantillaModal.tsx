@@ -36,7 +36,15 @@ const PlantillaModal: FC<Props> = ({show, onHide, onSave, plantilla}) => {
       onHide={onHide}
       dialogClassName='modal-dialog modal-dialog-centered mw-650px'
     >
-      <form onSubmit={(e) => {e.preventDefault(); onSave(formData)}}>
+      <form
+        onSubmit={e => {
+          e.preventDefault()
+          onSave({
+            ...formData,
+            descripcion: formData.descripcion ?? '' // Siempre enviar string
+          })
+        }}
+      >
         <Modal.Header>
           <Modal.Title>{plantilla ? 'Editar' : 'Nueva'} Plantilla</Modal.Title>
           <div className='btn btn-icon btn-sm btn-active-icon-primary' onClick={onHide}>

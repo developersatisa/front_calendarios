@@ -1,6 +1,6 @@
 import {FC, useState, useEffect} from 'react'
 import {useNavigate} from 'react-router-dom'
-import {KTCard, KTCardBody, KTSVG} from '../../../_metronic/helpers'
+import {KTCard, KTCardBody} from '../../../_metronic/helpers'
 import PlantillaModal from './components/PlantillaModal'
 import PlantillaProcesosModal from './components/PlantillaProcesosModal'
 import {Plantilla, getAllPlantillas, createPlantilla, updatePlantilla, deletePlantilla} from '../../api/plantillas'
@@ -18,6 +18,8 @@ const PlantillasList: FC = () => {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortField, setSortField] = useState<string>('id')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [plantillaProcesos, setPlantillaProcesos] = useState<PlantillaProcesos[]>([])
   const [showProcesosModal, setShowProcesosModal] = useState(false)
@@ -26,13 +28,46 @@ const PlantillasList: FC = () => {
 
   useEffect(() => {
     loadAll()
-  }, [page])
+  }, [page, sortField, sortDirection])
+
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1)
+    } else {
+      loadAll()
+    }
+  }, [searchTerm])
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+    setPage(1) // Reset to first page when sorting changes
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return (
+        <span className='ms-1 text-muted'>
+          <i className='bi bi-arrow-down-up' style={{ fontSize: '12px' }}></i>
+        </span>
+      )
+    }
+    return (
+      <span className='ms-1 text-primary'>
+        <i className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`} style={{ fontSize: '12px' }}></i>
+      </span>
+    )
+  }
 
   const loadAll = async () => {
     try {
       setLoading(true)
       const [plantillasData, procesosData, plantillaProcesosData] = await Promise.all([
-        getAllPlantillas(page, limit),
+        getAllPlantillas(page, limit, sortField, sortDirection),
         getAllProcesos(),
         getAllPlantillaProcesos()
       ])
@@ -41,9 +76,18 @@ const PlantillasList: FC = () => {
       setTotal(plantillasData.total)
       setProcesos(procesosData.procesos || [])
       setPlantillaProcesos(plantillaProcesosData.plantillaProcesos || [])
-    } catch (error) {
-      setError('Error al cargar los datos')
-      console.error('Error:', error)
+      setError(null) // Limpiar errores previos
+    } catch (error: any) {
+      // Si es un error 404, mostrar tabla vacía (no hay plantillas)
+      if (error?.response?.status === 404) {
+        setPlantillas([])
+        setTotal(0)
+        setError(null)
+      } else {
+        // Para otros errores, mostrar mensaje de error
+        setError('Error al cargar los datos')
+        console.error('Error:', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -69,8 +113,15 @@ const PlantillasList: FC = () => {
       try {
         await deletePlantilla(id)
         setPlantillas(plantillas.filter((plantilla) => plantilla.id !== id))
-      } catch (error) {
-        console.error('Error al eliminar:', error)
+      } catch (error: any) {
+        // Extraer el mensaje de error del backend
+        let errorMessage = 'Error al eliminar la plantilla'
+        if (error?.response?.data?.detail) {
+          errorMessage = error.response.data.detail
+        } else if (error?.message) {
+          errorMessage = error.message
+        }
+        alert(errorMessage)
       }
     }
   }
@@ -83,17 +134,6 @@ const PlantillasList: FC = () => {
       setShowProcesosModal(false)
     } catch (error) {
       console.error('Error al guardar procesos:', error)
-    }
-  }
-
-  const handleDeleteProceso = async (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este proceso de la plantilla?')) {
-      try {
-        await deletePlantillaProcesos(id)
-        loadAll()
-      } catch (error) {
-        console.error('Error al eliminar:', error)
-      }
     }
   }
 
@@ -122,10 +162,7 @@ const PlantillasList: FC = () => {
       <div className='card-header border-0 pt-6'>
         <div className='card-title'>
           <div className='d-flex align-items-center position-relative my-1'>
-            <KTSVG
-              path='/media/icons/duotune/general/gen021.svg'
-              className='svg-icon-1 position-absolute ms-6'
-            />
+            <i className='bi bi-search position-absolute ms-6'></i>
             <input
               type='text'
               className='form-control form-control-solid w-250px ps-14'
@@ -142,10 +179,7 @@ const PlantillasList: FC = () => {
               className='btn btn-light'
               onClick={() => navigate('/dashboard')}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr063.svg'
-                className='svg-icon-2'
-              />
+              <i className="bi bi-arrow-left"></i>
               Volver
             </button>
             <button
@@ -156,10 +190,7 @@ const PlantillasList: FC = () => {
                 setShowModal(true)
               }}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr075.svg'
-                className='svg-icon-2'
-              />
+              <i className="bi bi-plus-circle"></i>
               Añadir Plantilla
             </button>
           </div>
@@ -181,37 +212,52 @@ const PlantillasList: FC = () => {
               <table className='table align-middle table-row-dashed fs-6 gy-5'>
                 <thead>
                   <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                    <th>Plantilla</th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('id')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      ID {getSortIcon('id')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('nombre')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Plantilla {getSortIcon('nombre')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('descripcion')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Descripción {getSortIcon('descripcion')}
+                    </th>
                     <th>Procesos Asociados</th>
-                    <th className='text-end'>Acciones</th>
+                    <th className='text-start'>Acciones</th>
                   </tr>
                 </thead>
                 <tbody className='text-gray-600 fw-semibold'>
                   {filteredPlantillas.map((plantilla) => (
                     <tr key={plantilla.id}>
+                      <td>{plantilla.id}</td>
                       <td>
                         <div className='d-flex flex-column'>
                           <span className='fw-bold'>{plantilla.nombre}</span>
-                          <small className='text-muted'>{plantilla.descripcion || '-'}</small>
                         </div>
                       </td>
+                      <td>{plantilla.descripcion || '-'}</td>
                       <td>
                         <div className='d-flex flex-column gap-2' style={{ maxHeight: '150px', overflowY: 'auto' }}>
                           {groupedPlantillaProcesos[plantilla.id]?.map((pp) => (
                             <div key={pp.id} className='d-flex align-items-center justify-content-between'>
                               <span>{pp.procesoData.nombre}</span>
-                              <button
-                                className='btn btn-sm btn-icon btn-light-danger'
-                                onClick={() => handleDeleteProceso(pp.id)}
-                              >
-                                <KTSVG path='/media/icons/duotune/general/gen027.svg' className='svg-icon-1' />
-                              </button>
                             </div>
                           ))}
                         </div>
                       </td>
-                      <td className='text-end'>
-                        <div className='d-flex justify-content-end gap-2'>
+                      <td className='text-start'>
+                        <div className='d-flex justify-content-start gap-2'>
                           <button
                             className='btn btn-sm btn-light-primary'
                             onClick={() => {
@@ -219,10 +265,10 @@ const PlantillasList: FC = () => {
                               setShowProcesosModal(true)
                             }}
                           >
-                            <KTSVG path='/media/icons/duotune/arrows/arr075.svg' className='svg-icon-2 me-2' />
+                            <i className='bi bi-plus-circle me-2'></i>
                             Añadir Procesos
                           </button>
-                          <div className='dropdown'>
+                          <div className='dropdown' style={{ position: 'static' }}>
                             <button
                               className='btn btn-sm btn-light btn-active-light-primary'
                               type='button'
@@ -230,9 +276,9 @@ const PlantillasList: FC = () => {
                               aria-expanded='false'
                             >
                               Acciones
-                              <KTSVG path='/media/icons/duotune/arrows/arr072.svg' className='svg-icon-5 m-0' />
+                              <i className="bi bi-chevron-down ms-1"></i>
                             </button>
-                            <ul className='dropdown-menu menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
+                            <ul className='dropdown-menu dropdown-menu-end menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
                               <li className='menu-item px-3'>
                                 <a
                                   href='#'
@@ -242,6 +288,7 @@ const PlantillasList: FC = () => {
                                     setShowModal(true)
                                   }}
                                 >
+                                  <i className="bi bi-pencil-square me-2"></i>
                                   Editar
                                 </a>
                               </li>
@@ -251,6 +298,7 @@ const PlantillasList: FC = () => {
                                   className='menu-link px-3 text-danger'
                                   onClick={() => handleEliminar(plantilla.id)}
                                 >
+                                  <i className="bi bi-trash3 me-2"></i>
                                   Eliminar
                                 </a>
                               </li>

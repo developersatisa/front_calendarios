@@ -13,11 +13,11 @@ interface Props {
 const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
   const [formData, setFormData] = useState<Omit<Proceso, 'id'>>({
     nombre: '',
-    descripcion: '',
+    descripcion: null,
     frecuencia: 1,
     temporalidad: 'mes',
     fecha_inicio: new Date().toISOString().split('T')[0],
-    fecha_fin: new Date().toISOString().split('T')[0], // Inicializar con fecha actual en lugar de null
+    fecha_fin: null,
   })
 
   useEffect(() => {
@@ -28,16 +28,16 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
         frecuencia: proceso.frecuencia,
         temporalidad: proceso.temporalidad,
         fecha_inicio: proceso.fecha_inicio,
-        fecha_fin: proceso.fecha_fin || new Date().toISOString().split('T')[0], // Asegurar que siempre haya una fecha
+        fecha_fin: proceso.fecha_fin,
       })
     } else {
       setFormData({
         nombre: '',
-        descripcion: '',
+        descripcion: null,
         frecuencia: 1,
         temporalidad: 'mes',
         fecha_inicio: new Date().toISOString().split('T')[0],
-        fecha_fin: new Date().toISOString().split('T')[0], // Reiniciar con fecha actual
+        fecha_fin: null,
       })
     }
   }, [proceso])
@@ -72,19 +72,6 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
                 placeholder='Nombre del proceso'
                 value={formData.nombre}
                 onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                required
-                maxLength={150}
-              />
-            </div>
-
-            <div className='fv-row mb-7'>
-              <label className='fw-bold fs-6 mb-2'>Descripción</label>
-              <input
-                type='text'
-                className='form-control form-control-solid mb-3 mb-lg-0'
-                placeholder='Descripción del proceso'
-                value={formData.descripcion || ''}
-                onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
                 required
                 maxLength={150}
               />
@@ -130,15 +117,25 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
                 />
               </div>
               <div className='col-6'>
-                <label className='required fw-bold fs-6 mb-2'>Fecha Fin</label>
+                <label className='fw-bold fs-6 mb-2'>Fecha Cumplimiento</label>
                 <input
                   type='date'
                   className='form-control form-control-solid'
                   value={formData.fecha_fin || ''}
-                  onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})}
-                  required
+                  onChange={(e) => setFormData({...formData, fecha_fin: e.target.value || null})}
                 />
               </div>
+            </div>
+
+            <div className='fv-row mb-7'>
+              <label className='fw-bold fs-6 mb-2'>Descripción</label>
+              <textarea
+                className='form-control form-control-solid'
+                rows={3}
+                value={formData.descripcion || ''}
+                onChange={(e) => setFormData({...formData, descripcion: e.target.value || null})}
+                maxLength={255}
+              />
             </div>
           </div>
         </Modal.Body>

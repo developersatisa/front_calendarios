@@ -42,3 +42,12 @@ export const getClienteProcesoHitosByProceso = async (idClienteProceso: number) 
   const response = await api.get<ClienteProcesoHito[]>(`/cliente-proceso-hitos/cliente-proceso/${idClienteProceso}`)
   return response.data
 }
+
+// Cambia el estado de un hito a 'finalizado'
+export const finalizarClienteProcesoHito = async (id: number) => {
+  const response = await api.put<ClienteProcesoHito>(`/cliente-proceso-hitos/${id}`, {
+    estado: 'Finalizado',
+    fecha_estado: new Date().toISOString(),
+  })
+  return response.data
+}

@@ -1,9 +1,8 @@
-import {FC, useState, useEffect} from 'react'
-import {useNavigate} from 'react-router-dom'
-import {KTCard, KTCardBody, KTSVG} from '../../../_metronic/helpers'
+import { FC, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import HitoModal from './components/HitoModal'
-import {Hito, getAllHitos, createHito, updateHito, deleteHito} from '../../api/hitos'
-import {getPageNumbers} from '../../utils/pagination'
+import { Hito, getAllHitos, createHito, updateHito, deleteHito } from '../../api/hitos'
 import SharedPagination from '../../components/pagination/SharedPagination'
 
 const HitosList: FC = () => {
@@ -17,20 +16,64 @@ const HitosList: FC = () => {
   const [total, setTotal] = useState(0)
   const limit = 10
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortField, setSortField] = useState<string>('id')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     loadHitos()
-  }, [page])
+  }, [page, sortField, sortDirection])
+
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1)
+    } else {
+      loadHitos()
+    }
+  }, [searchTerm])
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+    setPage(1) // Reset to first page when sorting changes
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return (
+        <span className='ms-1 text-muted'>
+          <i className='bi bi-arrow-down-up' style={{ fontSize: '12px' }}></i>
+        </span>
+      )
+    }
+    return (
+      <span className='ms-1 text-primary'>
+        <i className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`} style={{ fontSize: '12px' }}></i>
+      </span>
+    )
+  }
 
   const loadHitos = async () => {
     try {
       setLoading(true)
-      const data = await getAllHitos(page, limit)
+      const data = await getAllHitos(page, limit, sortField, sortDirection)
       setHitos(data.hitos)
       setTotal(data.total)
-    } catch (error) {
-      setError('Error al cargar los hitos')
-      console.error('Error:', error)
+      setError(null) // Limpiar errores previos
+    } catch (error: any) {
+      // Si es un error 404, mostrar tabla vacía (no hay hitos)
+      if (error?.response?.status === 404) {
+        setHitos([])
+        setTotal(0)
+        setError(null)
+      } else {
+        // Para otros errores, mostrar mensaje de error
+        setError('Error al cargar los hitos')
+        console.error('Error:', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -56,8 +99,15 @@ const HitosList: FC = () => {
       try {
         await deleteHito(id)
         setHitos(hitos.filter((hito) => hito.id !== id))
-      } catch (error) {
-        console.error('Error al eliminar el hito:', error)
+      } catch (error: any) {
+        // Extraer el mensaje de error del backend
+        let errorMessage = 'Error al eliminar el hito'
+        if (error?.response?.data?.detail) {
+          errorMessage = error.response.data.detail
+        } else if (error?.message) {
+          errorMessage = error.message
+        }
+        alert(errorMessage)
       }
     }
   }
@@ -76,10 +126,7 @@ const HitosList: FC = () => {
       <div className='card-header border-0 pt-6'>
         <div className='card-title'>
           <div className='d-flex align-items-center position-relative my-1'>
-            <KTSVG
-              path='/media/icons/duotune/general/gen021.svg'
-              className='svg-icon-1 position-absolute ms-6'
-            />
+            <i className='bi bi-search position-absolute ms-6'></i>
             <input
               type='text'
               className='form-control form-control-solid w-250px ps-14'
@@ -96,10 +143,7 @@ const HitosList: FC = () => {
               className='btn btn-light'
               onClick={() => navigate('/dashboard')}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr063.svg'
-                className='svg-icon-2'
-              />
+              <i className="bi bi-arrow-left"></i>
               Volver
             </button>
             <button
@@ -110,11 +154,8 @@ const HitosList: FC = () => {
                 setShowModal(true)
               }}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr075.svg'
-                className='svg-icon-2'
-              />
-              Añadir Hito
+              <i className="bi bi-plus-circle"></i>
+              Nuevo Hito
             </button>
           </div>
         </div>
@@ -134,15 +175,63 @@ const HitosList: FC = () => {
               <table className='table align-middle table-row-dashed fs-6 gy-5'>
                 <thead>
                   <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Descripción</th>
-                    <th>Frecuencia</th>
-                    <th>Temporalidad</th>
-                    <th>Fecha Inicio</th>
-                    <th>Fecha Fin</th>
-                    <th>Obligatorio</th>
-                    <th className='text-end'>Acciones</th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('id')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      ID {getSortIcon('id')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('nombre')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Nombre {getSortIcon('nombre')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('descripcion')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Descripción {getSortIcon('descripcion')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('frecuencia')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Frecuencia {getSortIcon('frecuencia')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('temporalidad')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Temporalidad {getSortIcon('temporalidad')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('fecha_inicio')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Fecha Inicio {getSortIcon('fecha_inicio')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('fecha_fin')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Fecha Cumplimiento {getSortIcon('fecha_fin')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('obligatorio')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Obligatorio {getSortIcon('obligatorio')}
+                    </th>
+                    <th className='text-start'>Acciones</th>
                   </tr>
                 </thead>
                 <tbody className='text-gray-600 fw-semibold'>
@@ -153,15 +242,15 @@ const HitosList: FC = () => {
                       <td>{hito.descripcion || '-'}</td>
                       <td>{hito.frecuencia}</td>
                       <td className='text-capitalize'>{hito.temporalidad}</td>
-                      <td>{new Date(hito.fecha_inicio).toLocaleDateString()}</td>
-                      <td>{hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString() : '-'}</td>
+                      <td>{new Date(hito.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                      <td>{hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                       <td>
                         <span className={`badge badge-light-${hito.obligatorio ? 'success' : 'warning'}`}>
                           {hito.obligatorio ? 'Sí' : 'No'}
                         </span>
                       </td>
-                      <td className='text-end'>
-                        <div className='dropdown'>
+                      <td className='text-start'>
+                        <div className='dropdown' style={{ position: 'static' }}>
                           <button
                             className='btn btn-sm btn-light btn-active-light-primary'
                             type='button'
@@ -169,12 +258,9 @@ const HitosList: FC = () => {
                             aria-expanded='false'
                           >
                             Acciones
-                            <KTSVG
-                              path='/media/icons/duotune/arrows/arr072.svg'
-                              className='svg-icon-5 m-0'
-                            />
+                            <i className="bi bi-chevron-down ms-1"></i>
                           </button>
-                          <ul className='dropdown-menu menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
+                          <ul className='dropdown-menu dropdown-menu-start menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
                             <li className='menu-item px-3'>
                               <a
                                 href='#'
@@ -184,6 +270,7 @@ const HitosList: FC = () => {
                                   setShowModal(true)
                                 }}
                               >
+                                <i className="bi bi-pencil-square me-2"></i>
                                 Editar
                               </a>
                             </li>
@@ -193,6 +280,7 @@ const HitosList: FC = () => {
                                 className='menu-link px-3 text-danger'
                                 onClick={() => handleEliminar(hito.id)}
                               >
+                                <i className="bi bi-trash3 me-2"></i>
                                 Eliminar
                               </a>
                             </li>

@@ -1,13 +1,11 @@
 import React, { FC, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { KTCard, KTCardBody, KTSVG } from '../../../_metronic/helpers'
+import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import { Cliente, getAllClientes } from '../../api/clientes'
 import { getAllPlantillas, Plantilla } from '../../api/plantillas'
-import { getPageNumbers } from '../../utils/pagination'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import ClienteProcesosModal from './components/ClienteProcesosModal'
-import VerProcesosModal from './components/VerProcesosModal'
-import { ClienteProceso, GenerarCalendarioParams, getClienteProcesosByCliente } from '../../api/clienteProcesos'
+import { GenerarCalendarioParams } from '../../api/clienteProcesos'
 import { getAllProcesos, Proceso } from '../../api/procesos'
 import { generarCalendarioClienteProceso } from '../../api/clienteProcesos'
 
@@ -19,20 +17,55 @@ const ClientesList: FC = () => {
   const [page, setPage] = useState<number>(1)
   const [total, setTotal] = useState<number>(0)
   const [searchTerm, setSearchTerm] = useState<string>('')
+  const [sortField, setSortField] = useState<string>('idcliente')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showModal, setShowModal] = useState(false)
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
-  const [procesos, setProcesos] = useState<Proceso[]>([])
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
-  const [showVerProcesosModal, setShowVerProcesosModal] = useState(false)
-  const [clienteProcesos, setClienteProcesos] = useState<ClienteProceso[]>([])
   const [procesosList, setProcesosList] = useState<Proceso[]>([])
   const limit = 10
 
   useEffect(() => {
-    loadClientes()
     loadInitialData()
     loadProcesos()
   }, [])
+
+  useEffect(() => {
+    loadClientes()
+  }, [page, sortField, sortDirection])
+
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1)
+    } else {
+      loadClientes()
+    }
+  }, [searchTerm])
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+    setPage(1) // Reset to first page when sorting changes
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return (
+        <span className='ms-1 text-muted'>
+          <i className='bi bi-arrow-down-up' style={{ fontSize: '12px' }}></i>
+        </span>
+      )
+    }
+    return (
+      <span className='ms-1 text-primary'>
+        <i className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`} style={{ fontSize: '12px' }}></i>
+      </span>
+    )
+  }
 
   const loadInitialData = async () => {
     try {
@@ -46,7 +79,7 @@ const ClientesList: FC = () => {
   const loadClientes = async () => {
     try {
       setLoading(true)
-      const data = await getAllClientes(page, limit)
+      const data = await getAllClientes(page, limit, sortField, sortDirection)
       setClientes(data.clientes || [])
       setTotal(data.total)
     } catch (error) {
@@ -97,26 +130,12 @@ const ClientesList: FC = () => {
     }
   }
 
-  const handleVerProcesos = async (cliente: Cliente) => {
-    setSelectedCliente(cliente)
-    try {
-      const response = await getClienteProcesosByCliente(cliente.idcliente!)
-      setClienteProcesos(response.clienteProcesos || [])
-      setShowVerProcesosModal(true)
-    } catch (error) {
-      console.error('Error al cargar los procesos:', error)
-    }
-  }
-
   return (
     <KTCard>
       <div className='card-header border-0 pt-6'>
         <div className='card-title'>
           <div className='d-flex align-items-center position-relative my-1'>
-            <KTSVG
-              path='/media/icons/duotune/general/gen021.svg'
-              className='svg-icon-1 position-absolute ms-6'
-            />
+            <i className='bi bi-search position-absolute ms-6'></i>
             <input
               type='text'
               className='form-control form-control-solid w-250px ps-14'
@@ -133,10 +152,7 @@ const ClientesList: FC = () => {
               className='btn btn-light'
               onClick={() => navigate('/dashboard')}
             >
-              <KTSVG
-                path='/media/icons/duotune/arrows/arr063.svg'
-                className='svg-icon-2'
-              />
+              <i className="bi bi-arrow-left"></i>
               Volver
             </button>
           </div>
@@ -157,14 +173,62 @@ const ClientesList: FC = () => {
               <table className='table align-middle table-row-dashed fs-6 gy-5'>
                 <thead>
                   <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                    <th>ID Cliente</th>
-                    <th>CIF</th>
-                    <th>Razón Social</th>
-                    <th>Dirección</th>
-                    <th>Localidad</th>
-                    <th>Provincia</th>
-                    <th>C.P.</th>
-                    <th>País</th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('idcliente')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      ID {getSortIcon('idcliente')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('cif')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      CIF {getSortIcon('cif')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('razsoc')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Razón Social {getSortIcon('razsoc')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('direccion')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Dirección {getSortIcon('direccion')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('localidad')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Localidad {getSortIcon('localidad')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('provincia')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Provincia {getSortIcon('provincia')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('cpostal')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      C.P. {getSortIcon('cpostal')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('pais')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      País {getSortIcon('pais')}
+                    </th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -185,21 +249,15 @@ const ClientesList: FC = () => {
                             className='btn btn-sm btn-light-primary'
                             onClick={() => handleOpenModal(cliente)}
                           >
-                            <KTSVG
-                              path='/media/icons/duotune/general/gen035.svg'
-                              className='svg-icon-2'
-                            />
-                            Cargar Procesos
+                            <i className='bi bi-plus-circle me-2'></i>
+                            Generar Calendario
                           </button>
                           <button
                             className='btn btn-sm btn-light-info'
-                            onClick={() => handleVerProcesos(cliente)}
+                            onClick={() => navigate(`/cliente-calendario/${cliente.idcliente}`)}
                           >
-                            <KTSVG
-                              path='/media/icons/duotune/general/gen003.svg'
-                              className='svg-icon-2'
-                            />
-                            Ver Procesos
+                            <i className='bi bi-eye me-2'></i>
+                            Ver Calendario
                           </button>
                         </div>
                       </td>
@@ -222,14 +280,6 @@ const ClientesList: FC = () => {
               onSave={handleSaveClienteProceso}
               plantillas={plantillas}
               selectedCliente={selectedCliente}
-              procesosList={procesosList}
-            />
-
-            <VerProcesosModal
-              show={showVerProcesosModal}
-              onHide={() => setShowVerProcesosModal(false)}
-              cliente={selectedCliente}
-              procesos={clienteProcesos}
               procesosList={procesosList}
             />
           </>

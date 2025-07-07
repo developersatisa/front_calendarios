@@ -24,20 +24,18 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
   const [formData, setFormData] = useState<Omit<Hito, 'id'>>(initialFormState)
 
   useEffect(() => {
-    if (show) {
-      if (hito) {
-        setFormData({
-          nombre: hito.nombre,
-          descripcion: hito.descripcion,
-          frecuencia: hito.frecuencia,
-          temporalidad: hito.temporalidad,
-          fecha_inicio: hito.fecha_inicio,
-          fecha_fin: hito.fecha_fin,
-          obligatorio: hito.obligatorio
-        })
-      } else {
-        setFormData(initialFormState)
-      }
+    if (show && hito) {
+      setFormData({
+        nombre: hito.nombre,
+        descripcion: hito.descripcion,
+        frecuencia: hito.frecuencia,
+        temporalidad: hito.temporalidad,
+        fecha_inicio: hito.fecha_inicio,
+        fecha_fin: hito.fecha_fin,
+        obligatorio: hito.obligatorio
+      })
+    } else {
+      setFormData(initialFormState)
     }
   }, [show, hito])
 
@@ -116,13 +114,12 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
               />
             </div>
             <div className='col-6'>
-              <label className='required fw-bold fs-6 mb-2'>Fecha Fin</label>
+              <label className='fw-bold fs-6 mb-2'>Fecha de cumplimiento</label>
               <input
                 type='date'
                 className='form-control form-control-solid'
                 value={formData.fecha_fin || ''}
                 onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})}
-                required
               />
             </div>
           </div>

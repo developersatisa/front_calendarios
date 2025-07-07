@@ -19,11 +19,18 @@ export interface ClientesResponse {
   total: number
 }
 
-export const getAllClientes = async (page?: number, limit?: number) => {
+export const getAllClientes = async (
+  page?: number,
+  limit?: number,
+  sortField?: string,
+  sortDirection?: 'asc' | 'desc'
+) => {
   try {
     const params = new URLSearchParams()
     if (page && page > 0) params.append('page', String(page))
     if (limit && limit > 0) params.append('limit', String(limit))
+    if (sortField) params.append('sort_field', sortField)
+    if (sortDirection) params.append('sort_direction', sortDirection)
 
     // Si no se proporcionan parámetros, añadir limit=100 por defecto para el selector
     if (!page && !limit) {

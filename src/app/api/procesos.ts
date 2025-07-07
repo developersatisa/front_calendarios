@@ -15,10 +15,17 @@ export interface ProcesosResponse {
   total: number
 }
 
-export const getAllProcesos = async (page?: number, limit?: number) => {
+export const getAllProcesos = async (
+  page?: number,
+  limit?: number,
+  sortField?: string,
+  sortDirection?: 'asc' | 'desc'
+) => {
     const params = new URLSearchParams();
     if (page) params.append('page', page.toString());
     if (limit) params.append('limit', limit.toString());
+    if (sortField) params.append('sort_field', sortField);
+    if (sortDirection) params.append('sort_direction', sortDirection);
 
     const response = await api.get(`/procesos?${params.toString()}`);
     return response.data;

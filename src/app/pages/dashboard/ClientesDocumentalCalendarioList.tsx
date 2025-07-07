@@ -1,5 +1,5 @@
 import {FC, useState, useEffect} from 'react'
-import {KTCard, KTCardBody, KTSVG} from '../../../_metronic/helpers'
+import {KTCard, KTCardBody} from '../../../_metronic/helpers'
 import {Cliente, getAllClientes} from '../../api/clientes'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import {useNavigate} from 'react-router-dom'
@@ -14,6 +14,8 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const [total, setTotal] = useState(0)
   const limit = 10
   const [allClientes, setAllClientes] = useState<Cliente[]>([])
+  const [sortField, setSortField] = useState<string>('idcliente')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Cargar todos los clientes al inicio
   useEffect(() => {
@@ -25,7 +27,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
     if (!searchTerm) {
       loadClientes()
     }
-  }, [page])
+  }, [page, sortField, sortDirection])
 
   const loadAllClientes = async () => {
     try {
@@ -39,7 +41,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const loadClientes = async () => {
     try {
       setLoading(true)
-      const response = await getAllClientes(page, limit)
+      const response = await getAllClientes(page, limit, sortField, sortDirection)
       setClientes(response.clientes || [])
       setTotal(response.total || 0)
     } catch (error) {
@@ -48,6 +50,31 @@ const ClientesDocumentalCalendarioList: FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+    setPage(1) // Reset to first page when sorting changes
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return (
+        <span className='ms-1 text-muted'>
+          <i className='bi bi-arrow-down-up' style={{ fontSize: '12px' }}></i>
+        </span>
+      )
+    }
+    return (
+      <span className='ms-1 text-primary'>
+        <i className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`} style={{ fontSize: '12px' }}></i>
+      </span>
+    )
   }
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +121,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
             onChange={handleSearch}
           />
           <button className='btn btn-primary' type='button'>
-            <KTSVG path='/media/icons/duotune/general/gen021.svg' className='svg-icon-2' />
+            <i className='bi bi-search'></i>
           </button>
         </div>
       </div>
@@ -103,8 +130,20 @@ const ClientesDocumentalCalendarioList: FC = () => {
         <table className='table table-hover table-rounded table-striped border gy-7 gs-7'>
           <thead>
             <tr className='fw-semibold fs-6 text-gray-800 border-bottom-2 border-gray-200'>
-              <th>ID Cliente</th>
-              <th>Empresa</th>
+              <th
+                className='cursor-pointer user-select-none hover-primary'
+                onClick={() => handleSort('idcliente')}
+                style={{ transition: 'all 0.2s' }}
+              >
+                ID {getSortIcon('idcliente')}
+              </th>
+              <th
+                className='cursor-pointer user-select-none hover-primary'
+                onClick={() => handleSort('razsoc')}
+                style={{ transition: 'all 0.2s' }}
+              >
+                Empresa {getSortIcon('razsoc')}
+              </th>
               <th className='text-end'>Acciones</th>
             </tr>
           </thead>
@@ -115,17 +154,17 @@ const ClientesDocumentalCalendarioList: FC = () => {
                 <td>{cliente.razsoc || cliente.idcliente}</td>
                 <td className='text-end'>
                   <button
-                    className='btn btn-icon btn-light-primary btn-sm me-2'
-                    title='Expedientes'
-                  >
-                    <KTSVG path='/media/icons/duotune/files/fil012.svg' className='svg-icon-3' />
-                  </button>
-                  <button
                     className='btn btn-icon btn-light-success btn-sm'
                     title='Calendario'
                     onClick={() => handleCalendarClick(cliente.idcliente)}
                   >
-                    <KTSVG path='/media/icons/duotune/general/gen014.svg' className='svg-icon-3' />
+                    <i className='bi bi-calendar fs-5'></i>
+                  </button>
+                  <button
+                    className='btn btn-icon btn-light-primary btn-sm me-2'
+                    title='Expedientes'
+                  >
+                    <i className="bi bi-file-earmark-text"></i>
                   </button>
                 </td>
               </tr>

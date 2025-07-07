@@ -5,6 +5,7 @@ import { ClienteProceso, getClienteProcesosByCliente } from '../../../../api/cli
 import { Proceso, getAllProcesos } from '../../../../api/procesos'
 import { getClienteProcesoHitosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { Hito, getAllHitos } from '../../../../api/hitos'
+import SubirDocumentoModal from './SubirDocumentoModal'
 
 interface Props {
   clienteId: string
@@ -20,6 +21,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [loadingHitos, setLoadingHitos] = useState(false)
   const [selectedProceso, setSelectedProceso] = useState<ClienteProceso | null>(null)
   const [hitosMaestro, setHitosMaestro] = useState<Hito[]>([])
+  const [showSubirDocumento, setShowSubirDocumento] = useState(false)
+  const [hitoSeleccionado, setHitoSeleccionado] = useState<ClienteProcesoHito | null>(null)
+  const [hitosContadores, setHitosContadores] = useState<Record<number, { nuevos: number, finalizados: number }>>({})
+  const [loadingContadores, setLoadingContadores] = useState(false)
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -47,6 +52,43 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   useEffect(() => {
     if (periodos.length > 0) setSelectedPeriod(periodos[0])
   }, [periodos])
+
+  // Función para cargar contadores de hitos
+  const cargarContadoresHitos = async (procesosAConta: ClienteProceso[]) => {
+    if (procesosAConta.length === 0) {
+      setHitosContadores({})
+      return
+    }
+
+    setLoadingContadores(true)
+    const contadores: Record<number, { nuevos: number, finalizados: number }> = {}
+
+    try {
+      // Cargar hitos para todos los procesos en paralelo
+      const hitosPromises = procesosAConta.map(proceso =>
+        getClienteProcesoHitosByProceso(proceso.id)
+          .then(hitosData => ({ procesoId: proceso.id, hitos: hitosData }))
+          .catch(() => ({ procesoId: proceso.id, hitos: [] }))
+      )
+
+      const resultados = await Promise.all(hitosPromises)
+
+      // Contar hitos por estado para cada proceso
+      resultados.forEach(({ procesoId, hitos }) => {
+        contadores[procesoId] = {
+          nuevos: hitos.filter(h => h.estado === 'Nuevo').length,
+          finalizados: hitos.filter(h => h.estado === 'Finalizado').length
+        }
+      })
+
+      setHitosContadores(contadores)
+    } catch (error) {
+      console.error('Error cargando contadores de hitos:', error)
+      setHitosContadores({})
+    }
+
+    setLoadingContadores(false)
+  }
 
   // Agrupar procesos por tipo y subgrupar por período
   const groupedProcesos = useMemo(() => {
@@ -98,6 +140,20 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     return groups
   }, [procesos, procesosList])
 
+  // Cargar contadores cuando cambien los procesos filtrados por período
+  useEffect(() => {
+    if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
+      const procesosVisibles: ClienteProceso[] = []
+      Object.values(groupedProcesos).forEach(grupo => {
+        const periodoData = grupo.periodos[selectedPeriod]
+        if (periodoData) {
+          procesosVisibles.push(...periodoData.items)
+        }
+      })
+      cargarContadoresHitos(procesosVisibles)
+    }
+  }, [selectedPeriod, groupedProcesos])
+
   const getMesName = (mes: number) => {
     const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
     return meses[mes - 1] || '-'
@@ -135,9 +191,46 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     })
   }
 
+  const formatDateWithTime = (date: string) => {
+    return new Date(date).toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // Recargar hitos después de subir documento
+  const handleUploadSuccess = async () => {
+    if (selectedProceso) {
+      setLoadingHitos(true)
+      try {
+        const hitosData = await getClienteProcesoHitosByProceso(selectedProceso.id)
+        setHitos(hitosData)
+      } catch {
+        setHitos([])
+      }
+      setLoadingHitos(false)
+
+      // También recargar contadores
+      if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
+        const procesosVisibles: ClienteProceso[] = []
+        Object.values(groupedProcesos).forEach(grupo => {
+          const periodoData = grupo.periodos[selectedPeriod]
+          if (periodoData) {
+            procesosVisibles.push(...periodoData.items)
+          }
+        })
+        cargarContadoresHitos(procesosVisibles)
+      }
+    }
+
+  }
+
   return (
     <div className="container py-5">
-      <h2 className="mb-4">Procesos de {cliente?.razsoc || clienteId}</h2>
+      <h2 className="mb-4 text-center">Calendario {cliente?.razsoc || clienteId}</h2>
       <div className="mb-4 position-relative">
         <div className="d-flex gap-2 overflow-auto pb-2 justify-content-end" style={{ scrollbarWidth: 'thin' }}>
           {periodos.map((periodo) => {
@@ -181,24 +274,47 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                         <thead>
                           <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
                             <th>Fecha Inicio</th>
+                            <th className='text-center'>Hitos Pendientes</th>
+                            <th className='text-center'>Hitos Finalizados</th>
                             <th className='text-end'>Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {periodo.items.map((proceso) => (
-                            <tr key={proceso.id}>
-                              <td>{formatDate(proceso.fecha_inicio)}</td>
-                              <td className='text-end'>
-                                <button
-                                  className='btn btn-sm btn-icon btn-light-primary'
-                                  onClick={() => handleVerHitos(proceso)}
-                                  title='Ver hitos'
-                                >
-                                  <i className='bi bi-list-check fs-5'></i>
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {periodo.items.map((proceso) => {
+                            const contadores = hitosContadores[proceso.id] || { nuevos: 0, finalizados: 0 }
+                            return (
+                              <tr key={proceso.id}>
+                                <td>{formatDate(proceso.fecha_inicio)}</td>
+                                <td className='text-center'>
+                                  {loadingContadores ? (
+                                    <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                      <span className="visually-hidden">Cargando...</span>
+                                    </div>
+                                  ) : (
+                                    <span className='badge badge-light-info'>{contadores.nuevos}</span>
+                                  )}
+                                </td>
+                                <td className='text-center'>
+                                  {loadingContadores ? (
+                                    <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                      <span className="visually-hidden">Cargando...</span>
+                                    </div>
+                                  ) : (
+                                    <span className='badge badge-light-success'>{contadores.finalizados}</span>
+                                  )}
+                                </td>
+                                <td className='text-end'>
+                                  <button
+                                    className='btn btn-sm btn-icon btn-light-primary'
+                                    onClick={() => handleVerHitos(proceso)}
+                                    title='Ver Calendario'
+                                  >
+                                    <i className='bi bi-calendar fs-5'></i>
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -227,23 +343,46 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                   <table className="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0">
                     <thead>
                       <tr className="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th>Nombre Hito</th>
+                        <th>Hito</th>
                         <th>Estado</th>
                         <th>Fecha Estado</th>
                         <th>Fecha Inicio</th>
                         <th>Fecha Fin</th>
+                        <th>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {hitos.map(hito => (
-                        <tr key={hito.id}>
-                          <td>{getNombreHito(hito.hito_id)}</td>
-                          <td>{hito.estado}</td>
-                          <td>{hito.fecha_estado ? formatDate(hito.fecha_estado) : '-'}</td>
-                          <td>{formatDate(hito.fecha_inicio)}</td>
-                          <td>{hito.fecha_fin ? formatDate(hito.fecha_fin) : '-'}</td>
-                        </tr>
-                      ))}
+                      {hitos.map(hito => {
+                        const isFinalized = hito.estado === 'Finalizado'
+                        return (
+                          <tr key={hito.id}>
+                            <td>{getNombreHito(hito.hito_id)}</td>
+                            <td>
+                              <span className={`badge ${isFinalized ? 'badge-light-success' : 'badge-light-warning'}`}>
+                                {hito.estado}
+                              </span>
+                            </td>
+                            <td>{hito.fecha_estado ? formatDateWithTime(hito.fecha_estado) : '-'}</td>
+                            <td>{formatDate(hito.fecha_inicio)}</td>
+                            <td>{hito.fecha_fin ? formatDate(hito.fecha_fin) : '-'}</td>
+                            <td>
+                              <button
+                                className={`btn btn-sm ${isFinalized ? 'btn-light-secondary' : 'btn-light-primary'}`}
+                                onClick={() => {
+                                  if (!isFinalized) {
+                                    setHitoSeleccionado(hito)
+                                    setShowSubirDocumento(true)
+                                  }
+                                }}
+                                disabled={isFinalized}
+                                title={isFinalized ? "Proceso finalizado - No se pueden subir documentos" : "Insertar documento"}
+                              >
+                                <i className="bi bi-upload"></i> {isFinalized ? 'Finalizado' : 'Cumplimentar hito'}
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -251,6 +390,20 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             </div>
           </div>
         </div>
+      )}
+      {/* Modal para subir documento */}
+      {hitoSeleccionado && (
+        <SubirDocumentoModal
+          show={showSubirDocumento}
+          onHide={() => setShowSubirDocumento(false)}
+          idClienteProcesoHito={hitoSeleccionado.id}
+          nombreDocumento={getNombreHito(hitoSeleccionado.hito_id)}
+          estado={hitoSeleccionado.estado}
+          onUploadSuccess={() => {
+            setShowSubirDocumento(false)
+            handleUploadSuccess()
+          }}
+        />
       )}
     </div>
   )

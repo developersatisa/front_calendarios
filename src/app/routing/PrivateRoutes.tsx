@@ -41,7 +41,7 @@ const PrivateRoutes = () => {
         <Route path='hitos' element={<HitosList />} />
         <Route path='plantillas' element={<PlantillasList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
-        <Route path='/cliente-calendario/:clienteId' element={<CalendarioCliente clienteId={''} />} />
+        <Route path='/cliente-calendario/:clienteId' element={<CalendarioClienteWrapper />} />
         <Route path='metricas' element={<MetricasList />} />
         {/* Lazy Modules */}
         <Route
