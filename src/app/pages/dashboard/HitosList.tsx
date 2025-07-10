@@ -222,7 +222,7 @@ const HitosList: FC = () => {
                       onClick={() => handleSort('fecha_fin')}
                       style={{ transition: 'all 0.2s' }}
                     >
-                      Fecha Cumplimiento {getSortIcon('fecha_fin')}
+                      Fecha Fin {getSortIcon('fecha_fin')}
                     </th>
                     <th
                       className='cursor-pointer user-select-none hover-primary'

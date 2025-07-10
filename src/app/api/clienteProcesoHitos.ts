@@ -8,6 +8,9 @@ export interface ClienteProcesoHito {
   fecha_estado: string | null
   fecha_inicio: string
   fecha_fin: string | null
+  observacion: string | null
+  fecha_cumplimiento?: string | null
+  hora_cumplimiento?: string | null
 }
 
 export interface ClienteProcesoHitosResponse {
@@ -44,10 +47,18 @@ export const getClienteProcesoHitosByProceso = async (idClienteProceso: number) 
 }
 
 // Cambia el estado de un hito a 'finalizado'
-export const finalizarClienteProcesoHito = async (id: number) => {
+export const finalizarClienteProcesoHito = async (
+  id: number,
+  fechaCumplimiento?: string,
+  horaCumplimiento?: string,
+  observacion?: string
+) => {
   const response = await api.put<ClienteProcesoHito>(`/cliente-proceso-hitos/${id}`, {
     estado: 'Finalizado',
     fecha_estado: new Date().toISOString(),
+    fecha_cumplimiento: fechaCumplimiento,
+    hora_cumplimiento: horaCumplimiento,
+    observacion: observacion || '',
   })
   return response.data
 }
