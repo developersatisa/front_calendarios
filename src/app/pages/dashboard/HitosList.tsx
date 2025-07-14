@@ -226,10 +226,24 @@ const HitosList: FC = () => {
                     </th>
                     <th
                       className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('hora_limite')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Hora Limite {getSortIcon('hora_limite')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
                       onClick={() => handleSort('obligatorio')}
                       style={{ transition: 'all 0.2s' }}
                     >
                       Obligatorio {getSortIcon('obligatorio')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none hover-primary'
+                      onClick={() => handleSort('tipo')}
+                      style={{ transition: 'all 0.2s' }}
+                    >
+                      Tipo {getSortIcon('tipo')}
                     </th>
                     <th className='text-start'>Acciones</th>
                   </tr>
@@ -244,11 +258,13 @@ const HitosList: FC = () => {
                       <td className='text-capitalize'>{hito.temporalidad}</td>
                       <td>{new Date(hito.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                       <td>{hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
+                      <td>{hito.hora_limite ? hito.hora_limite.slice(0,5) : '-'}</td>
                       <td>
                         <span className={`badge badge-light-${hito.obligatorio ? 'success' : 'warning'}`}>
                           {hito.obligatorio ? 'Sí' : 'No'}
                         </span>
                       </td>
+                      <td>{hito.tipo}</td>
                       <td className='text-start'>
                         <div className='dropdown' style={{ position: 'static' }}>
                           <button

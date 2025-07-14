@@ -28,7 +28,7 @@ const PlantillaModal: FC<Props> = ({show, onHide, onSave, plantilla}) => {
         descripcion: null
       })
     }
-  }, [plantilla])
+  }, [plantilla, show])
 
   return (
     <Modal

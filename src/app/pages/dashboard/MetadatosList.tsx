@@ -1,13 +1,15 @@
-import React, {FC, useEffect, useState} from 'react'
-import {KTCard, KTCardBody, KTSVG} from '../../../_metronic/helpers'
-import {Metadato, getAllMetadatos, createMetadato, updateMetadato, deleteMetadato} from '../../api/metadatos'
-import {MetadatoArea, getAllMetadatosArea, createMetadatoArea} from '../../api/metadatosArea'
-import {Subdepartamento, getAllSubdepartamentos} from '../../api/subdepartamentos'
+import React, { FC, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { KTCard, KTCardBody, KTSVG } from '../../../_metronic/helpers'
+import { Metadato, getAllMetadatos, createMetadato, updateMetadato, deleteMetadato } from '../../api/metadatos'
+import { MetadatoArea, getAllMetadatosArea, createMetadatoArea } from '../../api/metadatosArea'
+import { Subdepartamento, getAllSubdepartamentos } from '../../api/subdepartamentos'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import MetadatoModal from './components/MetadatoModal'
 import MetadatoSubdepartamentosModal from './components/MetadatoSubdepartamentosModal'
 
 const MetadatosList: FC = () => {
+  const navigate = useNavigate()
   const [metadatos, setMetadatos] = useState<Metadato[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -102,10 +104,10 @@ const MetadatosList: FC = () => {
     }
     const subdep = subdepartamentos.find(s => s.ceco === ma.codigo_ceco && s.ceco !== null)
     if (subdep) {
-      groups[ma.id_metadato].push({...ma, subdepData: subdep})
+      groups[ma.id_metadato].push({ ...ma, subdepData: subdep })
     }
     return groups
-  }, {} as Record<number, Array<MetadatoArea & {subdepData: Subdepartamento}>>)
+  }, {} as Record<number, Array<MetadatoArea & { subdepData: Subdepartamento }>>)
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
@@ -157,7 +159,7 @@ const MetadatosList: FC = () => {
     }
   }
 
-  const handleAdministrarDepartamentos = (metadato: Metadato) => {
+  const handleAsignarDepartamentos = (metadato: Metadato) => {
     setSelectedMetadatoForAreas(metadato)
     setShowSubdepartamentosModal(true)
   }
@@ -191,7 +193,15 @@ const MetadatosList: FC = () => {
             </div>
           </div>
           <div className='card-toolbar'>
-            <div className='d-flex justify-content-end'>
+            <div className='d-flex justify-content-end gap-2'>
+              <button
+                type='button'
+                className='btn btn-light'
+                onClick={() => navigate('/dashboard')}
+              >
+                <i className="bi bi-arrow-left"></i>
+                Volver
+              </button>
               <button type='button' className='btn btn-primary' onClick={handleCreate}>
                 <i className='bi bi-plus-circle me-2'></i>
                 Nuevo Metadato
@@ -288,7 +298,7 @@ const MetadatosList: FC = () => {
                         </td>
                         <td>
                           {metadato.global_ ? (
-                            <span className='text-muted fst-italic'>Global - No aplica</span>
+                            <span className='text-muted fst-italic'>Global - Aplica a todos los departamentos</span>
                           ) : (
                             <div className='d-flex flex-column gap-2' style={{ maxHeight: '150px', overflowY: 'auto' }}>
                               {groupedMetadatosArea[metadato.id]?.map((ma) => (
@@ -308,53 +318,53 @@ const MetadatosList: FC = () => {
                             {!metadato.global_ && (
                               <button
                                 className='btn btn-sm btn-light-info'
-                                onClick={() => handleAdministrarDepartamentos(metadato)}
+                                onClick={() => handleAsignarDepartamentos(metadato)}
                               >
                                 <i className='bi bi-building me-2'></i>
-                                Administrar Departamentos
+                                Asignar Departamentos
                               </button>
                             )}
                             <div className='dropdown' style={{ position: 'static' }}>
-                            <button
-                              className='btn btn-sm btn-light btn-active-light-primary'
-                              type='button'
-                              data-bs-toggle='dropdown'
-                              aria-expanded='false'
-                            >
-                              Acciones
-                              <i className="bi bi-chevron-down ms-1"></i>
-                            </button>
-                            <ul className='dropdown-menu dropdown-menu-start menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
-                              <li className='menu-item px-3'>
-                                <a
-                                  href='#'
-                                  className='menu-link px-3'
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    handleEdit(metadato)
-                                  }}
-                                >
-                                  <i className="bi bi-pencil-square me-2"></i>
-                                  Editar
-                                </a>
-                              </li>
-                              {metadato.tipo_generacion !== 'automatico' && (
+                              <button
+                                className='btn btn-sm btn-light btn-active-light-primary'
+                                type='button'
+                                data-bs-toggle='dropdown'
+                                aria-expanded='false'
+                              >
+                                Acciones
+                                <i className="bi bi-chevron-down ms-1"></i>
+                              </button>
+                              <ul className='dropdown-menu dropdown-menu-start menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-bold fs-7 w-125px py-4'>
                                 <li className='menu-item px-3'>
                                   <a
                                     href='#'
-                                    className='menu-link px-3 text-danger'
+                                    className='menu-link px-3'
                                     onClick={(e) => {
                                       e.preventDefault()
-                                      handleDelete(metadato.id)
+                                      handleEdit(metadato)
                                     }}
                                   >
-                                    <i className="bi bi-trash3 me-2"></i>
-                                    Eliminar
+                                    <i className="bi bi-pencil-square me-2"></i>
+                                    Editar
                                   </a>
                                 </li>
-                              )}
-                            </ul>
-                          </div>
+                                {metadato.tipo_generacion !== 'automatico' && (
+                                  <li className='menu-item px-3'>
+                                    <a
+                                      href='#'
+                                      className='menu-link px-3 text-danger'
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        handleDelete(metadato.id)
+                                      }}
+                                    >
+                                      <i className="bi bi-trash3 me-2"></i>
+                                      Eliminar
+                                    </a>
+                                  </li>
+                                )}
+                              </ul>
+                            </div>
                           </div>
                         </td>
                       </tr>

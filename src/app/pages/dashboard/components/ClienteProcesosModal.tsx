@@ -71,7 +71,7 @@ const ClienteProcesosModal: FC<Props> = ({
   return (
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>Cargar Procesos para Cliente</Modal.Title>
+        <Modal.Title>Generar Calendario</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <form onSubmit={handleSubmit}>
@@ -144,7 +144,7 @@ const ClienteProcesosModal: FC<Props> = ({
           onClick={handleSubmit}
           disabled={!selectedCliente || !formData.plantillaId || !formData.fechaInicio}
         >
-          {selectedCliente ? 'Actualizar' : 'Crear'}
+          Generar
         </button>
       </Modal.Footer>
     </Modal>

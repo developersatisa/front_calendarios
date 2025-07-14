@@ -1,7 +1,7 @@
-import {FC, useEffect, useState} from 'react'
-import {Modal} from 'react-bootstrap'
-import {KTSVG} from '../../../../_metronic/helpers'
-import {Hito} from '../../../api/hitos'
+import { FC, useEffect, useState } from 'react'
+import { Modal } from 'react-bootstrap'
+import { KTSVG } from '../../../../_metronic/helpers'
+import { Hito } from '../../../api/hitos'
 
 interface Props {
   show: boolean
@@ -10,7 +10,7 @@ interface Props {
   hito: Hito | null
 }
 
-const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
+const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
   const initialFormState = {
     nombre: '',
     descripcion: null,
@@ -18,7 +18,9 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
     temporalidad: 'mes',
     fecha_inicio: new Date().toISOString().split('T')[0],
     fecha_fin: null,
-    obligatorio: 0
+    hora_limite: '00:00',
+    obligatorio: 0,
+    tipo: ''
   }
 
   const [formData, setFormData] = useState<Omit<Hito, 'id'>>(initialFormState)
@@ -32,7 +34,9 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
         temporalidad: hito.temporalidad,
         fecha_inicio: hito.fecha_inicio,
         fecha_fin: hito.fecha_fin,
-        obligatorio: hito.obligatorio
+        hora_limite: hito.hora_limite || '00:00',
+        obligatorio: hito.obligatorio,
+        tipo: hito.tipo
       })
     } else {
       setFormData(initialFormState)
@@ -68,7 +72,7 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
               className='form-control form-control-solid'
               placeholder='Nombre del hito'
               value={formData.nombre}
-              onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
               maxLength={255}
             />
@@ -81,7 +85,7 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
                 type='number'
                 className='form-control form-control-solid'
                 value={formData.frecuencia}
-                onChange={(e) => setFormData({...formData, frecuencia: parseInt(e.target.value) || 1})}
+                onChange={(e) => setFormData({ ...formData, frecuencia: parseInt(e.target.value) || 1 })}
                 min={1}
                 required
               />
@@ -91,13 +95,15 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
               <select
                 className='form-select form-select-solid'
                 value={formData.temporalidad}
-                onChange={(e) => setFormData({...formData, temporalidad: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, temporalidad: e.target.value })}
                 required
               >
-                <option value='dia'>Día</option>
-                <option value='semana'>Semana</option>
-                <option value='mes'>Mes</option>
-                <option value='año'>Año</option>
+                <option value='dia'>Diaria</option>
+                <option value='semana'>Semanal</option>
+                <option value='quincena'>Quincenal</option>
+                <option value='mes'>Mensual</option>
+                <option value='trimestre'>Trimestral</option>
+                <option value='año'>Anual</option>
               </select>
             </div>
           </div>
@@ -109,7 +115,7 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
                 type='date'
                 className='form-control form-control-solid'
                 value={formData.fecha_inicio}
-                onChange={(e) => setFormData({...formData, fecha_inicio: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
                 required
               />
             </div>
@@ -119,9 +125,19 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
                 type='date'
                 className='form-control form-control-solid'
                 value={formData.fecha_fin || ''}
-                onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className='fv-row mb-7'>
+            <label className='fw-bold fs-6 mb-2'>Hora límite</label>
+            <input
+              type='time'
+              className='form-control form-control-solid'
+              value={formData.hora_limite || '00:00'}
+              onChange={(e) => setFormData({ ...formData, hora_limite: e.target.value })}
+            />
           </div>
 
           <div className='fv-row mb-7'>
@@ -130,24 +146,37 @@ const HitoModal: FC<Props> = ({show, onHide, onSave, hito}) => {
               className='form-control form-control-solid'
               rows={3}
               value={formData.descripcion || ''}
-              onChange={(e) => setFormData({...formData, descripcion: e.target.value || null})}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value || null })}
               maxLength={255}
             />
           </div>
 
-          <div className='fv-row'>
+          <div className='fv-row mb-7'>
             <div className='form-check form-switch'>
               <input
                 className='form-check-input'
                 type='checkbox'
                 checked={formData.obligatorio === 1}
-                onChange={(e) => setFormData({...formData, obligatorio: e.target.checked ? 1 : 0})}
+                onChange={(e) => setFormData({ ...formData, obligatorio: e.target.checked ? 1 : 0 })}
                 id='obligatorio'
               />
               <label className='form-check-label' htmlFor='obligatorio'>
                 Obligatorio
               </label>
             </div>
+          </div>
+          <div className='fv-row mb-7'>
+            <label className='fw-bold fs-6 mb-2'>Tipo</label>
+            <select
+              className='form-select form-select-solid'
+              value={formData.tipo || ''}
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              required
+            >
+              <option value='' disabled>Selecciona un tipo</option>
+              <option value='Atisa'>Atisa</option>
+              <option value='Cliente'>Cliente</option>
+            </select>
           </div>
         </Modal.Body>
 

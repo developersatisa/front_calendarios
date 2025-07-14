@@ -5,7 +5,7 @@ import { ClienteProceso, getClienteProcesosByCliente } from '../../../../api/cli
 import { Proceso, getAllProcesos } from '../../../../api/procesos'
 import { getClienteProcesoHitosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { Hito, getAllHitos } from '../../../../api/hitos'
-import SubirDocumentoModal from './SubirDocumentoModal'
+import CumplimentarHitoModal from './CumplimentarHitoModal'
 
 interface Props {
   clienteId: string
@@ -16,20 +16,19 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [procesos, setProcesos] = useState<ClienteProceso[]>([])
   const [procesosList, setProcesosList] = useState<Proceso[]>([])
   const [selectedPeriod, setSelectedPeriod] = useState<string>('')
-  const [showHitos, setShowHitos] = useState(false)
-  const [hitos, setHitos] = useState<ClienteProcesoHito[]>([])
+  const [hitosPorProceso, setHitosPorProceso] = useState<Record<number, ClienteProcesoHito[]>>({})
   const [loadingHitos, setLoadingHitos] = useState(false)
-  const [selectedProceso, setSelectedProceso] = useState<ClienteProceso | null>(null)
   const [hitosMaestro, setHitosMaestro] = useState<Hito[]>([])
-  const [showSubirDocumento, setShowSubirDocumento] = useState(false)
+  const [showCumplimentarHito, setShowCumplimentarHito] = useState(false)
   const [hitoSeleccionado, setHitoSeleccionado] = useState<ClienteProcesoHito | null>(null)
-  const [hitosContadores, setHitosContadores] = useState<Record<number, { nuevos: number, finalizados: number }>>({})
-  const [loadingContadores, setLoadingContadores] = useState(false)
+  const [showObservacionModal, setShowObservacionModal] = useState(false)
+  const [observacionSeleccionada, setObservacionSeleccionada] = useState('')
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
     getClienteProcesosByCliente(clienteId).then(res => setProcesos(res.clienteProcesos || []))
     getAllProcesos().then(res => setProcesosList(res.procesos || []))
+    getAllHitos().then((res) => setHitosMaestro(res.hitos || []))
   }, [clienteId])
 
   // Obtener períodos únicos
@@ -50,22 +49,34 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   }, [procesos])
 
   useEffect(() => {
-    if (periodos.length > 0) setSelectedPeriod(periodos[0])
+    if (periodos.length > 0) {
+      // Obtener el mes y año actual
+      const ahora = new Date()
+      const anoActual = ahora.getFullYear()
+      const mesActual = (ahora.getMonth() + 1).toString().padStart(2, '0')
+      const periodoActual = `${anoActual}-${mesActual}`
+
+      // Buscar si existe el período actual en la lista
+      const existePeriodoActual = periodos.includes(periodoActual)
+
+      // Seleccionar el período actual si existe, sino el más reciente
+      setSelectedPeriod(existePeriodoActual ? periodoActual : periodos[0])
+    }
   }, [periodos])
 
-  // Función para cargar contadores de hitos
-  const cargarContadoresHitos = async (procesosAConta: ClienteProceso[]) => {
-    if (procesosAConta.length === 0) {
-      setHitosContadores({})
+  // Función para cargar todos los hitos de los procesos
+  const cargarHitosDeProcesos = async (procesosACarga: ClienteProceso[]) => {
+    if (procesosACarga.length === 0) {
+      setHitosPorProceso({})
       return
     }
 
-    setLoadingContadores(true)
-    const contadores: Record<number, { nuevos: number, finalizados: number }> = {}
+    setLoadingHitos(true)
+    const hitosMap: Record<number, ClienteProcesoHito[]> = {}
 
     try {
       // Cargar hitos para todos los procesos en paralelo
-      const hitosPromises = procesosAConta.map(proceso =>
+      const hitosPromises = procesosACarga.map(proceso =>
         getClienteProcesoHitosByProceso(proceso.id)
           .then(hitosData => ({ procesoId: proceso.id, hitos: hitosData }))
           .catch(() => ({ procesoId: proceso.id, hitos: [] }))
@@ -73,21 +84,20 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
       const resultados = await Promise.all(hitosPromises)
 
-      // Contar hitos por estado para cada proceso
+      // Organizar hitos por proceso y ordenar por fecha de inicio
       resultados.forEach(({ procesoId, hitos }) => {
-        contadores[procesoId] = {
-          nuevos: hitos.filter(h => h.estado === 'Nuevo').length,
-          finalizados: hitos.filter(h => h.estado === 'Finalizado').length
-        }
+        hitosMap[procesoId] = hitos.sort((a, b) =>
+          new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+        )
       })
 
-      setHitosContadores(contadores)
+      setHitosPorProceso(hitosMap)
     } catch (error) {
-      console.error('Error cargando contadores de hitos:', error)
-      setHitosContadores({})
+      console.error('Error cargando hitos:', error)
+      setHitosPorProceso({})
     }
 
-    setLoadingContadores(false)
+    setLoadingHitos(false)
   }
 
   // Agrupar procesos por tipo y subgrupar por período
@@ -140,7 +150,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     return groups
   }, [procesos, procesosList])
 
-  // Cargar contadores cuando cambien los procesos filtrados por período
+  // Cargar hitos cuando cambien los procesos filtrados por período
   useEffect(() => {
     if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
       const procesosVisibles: ClienteProceso[] = []
@@ -150,7 +160,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           procesosVisibles.push(...periodoData.items)
         }
       })
-      cargarContadoresHitos(procesosVisibles)
+      cargarHitosDeProcesos(procesosVisibles)
     }
   }, [selectedPeriod, groupedProcesos])
 
@@ -159,32 +169,14 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     return meses[mes - 1] || '-'
   }
 
-  useEffect(() => {
-    if (showHitos) {
-      getAllHitos().then((res) => setHitosMaestro(res.hitos || []))
-    }
-  }, [showHitos])
-
-  const handleVerHitos = async (proceso: ClienteProceso) => {
-    setSelectedProceso(proceso)
-    setLoadingHitos(true)
-    setShowHitos(true)
-    try {
-      const hitosData = await getClienteProcesoHitosByProceso(proceso.id)
-      setHitos(hitosData)
-    } catch {
-      setHitos([])
-    }
-    setLoadingHitos(false)
-  }
-
   const getNombreHito = (hito_id: number) => {
     const hito = hitosMaestro.find(h => h.id === hito_id)
     return hito ? hito.nombre : `Hito ${hito_id}`
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('es-ES', {
+    const d = new Date(date)
+    return d.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -192,7 +184,8 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   }
 
   const formatDateWithTime = (date: string) => {
-    return new Date(date).toLocaleString('es-ES', {
+    const d = new Date(date)
+    return d.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -201,31 +194,44 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     })
   }
 
-  // Recargar hitos después de subir documento
-  const handleUploadSuccess = async () => {
-    if (selectedProceso) {
-      setLoadingHitos(true)
-      try {
-        const hitosData = await getClienteProcesoHitosByProceso(selectedProceso.id)
-        setHitos(hitosData)
-      } catch {
-        setHitos([])
-      }
-      setLoadingHitos(false)
+  const formatTime = (time: string | null) => {
+    if (!time) return '-'
 
-      // También recargar contadores
-      if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
-        const procesosVisibles: ClienteProceso[] = []
-        Object.values(groupedProcesos).forEach(grupo => {
-          const periodoData = grupo.periodos[selectedPeriod]
-          if (periodoData) {
-            procesosVisibles.push(...periodoData.items)
-          }
-        })
-        cargarContadoresHitos(procesosVisibles)
-      }
+    // Si ya está en formato HH:MM, devolverlo tal como está
+    if (time.match(/^\d{2}:\d{2}$/)) {
+      return time
     }
 
+    // Si viene en otro formato, intentar parsearlo
+    try {
+      const date = new Date(`1970-01-01T${time}`)
+      return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+    } catch {
+      return time // Si no se puede parsear, devolver el valor original
+    }
+  }
+
+  // Recargar hitos después de subir documento
+  const handleUploadSuccess = async () => {
+    if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
+      const procesosVisibles: ClienteProceso[] = []
+      Object.values(groupedProcesos).forEach(grupo => {
+        const periodoData = grupo.periodos[selectedPeriod]
+        if (periodoData) {
+          procesosVisibles.push(...periodoData.items)
+        }
+      })
+      await cargarHitosDeProcesos(procesosVisibles)
+    }
+  }
+
+  const handleMostrarObservacion = (observacion: string) => {
+    setObservacionSeleccionada(observacion)
+    setShowObservacionModal(true)
   }
 
   return (
@@ -253,68 +259,110 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
             : Object.entries(grupo.periodos)
           if (procesosFiltradosPorPeriodo.length === 0) return null
+
+          // Calcular total de hitos para este grupo de procesos
+          const totalHitos = procesosFiltradosPorPeriodo.reduce((total, [, periodo]) => {
+            return total + periodo.items.reduce((subtotal, proceso) => {
+              const hitosDelProceso = hitosPorProceso[proceso.id] || []
+              return subtotal + hitosDelProceso.length
+            }, 0)
+          }, 0)
+
           return (
             <Accordion.Item key={nombreProceso} eventKey={index.toString()}>
               <Accordion.Header>
                 <div className='d-flex justify-content-between w-100 me-3'>
                   <span>{nombreProceso}</span>
                   <span className='badge badge-light-primary'>
-                    {procesosFiltradosPorPeriodo.reduce((total, [, periodo]) => total + periodo.items.length, 0)}
+                    {totalHitos} hitos
                   </span>
                 </div>
               </Accordion.Header>
               <Accordion.Body>
                 {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
                   <div key={periodoKey} className='mb-5'>
-                    <h3 className='fs-5 text-gray-800 mb-3'>
-                      {getMesName(periodo.mes || 0)} {periodo.anio || '-'}
-                    </h3>
                     <div className='table-responsive'>
                       <table className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0'>
                         <thead>
                           <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
+                            <th>Proceso</th>
+                            <th>Hito</th>
+                            <th>Estado</th>
+                            <th>Fecha Estado</th>
                             <th>Fecha Inicio</th>
-                            <th className='text-center'>Hitos Pendientes</th>
-                            <th className='text-center'>Hitos Finalizados</th>
+                            <th>Fecha Fin</th>
+                            <th>Hora Límite</th>
+                            <th>Responsable</th>
                             <th className='text-end'>Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {periodo.items.map((proceso) => {
-                            const contadores = hitosContadores[proceso.id] || { nuevos: 0, finalizados: 0 }
-                            return (
-                              <tr key={proceso.id}>
-                                <td>{formatDate(proceso.fecha_inicio)}</td>
-                                <td className='text-center'>
-                                  {loadingContadores ? (
-                                    <div className="spinner-border spinner-border-sm text-primary" role="status">
-                                      <span className="visually-hidden">Cargando...</span>
-                                    </div>
-                                  ) : (
-                                    <span className='badge badge-light-info'>{contadores.nuevos}</span>
-                                  )}
-                                </td>
-                                <td className='text-center'>
-                                  {loadingContadores ? (
-                                    <div className="spinner-border spinner-border-sm text-primary" role="status">
-                                      <span className="visually-hidden">Cargando...</span>
-                                    </div>
-                                  ) : (
-                                    <span className='badge badge-light-success'>{contadores.finalizados}</span>
-                                  )}
-                                </td>
-                                <td className='text-end'>
-                                  <button
-                                    className='btn btn-sm btn-icon btn-light-primary'
-                                    onClick={() => handleVerHitos(proceso)}
-                                    title='Ver Calendario'
-                                  >
-                                    <i className='bi bi-calendar fs-5'></i>
-                                  </button>
-                                </td>
-                              </tr>
-                            )
-                          })}
+                          {loadingHitos ? (
+                            <tr>
+                              <td colSpan={9} className="text-center py-4">
+                                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                  <span className="visually-hidden">Cargando hitos...</span>
+                                </div>
+                                <span className="ms-2">Cargando hitos...</span>
+                              </td>
+                            </tr>
+                          ) : (
+                            periodo.items.map((proceso) => {
+                              const hitosDelProceso = hitosPorProceso[proceso.id] || []
+
+                              if (hitosDelProceso.length === 0) {
+                                return (
+                                  <tr key={proceso.id}>
+                                    <td className="fw-bold text-gray-800">{formatDate(proceso.fecha_inicio)}</td>
+                                    <td colSpan={8} className="text-muted text-center py-3">
+                                      No hay hitos para este proceso
+                                    </td>
+                                  </tr>
+                                )
+                              }
+
+                              return hitosDelProceso.map((hito, hitoIndex) => {
+                                const isFinalized = hito.estado === 'Finalizado'
+                                const isFirstHito = hitoIndex === 0
+
+                                return (
+                                  <tr key={`${proceso.id}-${hito.id}`}>
+                                    {isFirstHito && (
+                                      <td className="fw-bold text-gray-800" rowSpan={hitosDelProceso.length}>
+                                        {formatDate(proceso.fecha_inicio)}
+                                      </td>
+                                    )}
+                                    <td>{getNombreHito(hito.hito_id)}</td>
+                                    <td>
+                                      <span className={`badge ${isFinalized ? 'badge-success' : 'badge-primary'}`}>
+                                        {hito.estado}
+                                      </span>
+                                    </td>
+                                    <td>{hito.fecha_estado ? formatDateWithTime(hito.fecha_estado) : '-'}</td>
+                                    <td>{formatDate(hito.fecha_inicio)}</td>
+                                    <td>{hito.fecha_fin ? formatDate(hito.fecha_fin ?? null) : '-'}</td>
+                                    <td>{hito.hora_limite ? formatTime(hito.hora_limite) : '-'}</td>
+                                    <td>{hito.tipo}</td>
+                                    <td className='text-end'>
+                                      <button
+                                        className={`btn btn-sm ${isFinalized ? 'btn-light-secondary' : 'btn-light-primary'}`}
+                                        onClick={() => {
+                                          if (!isFinalized) {
+                                            setHitoSeleccionado(hito)
+                                            setShowCumplimentarHito(true)
+                                          }
+                                        }}
+                                        disabled={isFinalized}
+                                        title={isFinalized ? "Proceso finalizado - No se pueden subir documentos" : "Insertar documento"}
+                                      >
+                                        <i className="bi bi-upload"></i> {isFinalized ? 'Finalizado' : 'Cumplimentar'}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                )
+                              })
+                            })
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -325,85 +373,36 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           )
         })}
       </Accordion>
-      {/* Modal-like tabla de hitos */}
-      {showHitos && (
-        <div className="modal fade show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.2)' }}>
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Hitos del proceso</h5>
-                <button type="button" className="btn-close" onClick={() => setShowHitos(false)}></button>
-              </div>
-              <div className="modal-body">
-                {loadingHitos ? (
-                  <div className="text-center py-4">Cargando hitos...</div>
-                ) : hitos.length === 0 ? (
-                  <div className="text-center py-4">No hay hitos para este proceso.</div>
-                ) : (
-                  <table className="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0">
-                    <thead>
-                      <tr className="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th>Hito</th>
-                        <th>Estado</th>
-                        <th>Fecha Estado</th>
-                        <th>Fecha Inicio</th>
-                        <th>Fecha Fin</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hitos.map(hito => {
-                        const isFinalized = hito.estado === 'Finalizado'
-                        return (
-                          <tr key={hito.id}>
-                            <td>{getNombreHito(hito.hito_id)}</td>
-                            <td>
-                              <span className={`badge ${isFinalized ? 'badge-light-success' : 'badge-light-warning'}`}>
-                                {hito.estado}
-                              </span>
-                            </td>
-                            <td>{hito.fecha_estado ? formatDateWithTime(hito.fecha_estado) : '-'}</td>
-                            <td>{formatDate(hito.fecha_inicio)}</td>
-                            <td>{hito.fecha_fin ? formatDate(hito.fecha_fin) : '-'}</td>
-                            <td>
-                              <button
-                                className={`btn btn-sm ${isFinalized ? 'btn-light-secondary' : 'btn-light-primary'}`}
-                                onClick={() => {
-                                  if (!isFinalized) {
-                                    setHitoSeleccionado(hito)
-                                    setShowSubirDocumento(true)
-                                  }
-                                }}
-                                disabled={isFinalized}
-                                title={isFinalized ? "Proceso finalizado - No se pueden subir documentos" : "Insertar documento"}
-                              >
-                                <i className="bi bi-upload"></i> {isFinalized ? 'Finalizado' : 'Cumplimentar hito'}
-                              </button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
       {/* Modal para subir documento */}
       {hitoSeleccionado && (
-        <SubirDocumentoModal
-          show={showSubirDocumento}
-          onHide={() => setShowSubirDocumento(false)}
+        <CumplimentarHitoModal
+          show={showCumplimentarHito}
+          onHide={() => setShowCumplimentarHito(false)}
           idClienteProcesoHito={hitoSeleccionado.id}
           nombreDocumento={getNombreHito(hitoSeleccionado.hito_id)}
           estado={hitoSeleccionado.estado}
           onUploadSuccess={() => {
-            setShowSubirDocumento(false)
+            setShowCumplimentarHito(false)
             handleUploadSuccess()
           }}
         />
+      )}
+      {/* Modal para mostrar observación */}
+      {showObservacionModal && (
+        <div className="modal fade show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.2)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Observación</h5>
+                <button type="button" className="btn-close" onClick={() => setShowObservacionModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>{observacionSeleccionada}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

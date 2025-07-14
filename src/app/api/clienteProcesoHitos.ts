@@ -8,9 +8,13 @@ export interface ClienteProcesoHito {
   fecha_estado: string | null
   fecha_inicio: string
   fecha_fin: string | null
-  observacion: string | null
-  fecha_cumplimiento?: string | null
-  hora_cumplimiento?: string | null
+  hora_limite: string | null
+  tipo: string
+}
+
+export interface ClienteProcesoHitoUpdate {
+  estado: string
+  fecha_estado: string | null
 }
 
 export interface ClienteProcesoHitosResponse {
@@ -27,12 +31,17 @@ export const getAllClienteProcesoHitos = async (page?: number, limit?: number) =
   return response.data
 }
 
+export const getClienteProcesoHitoById = async (id: number) => {
+  const response = await api.get<ClienteProcesoHito>(`/cliente-proceso-hitos/${id}`)
+  return response.data
+}
+
 export const createClienteProcesoHito = async (clienteProcesoHito: Omit<ClienteProcesoHito, 'id'>) => {
   const response = await api.post<ClienteProcesoHito>('/cliente-proceso-hitos', clienteProcesoHito)
   return response.data
 }
 
-export const updateClienteProcesoHito = async (id: number, clienteProcesoHito: Omit<ClienteProcesoHito, 'id'>) => {
+export const updateClienteProcesoHito = async (id: number, clienteProcesoHito: Omit<ClienteProcesoHitoUpdate, 'id'>) => {
   const response = await api.put<ClienteProcesoHito>(`/cliente-proceso-hitos/${id}`, clienteProcesoHito)
   return response.data
 }
@@ -43,22 +52,5 @@ export const deleteClienteProcesoHito = async (id: number) => {
 
 export const getClienteProcesoHitosByProceso = async (idClienteProceso: number) => {
   const response = await api.get<ClienteProcesoHito[]>(`/cliente-proceso-hitos/cliente-proceso/${idClienteProceso}`)
-  return response.data
-}
-
-// Cambia el estado de un hito a 'finalizado'
-export const finalizarClienteProcesoHito = async (
-  id: number,
-  fechaCumplimiento?: string,
-  horaCumplimiento?: string,
-  observacion?: string
-) => {
-  const response = await api.put<ClienteProcesoHito>(`/cliente-proceso-hitos/${id}`, {
-    estado: 'Finalizado',
-    fecha_estado: new Date().toISOString(),
-    fecha_cumplimiento: fechaCumplimiento,
-    hora_cumplimiento: horaCumplimiento,
-    observacion: observacion || '',
-  })
   return response.data
 }

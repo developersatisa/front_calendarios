@@ -39,7 +39,7 @@ const MetadatoModal: FC<Props> = ({ show, onHide, onSave, metadato, areasActuale
         activo: true
       })
     }
-  }, [metadato])
+  }, [metadato, show])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

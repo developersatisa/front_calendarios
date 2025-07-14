@@ -7,8 +7,10 @@ export interface Hito {
   temporalidad: string
   fecha_inicio: string
   fecha_fin: string | null
+  hora_limite: string | null
   descripcion: string | null
   obligatorio: number
+  tipo: string
 }
 
 export interface HitosResponse {

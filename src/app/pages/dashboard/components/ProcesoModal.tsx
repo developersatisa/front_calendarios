@@ -40,7 +40,7 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
         fecha_fin: null,
       })
     }
-  }, [proceso])
+  }, [proceso, show])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,10 +97,12 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
                   onChange={(e) => setFormData({...formData, temporalidad: e.target.value})}
                   required
                 >
-                  <option value='dia'>Día</option>
-                  <option value='semana'>Semana</option>
-                  <option value='mes'>Mes</option>
-                  <option value='año'>Año</option>
+                  <option value='dia'>Diaria</option>
+                  <option value='semana'>Semanal</option>
+                  <option value='quincena'>Quincenal</option>
+                  <option value='mes'>Mensual</option>
+                  <option value='trimestre'>Trimestral</option>
+                  <option value='año'>Anual</option>
                 </select>
               </div>
             </div>
