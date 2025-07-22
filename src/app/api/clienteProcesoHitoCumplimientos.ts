@@ -59,3 +59,20 @@ export const updateClienteProcesoHitoCumplimiento = async (
 export const deleteClienteProcesoHitoCumplimiento = async (id: number) => {
   return await api.delete(`/cliente-proceso-hito-cumplimientos/${id}`)
 }
+
+export const getClienteProcesoHitoCumplimientosByHito = async (clienteProcesoHitoId: number,
+  page?: number,
+  limit?: number,
+  sortField?: string,
+  sortDirection?: 'asc' | 'desc'
+) => {
+  const params = new URLSearchParams()
+  if (page && page > 0) params.append('page', String(page))
+  if (limit && limit > 0) params.append('limit', String(limit))
+  if (sortField) params.append('sort_field', sortField)
+  if (sortDirection) params.append('sort_direction', sortDirection)
+
+  const response = await api.get<ClienteProcesoHitoCumplimientosResponse>
+    (`/cliente-proceso-hito-cumplimientos/cliente-proceso-hito/${clienteProcesoHitoId}` + (params.toString() ? `?${params.toString()}` : ''))
+  return response.data.cumplimientos || []
+}

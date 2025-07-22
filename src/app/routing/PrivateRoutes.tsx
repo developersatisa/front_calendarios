@@ -14,8 +14,9 @@ import {WithChildren} from '../../_metronic/helpers'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 import PlantillasList from '../pages/dashboard/PlantillasList'
 import MetadatosList from '../pages/dashboard/MetadatosList'
-import ClientesDocumentalCalendarioList from '../pages/dashboard/ClientesDocumentalCalendarioList'
-import CalendarioCliente from '../pages/dashboard/components/calendario/CalendarioCliente'
+import ClientesDocumentalCalendarioList from '../pages/cliente-documental/ClientesDocumentalCalendarioList'
+import CalendarioCliente from '../pages/cliente-documental/components/calendario/CalendarioCliente'
+import GestorDocumental from '../pages/cliente-documental/components/gestor_documental/GestorDocumental'
 import MetricasList from '../pages/dashboard/MetricasList'
 
 
@@ -43,7 +44,8 @@ const PrivateRoutes = () => {
         <Route path='plantillas' element={<PlantillasList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioClienteWrapper />} />
-        <Route path='metadatos' element={<MetadatosList />} />
+        <Route path='gestor-documental' element={<GestorDocumental />} />
+        {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
         {/* Lazy Modules */}
         <Route

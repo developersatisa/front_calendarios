@@ -8,8 +8,8 @@ const entities = [
   { name: 'Hitos', route: '/hitos', icon: 'flag' },
   { name: 'Procesos', route: '/procesos', icon: 'flow' },
   { name: 'Plantillas', route: '/plantillas', icon: 'copy' },
-  { name: 'Clientes', route: '/clientes', icon: 'user' },
-  { name: 'Metadatos', route: '/metadatos', icon: 'gear' }
+  { name: 'Clientes', route: '/clientes', icon: 'user' }
+  // { name: 'Metadatos', route: '/metadatos', icon: 'gear' }
 ];
 
 const EntityDashboard = () => {

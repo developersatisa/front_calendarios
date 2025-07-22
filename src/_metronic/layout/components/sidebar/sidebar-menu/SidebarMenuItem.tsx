@@ -34,15 +34,28 @@ const SidebarMenuItem: FC<Props & WithChildren> = ({
             <span className='bullet bullet-dot'></span>
           </span>
         )}
+
+        {/* Renderizado de iconos SVG */}
         {icon && app?.sidebar?.default?.menu?.iconType === 'svg' && (
           <span className='menu-icon'>
-            {' '}
             <KTIcon iconName={icon} className='fs-2' />
           </span>
         )}
+
+        {/* Renderizado de iconos de fuente */}
         {fontIcon && app?.sidebar?.default?.menu?.iconType === 'font' && (
-          <i className={clsx('bi fs-3', fontIcon)}></i>
+          <span className='menu-icon'>
+            <i className={clsx('bi fs-3', fontIcon)}></i>
+          </span>
         )}
+
+        {/* Si no hay configuración específica, usar font icons por defecto */}
+        {fontIcon && !app?.sidebar?.default?.menu?.iconType && (
+          <span className='menu-icon'>
+            <i className={clsx('bi fs-3', fontIcon)}></i>
+          </span>
+        )}
+
         <span className='menu-title'>{title}</span>
       </Link>
       {children}

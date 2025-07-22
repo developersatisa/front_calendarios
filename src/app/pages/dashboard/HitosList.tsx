@@ -198,20 +198,6 @@ const HitosList: FC = () => {
                     </th>
                     <th
                       className='cursor-pointer user-select-none hover-primary'
-                      onClick={() => handleSort('frecuencia')}
-                      style={{ transition: 'all 0.2s' }}
-                    >
-                      Frecuencia {getSortIcon('frecuencia')}
-                    </th>
-                    <th
-                      className='cursor-pointer user-select-none hover-primary'
-                      onClick={() => handleSort('temporalidad')}
-                      style={{ transition: 'all 0.2s' }}
-                    >
-                      Temporalidad {getSortIcon('temporalidad')}
-                    </th>
-                    <th
-                      className='cursor-pointer user-select-none hover-primary'
                       onClick={() => handleSort('fecha_inicio')}
                       style={{ transition: 'all 0.2s' }}
                     >
@@ -222,7 +208,7 @@ const HitosList: FC = () => {
                       onClick={() => handleSort('fecha_fin')}
                       style={{ transition: 'all 0.2s' }}
                     >
-                      Fecha Fin {getSortIcon('fecha_fin')}
+                      Fecha Límite {getSortIcon('fecha_fin')}
                     </th>
                     <th
                       className='cursor-pointer user-select-none hover-primary'
@@ -254,8 +240,6 @@ const HitosList: FC = () => {
                       <td>{hito.id}</td>
                       <td>{hito.nombre}</td>
                       <td>{hito.descripcion || '-'}</td>
-                      <td>{hito.frecuencia}</td>
-                      <td className='text-capitalize'>{hito.temporalidad}</td>
                       <td>{new Date(hito.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                       <td>{hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                       <td>{hito.hora_limite ? hito.hora_limite.slice(0,5) : '-'}</td>

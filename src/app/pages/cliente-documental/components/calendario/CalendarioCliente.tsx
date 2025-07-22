@@ -5,6 +5,7 @@ import { ClienteProceso, getClienteProcesosByCliente } from '../../../../api/cli
 import { Proceso, getAllProcesos } from '../../../../api/procesos'
 import { getClienteProcesoHitosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { Hito, getAllHitos } from '../../../../api/hitos'
+import { getClienteProcesoHitoCumplimientosByHito, ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 import CumplimentarHitoModal from './CumplimentarHitoModal'
 
 interface Props {
@@ -23,6 +24,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [hitoSeleccionado, setHitoSeleccionado] = useState<ClienteProcesoHito | null>(null)
   const [showObservacionModal, setShowObservacionModal] = useState(false)
   const [observacionSeleccionada, setObservacionSeleccionada] = useState('')
+  const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -68,6 +70,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const cargarHitosDeProcesos = async (procesosACarga: ClienteProceso[]) => {
     if (procesosACarga.length === 0) {
       setHitosPorProceso({})
+      setCumplimientosPorHito({})
       return
     }
 
@@ -91,13 +94,52 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
         )
       })
 
+      // Establecer hitos inmediatamente para que la tabla se muestre
       setHitosPorProceso(hitosMap)
+
+      // Cargar cumplimientos de forma asíncrona y no bloqueante
+      cargarCumplimientosAsync(hitosMap)
+
     } catch (error) {
       console.error('Error cargando hitos:', error)
       setHitosPorProceso({})
+      setCumplimientosPorHito({})
     }
 
     setLoadingHitos(false)
+  }
+
+  // Función separada para cargar cumplimientos de forma asíncrona
+  const cargarCumplimientosAsync = async (hitosMap: Record<number, ClienteProcesoHito[]>) => {
+    try {
+      const cumplimientosMap: Record<number, ClienteProcesoHitoCumplimiento[]> = {}
+      const todosLosHitos = Object.values(hitosMap).flat()
+
+      if (todosLosHitos.length > 0) {
+        const cumplimientosPromises = todosLosHitos.map(hito =>
+          getClienteProcesoHitoCumplimientosByHito(hito.id, 0, 1, 'id', 'desc')
+            .then(cumplimientos => ({ hitoId: hito.id, cumplimientos: cumplimientos || [] }))
+            .catch((error) => {
+              console.warn(`Error cargando cumplimientos para hito ${hito.id}:`, error)
+              return { hitoId: hito.id, cumplimientos: [] }
+            })
+        )
+
+        const resultadosCumplimientos = await Promise.all(cumplimientosPromises)
+
+        // Organizar cumplimientos por hito (ya vienen ordenados de la API)
+        resultadosCumplimientos.forEach(({ hitoId, cumplimientos }) => {
+          cumplimientosMap[hitoId] = cumplimientos || []
+        })
+
+        setCumplimientosPorHito(cumplimientosMap)
+      } else {
+        setCumplimientosPorHito({})
+      }
+    } catch (error) {
+      console.warn('Error cargando cumplimientos (no bloqueante):', error)
+      // No limpiar cumplimientos existentes en caso de error
+    }
   }
 
   // Agrupar procesos por tipo y subgrupar por período
@@ -215,6 +257,49 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     }
   }
 
+  const getUltimaFechaCumplimiento = (hitoId: number) => {
+    const cumplimientos = cumplimientosPorHito[hitoId]
+    if (!cumplimientos || cumplimientos.length === 0) {
+      return '-'
+    }
+
+    try {
+      const ultimoCumplimiento = cumplimientos[0] // Ya están ordenados por fecha descendente
+
+      // Validar que tenemos fecha y hora
+      if (!ultimoCumplimiento.fecha || !ultimoCumplimiento.hora) {
+        return '-'
+      }
+
+      // Manejar formato de hora HH:MM:SS o HH:MM
+      let horaFormateada = ultimoCumplimiento.hora
+      if (horaFormateada.includes(':')) {
+        const partes = horaFormateada.split(':')
+        horaFormateada = `${partes[0]}:${partes[1]}` // Solo tomar HH:MM
+      }
+
+      // Crear fecha completa y formatearla
+      const fechaCompleta = `${ultimoCumplimiento.fecha}T${horaFormateada}:00`
+      const fecha = new Date(fechaCompleta)
+
+      // Verificar que la fecha es válida
+      if (isNaN(fecha.getTime())) {
+        return '-'
+      }
+
+      return fecha.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (error) {
+      console.warn('Error formateando fecha de cumplimiento:', error)
+      return '-'
+    }
+  }
+
   // Recargar hitos después de subir documento
   const handleUploadSuccess = async () => {
     if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
@@ -285,14 +370,14 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                       <table className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0'>
                         <thead>
                           <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                            <th>Proceso</th>
                             <th>Hito</th>
                             <th>Estado</th>
-                            <th>Fecha Estado</th>
+                            <th>Fecha Actualización</th>
                             <th>Fecha Inicio</th>
-                            <th>Fecha Fin</th>
+                            <th>Fecha Límite</th>
                             <th>Hora Límite</th>
                             <th>Responsable</th>
+                            <th>Fecha Cumplimiento</th>
                             <th className='text-end'>Acciones</th>
                           </tr>
                         </thead>
@@ -327,11 +412,6 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
                                 return (
                                   <tr key={`${proceso.id}-${hito.id}`}>
-                                    {isFirstHito && (
-                                      <td className="fw-bold text-gray-800" rowSpan={hitosDelProceso.length}>
-                                        {formatDate(proceso.fecha_inicio)}
-                                      </td>
-                                    )}
                                     <td>{getNombreHito(hito.hito_id)}</td>
                                     <td>
                                       <span className={`badge ${isFinalized ? 'badge-success' : 'badge-primary'}`}>
@@ -343,6 +423,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                     <td>{hito.fecha_fin ? formatDate(hito.fecha_fin ?? null) : '-'}</td>
                                     <td>{hito.hora_limite ? formatTime(hito.hora_limite) : '-'}</td>
                                     <td>{hito.tipo}</td>
+                                    <td>{getUltimaFechaCumplimiento(hito.id)}</td>
                                     <td className='text-end'>
                                       <button
                                         className={`btn btn-sm ${isFinalized ? 'btn-light-secondary' : 'btn-light-primary'}`}

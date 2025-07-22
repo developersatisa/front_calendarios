@@ -2,7 +2,6 @@ import { FC, useRef, useState, useEffect } from 'react'
 import { Modal, Button, Form, Accordion, ProgressBar, Alert } from 'react-bootstrap'
 import { updateClienteProcesoHito, getClienteProcesoHitoById } from '../../../../api/clienteProcesoHitos'
 import { subirDocumento } from '../../../../api/documentos'
-import { getMetadatosVisibles, Metadato } from '../../../../api/metadatos'
 import { createClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 
 interface Props {
@@ -30,16 +29,13 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     return today.toISOString().split('T')[0]
   })
   const [fechaEditable, setFechaEditable] = useState(false)
-  const [horaCumplimiento, setHoraCumplimiento] = useState('00:00')
+  const [horaCumplimiento, setHoraCumplimiento] = useState(() => {
+    const now = new Date()
+    return now.toTimeString().slice(0, 5) // Formato HH:MM
+  })
   const [horaEditable, setHoraEditable] = useState(false)
   const [observacion, setObservacion] = useState('')
   const [dragActive, setDragActive] = useState(false)
-
-  // Estados para metadatos
-  const [metadatosVisibles, setMetadatosVisibles] = useState<Metadato[]>([])
-  const [valoresMetadatos, setValoresMetadatos] = useState<Record<number, string>>({})
-  const [loadingMetadatos, setLoadingMetadatos] = useState(false)
-  const [errorMetadatos, setErrorMetadatos] = useState<Record<number, boolean>>({})
 
   // Estados para manejo de subida de archivos
   const [fileUploadStatuses, setFileUploadStatuses] = useState<FileUploadStatus[]>([])
@@ -48,13 +44,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isFinalized = estado === 'Finalizado'
-
-  // Cargar metadatos visibles cuando se abre el modal
-  useEffect(() => {
-    if (show && !isFinalized) {
-      cargarMetadatosVisibles()
-    }
-  }, [show, isFinalized])
 
   // Reiniciar formulario cuando se abre el modal
   useEffect(() => {
@@ -69,80 +58,15 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     setHoraEditable(false)
     setFiles([])
     setObservacion('')
-    setHoraCumplimiento('00:00')
+    const now = new Date()
+    setHoraCumplimiento(now.toTimeString().slice(0, 5))
     const today = new Date()
     setFechaCumplimiento(today.toISOString().split('T')[0])
-
-    // Resetear metadatos
-    const valoresVacios: Record<number, string> = {}
-    metadatosVisibles.forEach(metadato => {
-      valoresVacios[metadato.id] = ''
-    })
-    setValoresMetadatos(valoresVacios)
-    setErrorMetadatos({})
 
     // Resetear estados de subida
     setFileUploadStatuses([])
     setUploadProgress(0)
     setShowUploadResults(false)
-  }
-
-  const cargarMetadatosVisibles = async () => {
-    try {
-      setLoadingMetadatos(true)
-      const metadatos = await getMetadatosVisibles('alejandro.quiros@atisa.es')
-
-      // Filtrar solo metadatos manuales
-      const metadatosManuales = metadatos.filter(metadato => metadato.tipo_generacion === 'manual')
-      setMetadatosVisibles(metadatosManuales)
-
-      // Inicializar valores vacíos para cada metadato manual
-      const valoresIniciales: Record<number, string> = {}
-      metadatosManuales.forEach(metadato => {
-        valoresIniciales[metadato.id] = ''
-      })
-      setValoresMetadatos(valoresIniciales)
-    } catch (error) {
-      console.error('Error al cargar metadatos visibles:', error)
-    } finally {
-      setLoadingMetadatos(false)
-    }
-  }
-
-  const handleMetadatoChange = (metadatoId: number, valor: string) => {
-    setValoresMetadatos(prev => ({
-      ...prev,
-      [metadatoId]: valor
-    }))
-
-    // Limpiar error cuando el usuario empiece a escribir
-    if (errorMetadatos[metadatoId] && valor.trim() !== '') {
-      setErrorMetadatos(prev => ({
-        ...prev,
-        [metadatoId]: false
-      }))
-    }
-  }
-
-  // Función para validar metadatos obligatorios
-  const validarMetadatos = (): boolean => {
-    if (!incluirDocumento || metadatosVisibles.length === 0) {
-      return true // No hay metadatos que validar
-    }
-
-    const errores: Record<number, boolean> = {}
-    let hayErrores = false
-
-    metadatosVisibles.forEach(metadato => {
-      const valor = valoresMetadatos[metadato.id]
-      if (!valor || valor.trim() === '') {
-        errores[metadato.id] = true
-        hayErrores = true
-      }
-    })
-
-    setErrorMetadatos(errores)
-    return !hayErrores
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,10 +128,14 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
       const newFiles = prev.filter((_, index) => index !== indexToRemove)
 
       // Actualizar estados de subida
-      const newStatuses: FileUploadStatus[] = newFiles.map(file => ({
-        file,
-        status: 'pending'
-      }))
+      const newStatuses: FileUploadStatus[] = newFiles.map((file, index) => {
+        // Mantener los datos existentes si el archivo ya estaba
+        const existingStatus = fileUploadStatuses.find(status => status.file === file)
+        return existingStatus || {
+          file,
+          status: 'pending'
+        }
+      })
       setFileUploadStatuses(newStatuses)
       setShowUploadResults(false)
       setUploadProgress(0)
@@ -234,8 +162,9 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     const checked = e.target.checked
     setHoraEditable(checked)
     if (!checked) {
-      // Si se desmarca, restaurar hora a 00:00
-      setHoraCumplimiento('00:00')
+      // Si se desmarca, restaurar hora actual
+      const now = new Date()
+      setHoraCumplimiento(now.toTimeString().slice(0, 5))
     }
   }
 
@@ -245,12 +174,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     // Validar que si se va a incluir documento, haya al menos un archivo
     if (incluirDocumento && files.length === 0) {
       alert('Por favor selecciona al menos un archivo para subir')
-      return
-    }
-
-    // Validar metadatos obligatorios
-    if (incluirDocumento && !validarMetadatos()) {
-      alert('Por favor completa todos los campos de metadatos obligatorios')
       return
     }
 
@@ -333,9 +256,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
         usuario: "alejandro.quiros@atisa.es"
       })
 
-      // TODO: Cuando se implemente, también enviar los metadatos
-      // Los metadatos están disponibles en valoresMetadatos
-
       onUploadSuccess()
       onHide()
 
@@ -347,18 +267,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     } finally {
       setLoading(false)
     }
-  }
-
-  // Verificar si hay metadatos incompletos
-  const hayMetadatosIncompletos = () => {
-    if (!incluirDocumento || metadatosVisibles.length === 0) {
-      return false
-    }
-
-    return metadatosVisibles.some(metadato => {
-      const valor = valoresMetadatos[metadato.id]
-      return !valor || valor.trim() === ''
-    })
   }
 
   return (
@@ -408,7 +316,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
                 className={horaEditable ? 'form-control' : 'form-control bg-light'}
               />
               <Form.Text className="text-muted">
-                {horaEditable ? 'Puedes modificar la hora de cumplimiento' : 'Hora 00:00 por defecto'}
+                {horaEditable ? 'Puedes modificar la hora de cumplimiento' : 'Hora actual por defecto'}
               </Form.Text>
             </Form.Group>
 
@@ -436,9 +344,8 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
               <div className="mb-4">
                 {/* Zona de Drag & Drop */}
                 <div
-                  className={`border border-2 border-dashed rounded p-4 text-center position-relative ${
-                    dragActive ? 'border-primary bg-light' : 'border-secondary'
-                  }`}
+                  className={`border border-2 border-dashed rounded p-4 text-center position-relative ${dragActive ? 'border-primary bg-light' : 'border-secondary'
+                    }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
@@ -468,29 +375,32 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
                 {files.length > 0 && (
                   <div className="mt-3">
                     <h6 className="fw-bold mb-2">Archivos seleccionados ({files.length})</h6>
-                    <div className="border rounded p-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       {files.map((file, index) => (
-                        <div key={index} className="d-flex align-items-center justify-content-between p-2 border-bottom">
-                          <div className="d-flex align-items-center">
-                            <i className="bi bi-file-earmark text-primary me-2"></i>
-                            <div>
-                              <div className="fw-semibold">{file.name}</div>
-                              <small className="text-muted">
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </small>
+                        <div key={index} className="border rounded mb-2 p-3">
+                          {/* Cabecera del archivo */}
+                          <div className="d-flex align-items-center justify-content-between">
+                            <div className="d-flex align-items-center">
+                              <i className="bi bi-file-earmark text-primary me-2"></i>
+                              <div>
+                                <div className="fw-semibold">{file.name}</div>
+                                <small className="text-muted">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </small>
+                              </div>
                             </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeFile(index)
+                              }}
+                              title="Eliminar archivo"
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              removeFile(index)
-                            }}
-                            title="Eliminar archivo"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
                         </div>
                       ))}
                     </div>
@@ -581,76 +491,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
               </div>
             )}
 
-            {/* Sección de Metadatos Visibles */}
-            {incluirDocumento && (
-              loadingMetadatos ? (
-                <div className="text-center py-3">
-                  <div className="spinner-border spinner-border-sm me-2" />
-                  Cargando metadatos...
-                </div>
-              ) : metadatosVisibles.length > 0 && (
-                <>
-                  <hr className="my-4" />
-                  <Accordion className="mb-3">
-                    <Accordion.Item eventKey="0">
-                      <Accordion.Header>
-                        <div className="d-flex align-items-center justify-content-between w-100 me-3">
-                          <div className="d-flex align-items-center">
-                            <i className="bi bi-tags me-2"></i>
-                            <span className="fw-bold">Metadatos del documento</span>
-                          </div>
-                          <span className="badge bg-secondary">{metadatosVisibles.length}</span>
-                        </div>
-                      </Accordion.Header>
-                      <Accordion.Body style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                        <div className="row">
-                          {metadatosVisibles.map((metadato, index) => (
-                            <div key={metadato.id} className={`col-md-${metadatosVisibles.length > 4 ? '6' : '12'} mb-3`}>
-                              <Form.Group>
-                                <Form.Label className="fw-semibold text-gray-700 d-flex align-items-center">
-                                  {metadato.nombre}
-                                  <span className="text-danger ms-1">*</span>
-                                  {metadato.descripcion && (
-                                    <i
-                                      className="bi bi-info-circle ms-1 text-muted"
-                                      title={metadato.descripcion}
-                                      style={{ cursor: 'help' }}
-                                    ></i>
-                                  )}
-                                </Form.Label>
-                                <Form.Control
-                                  type="text"
-                                  size="sm"
-                                  value={valoresMetadatos[metadato.id] || ''}
-                                  onChange={(e) => handleMetadatoChange(metadato.id, e.target.value)}
-                                  placeholder={`Ingresa ${metadato.nombre.toLowerCase()}`}
-                                  isInvalid={errorMetadatos[metadato.id]}
-                                  required
-                                />
-                                {errorMetadatos[metadato.id] && (
-                                  <Form.Control.Feedback type="invalid">
-                                    Este campo es obligatorio
-                                  </Form.Control.Feedback>
-                                )}
-                              </Form.Group>
-                            </div>
-                          ))}
-                        </div>
-                        {metadatosVisibles.length > 8 && (
-                          <div className="text-center mt-3">
-                            <small className="text-muted">
-                              <i className="bi bi-info-circle me-1"></i>
-                              {metadatosVisibles.length} metadatos disponibles
-                            </small>
-                          </div>
-                        )}
-                      </Accordion.Body>
-                    </Accordion.Item>
-                  </Accordion>
-                  <hr className="my-4" />
-                </>
-              )
-            )}
             <Form.Group className="mb-3">
               <Form.Label className="fw-bold">Observaciones</Form.Label>
               <Form.Control
@@ -666,9 +506,9 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
               variant="primary"
               type="submit"
               className="mt-3"
-              disabled={loading || (incluirDocumento && files.length === 0) || (incluirDocumento && hayMetadatosIncompletos())}
+              disabled={loading || (incluirDocumento && files.length === 0)}
             >
-              {loading ? 'Procesando...' : 'Cumplimentar Hito'}
+              {loading ? 'Procesando...' : 'Cumplimentar'}
             </Button>
           </Form>
         )}

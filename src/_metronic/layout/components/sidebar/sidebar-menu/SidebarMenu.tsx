@@ -5,9 +5,15 @@ const SidebarMenuMain = () => {
     <>
       <SidebarMenuItem
         to='/dashboard'
-        icon='/media/icons/duotune/general/gen025.svg'
+        icon='table'
+        fontIcon='bi-table'
         title='Dashboard'
-        fontIcon='bi-app-indicator'
+      />
+      <SidebarMenuItem
+        to='/clientes-documental-calendario'
+        icon='calendar'
+        fontIcon='bi-calendar'
+        title='Gestor Documental/Calendario'
       />
     </>
   )

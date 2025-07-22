@@ -25,7 +25,7 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
       setFormData({
         nombre: proceso.nombre,
         descripcion: proceso.descripcion,
-        frecuencia: proceso.frecuencia,
+        frecuencia: 1,
         temporalidad: proceso.temporalidad,
         fecha_inicio: proceso.fecha_inicio,
         fecha_fin: proceso.fecha_fin,
@@ -77,34 +77,18 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
               />
             </div>
 
-            <div className='row mb-7'>
-              <div className='col-6'>
-                <label className='required fw-bold fs-6 mb-2'>Frecuencia</label>
-                <input
-                  type='number'
-                  className='form-control form-control-solid'
-                  value={formData.frecuencia}
-                  onChange={(e) => setFormData({...formData, frecuencia: parseInt(e.target.value) || 1})}
-                  min={1}
-                  required
-                />
-              </div>
-              <div className='col-6'>
-                <label className='required fw-bold fs-6 mb-2'>Temporalidad</label>
-                <select
-                  className='form-select form-select-solid'
-                  value={formData.temporalidad}
-                  onChange={(e) => setFormData({...formData, temporalidad: e.target.value})}
-                  required
-                >
-                  <option value='dia'>Diaria</option>
-                  <option value='semana'>Semanal</option>
-                  <option value='quincena'>Quincenal</option>
-                  <option value='mes'>Mensual</option>
-                  <option value='trimestre'>Trimestral</option>
-                  <option value='año'>Anual</option>
-                </select>
-              </div>
+            <div className='fv-row mb-7'>
+              <label className='required fw-bold fs-6 mb-2'>Temporalidad</label>
+              <select
+                className='form-select form-select-solid'
+                value={formData.temporalidad}
+                onChange={(e) => setFormData({...formData, temporalidad: e.target.value})}
+                required
+              >
+                <option value='mes'>Mensual</option>
+                <option value='trimestre'>Trimestral</option>
+                <option value='año'>Anual</option>
+              </select>
             </div>
 
             <div className='row mb-7'>

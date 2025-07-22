@@ -3,8 +3,6 @@ import api from './axiosConfig'
 export interface Hito {
   id: number
   nombre: string
-  frecuencia: number
-  temporalidad: string
   fecha_inicio: string
   fecha_fin: string | null
   hora_limite: string | null

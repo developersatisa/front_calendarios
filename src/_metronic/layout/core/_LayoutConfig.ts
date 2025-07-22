@@ -69,7 +69,7 @@ export const DefaultConfig: ILayout = {
           },
         },
         menu: {
-          iconType: 'svg',
+          iconType: 'font',
         },
       },
     },
@@ -84,10 +84,10 @@ export const DefaultConfig: ILayout = {
         desktop: false,
         mobile: false,
       },
-      // custom settings,
-      filterButton: true,
+      // custom settings - desactivando todos los botones
+      filterButton: false,
       daterangepickerButton: false,
-      primaryButton: true,
+      primaryButton: false,
       primaryButtonLabel: 'Create',
       primaryButtonModal: 'create-app',
     },
