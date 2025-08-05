@@ -171,6 +171,13 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    let fechaActual = new Date();
+    let fechaCumplimientoDate = new Date(fechaCumplimiento);
+    if(fechaCumplimientoDate > fechaActual) {
+      alert('La fecha de cumplimiento no puede ser mayor a la fecha actual')
+      return
+    }
+
     // Validar que si se va a incluir documento, haya al menos un archivo
     if (incluirDocumento && files.length === 0) {
       alert('Por favor selecciona al menos un archivo para subir')
