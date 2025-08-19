@@ -53,3 +53,9 @@ export const descargarDocumento = async (idDocumento: number): Promise<Blob> => 
     })
     return response.data
 }
+
+// Función para eliminar un documento
+export const eliminarDocumento = async (idDocumento: number) => {
+    const response = await api.delete(`/documental-documentos/${idDocumento}`)
+    return response.data
+}

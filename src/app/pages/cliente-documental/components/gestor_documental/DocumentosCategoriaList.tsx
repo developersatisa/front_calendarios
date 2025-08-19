@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useState } from 'react'
 import { Modal, Button, Table, Badge, Spinner, Alert } from 'react-bootstrap'
-import { DocumentalDocumento, getDocumentosByClienteAndCategoria, descargarDocumento } from '../../../../api/documentalDocumentos'
+import { DocumentalDocumento, getDocumentosByClienteAndCategoria, descargarDocumento, eliminarDocumento } from '../../../../api/documentalDocumentos'
 
 interface Props {
   show: boolean
@@ -21,6 +21,9 @@ const DocumentosCategoriaList: FC<Props> = ({
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false)
+  const [documentoToDelete, setDocumentoToDelete] = useState<DocumentalDocumento | null>(null)
 
   useEffect(() => {
     if (show && categoriaId && clienteId) {
@@ -77,6 +80,28 @@ const DocumentosCategoriaList: FC<Props> = ({
     } finally {
       setDownloadingId(null)
     }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!documentoToDelete) return
+
+    try {
+      setDeletingId(documentoToDelete.id)
+      await eliminarDocumento(documentoToDelete.id)
+      setDocumentos(documentos.filter(doc => doc.id !== documentoToDelete.id))
+      setShowDeleteConfirm(false)
+      setDocumentoToDelete(null)
+    } catch (err) {
+      console.error('Error al eliminar documento:', err)
+      alert('Error al eliminar el documento. Por favor, inténtalo de nuevo.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false)
+    setDocumentoToDelete(null)
   }
 
   const getFileIcon = (fileName: string) => {
@@ -199,8 +224,17 @@ const DocumentosCategoriaList: FC<Props> = ({
                                 variant="outline-danger"
                                 size="sm"
                                 title="Eliminar documento"
+                                onClick={() => {
+                                  setDocumentoToDelete(documento)
+                                  setShowDeleteConfirm(true)
+                                }}
+                                disabled={deletingId === documento.id}
                               >
-                                <i className="bi bi-trash"></i>
+                                {deletingId === documento.id ? (
+                                  <Spinner animation="border" size="sm" />
+                                ) : (
+                                  <i className="bi bi-trash"></i>
+                                )}
                               </Button>
                             </div>
                           </td>
@@ -224,6 +258,33 @@ const DocumentosCategoriaList: FC<Props> = ({
           </Button>
         </div>
       </Modal.Footer>
+
+      {showDeleteConfirm && documentoToDelete && (
+        <Modal show={showDeleteConfirm} onHide={handleDeleteCancel} centered>
+          <Modal.Header closeButton className="bg-light-danger">
+            <Modal.Title className="d-flex align-items-center">
+              <i className="bi bi-trash-fill text-danger me-2"></i>
+              Confirmar eliminación
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            ¿Estás seguro de que quieres eliminar el documento "{documentoToDelete.original_file_name}"?
+            Esta acción no se puede deshacer.
+          </Modal.Body>
+          <Modal.Footer className="bg-light">
+            <Button variant="outline-secondary" onClick={handleDeleteCancel}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDeleteConfirm} disabled={deletingId === documentoToDelete.id}>
+              {deletingId === documentoToDelete.id ? (
+                <Spinner animation="border" size="sm" />
+              ) : (
+                "Eliminar"
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </Modal>
   )
 }
