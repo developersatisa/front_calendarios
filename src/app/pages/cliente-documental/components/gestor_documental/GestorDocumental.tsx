@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useState } from 'react'
 import { KTCard, KTCardBody } from '../../../../../_metronic/helpers'
-import { DocumentalCategoria, getAllDocumentalCategorias } from '../../../../api/documentalCategorias'
+import { DocumentalCategoria, getDocumentalCategoriasByClienteId } from '../../../../api/documentalCategorias'
 import { Cliente, getClienteById } from '../../../../api/clientes'
 import CategorizarDocumentoModal from './CategorizarDocumentoModal'
 import DocumentosCategoriaList from './DocumentosCategoriaList'
@@ -38,7 +38,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getAllDocumentalCategorias()
+      const data = await getDocumentalCategoriasByClienteId(clienteId)
       setCategorias(data.documental_categorias)
     } catch (err) {
       console.error('Error al cargar categorías de documentos:', err)

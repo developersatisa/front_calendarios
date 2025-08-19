@@ -39,10 +39,22 @@ export const getAllDocumentalCategorias = async (
   }
 }
 
+// Obtener categorías de documentos por clienteID
+export const getDocumentalCategoriasByClienteId = async (idCliente: string) => {
+  const response = await api.get<DocumentalCategoriasResponse>(`/documental-categorias/cliente/${idCliente}`)
+  return {
+    documental_categorias: response.data?.documental_categorias || [],
+    total: response.data?.total || 0
+  }
+}
+
 // Obtener una categoría de documento por ID
 export const getDocumentalCategoriaById = async (id: number) => {
-  const response = await api.get<DocumentalCategoria>(`/documental-categorias/${id}`)
-  return response.data
+  const response = await api.get<DocumentalCategoriasResponse>(`/documental-categorias/${id}`)
+  return {
+    documental_categorias: response.data?.documental_categorias || [],
+    total: response.data?.total || 0
+  }
 }
 
 // Crear una nueva categoría de documento
