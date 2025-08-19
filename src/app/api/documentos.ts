@@ -4,8 +4,6 @@ export interface DocumentoResponse {
   id: number
   nombre_documento: string
   cliente_proceso_hito_id: number
-  fecha_subida: string
-  url?: string
 }
 
 // Subir un documento para un cliente proceso hito

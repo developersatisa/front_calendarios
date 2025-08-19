@@ -44,7 +44,7 @@ const PrivateRoutes = () => {
         <Route path='plantillas' element={<PlantillasList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioClienteWrapper />} />
-        <Route path='gestor-documental' element={<GestorDocumental />} />
+        <Route path='gestor-documental/:clienteId' element={<GestorDocumentalWrapper />} />
         {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
         {/* Lazy Modules */}
@@ -120,6 +120,13 @@ const CalendarioClienteWrapper: FC = () => {
   const { clienteId } = useParams<{ clienteId: string }>()
   if (!clienteId) return null
   return <CalendarioCliente clienteId={clienteId} />
+}
+
+// Componente wrapper para extraer el clienteId de la URL y pasarlo como prop al Gestor Documental
+const GestorDocumentalWrapper: FC = () => {
+  const { clienteId } = useParams<{ clienteId: string }>()
+  if (!clienteId) return null
+  return <GestorDocumental clienteId={clienteId} />
 }
 
 export {PrivateRoutes}

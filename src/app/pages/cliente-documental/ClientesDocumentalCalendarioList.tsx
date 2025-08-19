@@ -163,7 +163,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
                   <button
                     className='btn btn-icon btn-light-primary btn-sm me-2'
                     title='Gestor Documental'
-                    onClick={() => navigate('/gestor-documental')}
+                    onClick={() => navigate(`/gestor-documental/${cliente.idcliente}`)}
                   >
                     <i className="bi bi-file-earmark-text"></i>
                   </button>
