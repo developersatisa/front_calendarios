@@ -132,6 +132,19 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
       {/* Container principal */}
       <KTCard>
         <KTCardBody className="py-10">
+          {/* Botón para agregar nueva categoría cuando ya existen categorías */}
+          {categorias.length > 0 && (
+            <div className="d-flex justify-content-end mb-6">
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => setShowCrearCategoriaModal(true)}
+              >
+                <i className="bi bi-folder-plus fs-6 me-2"></i>
+                Nueva Categoría
+              </button>
+            </div>
+          )}
+
           {/* Lista de categorías */}
           <div className="d-flex flex-column gap-5">
             {categorias.map((categoria, index) => (

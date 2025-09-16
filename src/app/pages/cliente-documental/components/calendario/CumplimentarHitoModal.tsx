@@ -178,6 +178,24 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
       return
     }
 
+    // Validar hora si la fecha es hoy
+    const hoy = new Date();
+    const esHoy = fechaCumplimientoDate.toDateString() === hoy.toDateString();
+
+    if (esHoy) {
+      const horaActual = hoy.toTimeString().slice(0, 5); // Formato HH:MM
+      const [horaActualH, horaActualM] = horaActual.split(':').map(Number);
+      const [horaCumplimientoH, horaCumplimientoM] = horaCumplimiento.split(':').map(Number);
+
+      const minutosActuales = horaActualH * 60 + horaActualM;
+      const minutosCumplimiento = horaCumplimientoH * 60 + horaCumplimientoM;
+
+      if (minutosCumplimiento > minutosActuales) {
+        alert('La hora de cumplimiento no puede ser superior a la hora actual cuando es la fecha actual.')
+        return
+      }
+    }
+
     // Validar que si se va a incluir documento, haya al menos un archivo
     if (incluirDocumento && files.length === 0) {
       alert('Por favor selecciona al menos un archivo para subir')
