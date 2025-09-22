@@ -1,15 +1,24 @@
 import axios from 'axios'
+import { getAuth, setAuth, removeAuth } from '../modules/auth/core/AuthHelpers'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-// Funciones de manejo de tokens
-const getAccessToken = () => localStorage.getItem('access_token')
-const getRefreshToken = () => localStorage.getItem('refresh_token')
+// Funciones de manejo de tokens usando el sistema de Metronic
+const getAccessToken = () => {
+  const auth = getAuth()
+  return auth?.api_token
+}
+
+const getRefreshToken = () => {
+  const auth = getAuth()
+  return auth?.refreshToken
+}
+
 const setTokens = (access_token: string, refresh_token?: string) => {
-  localStorage.setItem('access_token', access_token)
-  if (refresh_token) {
-    localStorage.setItem('refresh_token', refresh_token)
-  }
+  setAuth({
+    api_token: access_token,
+    refreshToken: refresh_token
+  })
 }
 
 // Instancia principal de axios
@@ -64,8 +73,7 @@ instance.interceptors.response.use(
         return instance(originalRequest)
       } catch (error) {
         // Si falla la renovación, limpiar tokens y redirigir a login
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
+        removeAuth()
         throw error
       }
     }

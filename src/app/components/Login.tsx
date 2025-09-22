@@ -18,18 +18,18 @@ export const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Usar authService que ahora está unificado con el sistema de Metronic
       const response = await authService.login(username, apiKey);
 
-      // Usar el sistema de autenticación correcto
       saveAuth({
         api_token: response.access_token,
         refreshToken: response.refresh_token
       });
 
       setSuccess('Login exitoso');
-      // Redirigir a la ruta de clientes documental calendario
       navigate('/clientes-documental-calendario');
     } catch (err) {
+      console.error('❌ Error en login:', err);
       setError('Error al iniciar sesión');
     }
   };
@@ -42,6 +42,7 @@ export const Login = () => {
       setShowModal(false);
       setNewClientName('');
     } catch (err) {
+      console.error('❌ Error al crear cliente:', err);
       setError('Error al crear cliente. Verifica el nombre del cliente.');
     }
   };
@@ -58,6 +59,7 @@ export const Login = () => {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            required
           />
         </Form.Group>
 
@@ -67,6 +69,7 @@ export const Login = () => {
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
+            required
           />
         </Form.Group>
 

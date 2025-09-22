@@ -14,11 +14,6 @@ import {Login} from '../components/Login'
 import {App} from '../App'
 import {useAuth} from '../modules/auth/core/Auth'
 
-/**
- * Base URL of the website.
- *
- * @see https://facebook.github.io/create-react-app/docs/using-the-public-folder
- */
 const {BASE_URL} = import.meta.env
 
 const AppRoutes: FC = () => {
