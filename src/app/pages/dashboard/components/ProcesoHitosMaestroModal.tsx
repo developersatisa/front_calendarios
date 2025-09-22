@@ -128,8 +128,6 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
                 </th>
                 <th>Hito</th>
                 <th>Descripción</th>
-                <th>Frecuencia</th>
-                <th>Temporalidad</th>
                 <th>Fecha Inicio</th>
                 <th>Fecha Fin</th>
               </tr>
@@ -155,8 +153,6 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
                   </td>
                   <td>{hito.nombre}</td>
                   <td>{hito.descripcion || '-'}</td>
-                  <td>{hito.frecuencia}</td>
-                  <td className='text-capitalize'>{hito.temporalidad}</td>
                   <td>{new Date(hito.fecha_inicio).toLocaleDateString()}</td>
                   <td>{hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString() : '-'}</td>
                 </tr>
