@@ -4,16 +4,16 @@ const SidebarMenuMain = () => {
   return (
     <>
       <SidebarMenuItem
-        to='/dashboard'
-        icon='table'
-        fontIcon='bi-table'
-        title='Dashboard'
-      />
-      <SidebarMenuItem
         to='/clientes-documental-calendario'
         icon='calendar'
         fontIcon='bi-calendar'
         title='Gestor Documental/Calendario'
+      />
+      <SidebarMenuItem
+        to='/dashboard'
+        icon='table'
+        fontIcon='bi-table'
+        title='Dashboard'
       />
     </>
   )

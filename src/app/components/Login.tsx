@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../api/auth';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
+import { useAuth } from '../modules/auth/core/Auth';
 
 export const Login = () => {
   const [username, setUsername] = useState('');
@@ -10,15 +12,23 @@ export const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const ADMIN_KEY = "7oK4Me0ChuaM3@1Hu3V0@666";
+  const navigate = useNavigate();
+  const { saveAuth } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const response = await authService.login(username, apiKey);
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('refresh_token', response.refresh_token);
+
+      // Usar el sistema de autenticación correcto
+      saveAuth({
+        api_token: response.access_token,
+        refreshToken: response.refresh_token
+      });
+
       setSuccess('Login exitoso');
-      // Aquí puedes redirigir al usuario o actualizar el estado de la app
+      // Redirigir a la ruta de clientes documental calendario
+      navigate('/clientes-documental-calendario');
     } catch (err) {
       setError('Error al iniciar sesión');
     }

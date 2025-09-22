@@ -12,6 +12,7 @@ import {ErrorsPage} from '../modules/errors/ErrorsPage'
 import {Logout} from '../modules/auth'
 import {Login} from '../components/Login'
 import {App} from '../App'
+import {useAuth} from '../modules/auth/core/Auth'
 
 /**
  * Base URL of the website.
@@ -21,7 +22,8 @@ import {App} from '../App'
 const {BASE_URL} = import.meta.env
 
 const AppRoutes: FC = () => {
-  const isAuthenticated = !!localStorage.getItem('access_token')
+  const {auth} = useAuth()
+  const isAuthenticated = !!auth?.api_token
 
   return (
     //<BrowserRouter basename={BASE_URL}>
@@ -33,7 +35,7 @@ const AppRoutes: FC = () => {
           {isAuthenticated ? (
             <>
               <Route path='/*' element={<PrivateRoutes />} />
-              <Route index element={<Navigate to='/dashboard' />} />
+              <Route index element={<Navigate to='/clientes-documental-calendario' />} />
             </>
           ) : (
             <>
