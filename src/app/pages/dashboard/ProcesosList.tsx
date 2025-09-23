@@ -247,13 +247,6 @@ const ProcesosList: FC = () => {
                     </th>
                     <th
                       className='cursor-pointer user-select-none hover-primary'
-                      onClick={() => handleSort('frecuencia')}
-                      style={{ transition: 'all 0.2s' }}
-                    >
-                      Frecuencia {getSortIcon('frecuencia')}
-                    </th>
-                    <th
-                      className='cursor-pointer user-select-none hover-primary'
                       onClick={() => handleSort('temporalidad')}
                       style={{ transition: 'all 0.2s' }}
                     >
@@ -283,7 +276,6 @@ const ProcesosList: FC = () => {
                       <td>{proceso.id}</td>
                       <td>{proceso.nombre}</td>
                       <td>{proceso.descripcion || '-'}</td>
-                      <td>{proceso.frecuencia}</td>
                       <td className='text-capitalize'>{proceso.temporalidad}</td>
                       <td>{new Date(proceso.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                       <td>{proceso.fecha_fin ? new Date(proceso.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
