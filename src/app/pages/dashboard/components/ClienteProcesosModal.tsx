@@ -27,7 +27,6 @@ const ClienteProcesosModal: FC<Props> = ({
 }) => {
   const [formData, setFormData] = useState({
     plantillaId: '',
-    fechaInicio: '',
   })
   const [procesos, setProcesos] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
@@ -53,12 +52,11 @@ const ClienteProcesosModal: FC<Props> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCliente || !formData.plantillaId || !formData.fechaInicio || !procesos.length) return
+    if (!selectedCliente || !formData.plantillaId || !procesos.length) return
 
     const calendarios = procesos.map(procesoId => ({
       idcliente: Number(selectedCliente.idcliente),
       id_proceso: procesoId,
-      fecha_inicio: formData.fechaInicio,
     }))
 
     onSave(calendarios)
@@ -120,18 +118,6 @@ const ClienteProcesosModal: FC<Props> = ({
             </div>
           </div>
 
-          <div className='row mb-6'>
-            <div className='col-lg-12'>
-              <label className='required fw-bold fs-6 mb-2'>Fecha Inicio</label>
-              <input
-                type='date'
-                className='form-control form-control-solid'
-                value={formData.fechaInicio}
-                onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})}
-                required
-              />
-            </div>
-          </div>
         </form>
       </Modal.Body>
       <Modal.Footer>
@@ -142,7 +128,7 @@ const ClienteProcesosModal: FC<Props> = ({
           type='button'
           className='btn btn-primary'
           onClick={handleSubmit}
-          disabled={!selectedCliente || !formData.plantillaId || !formData.fechaInicio}
+          disabled={!selectedCliente || !formData.plantillaId}
         >
           Generar
         </button>

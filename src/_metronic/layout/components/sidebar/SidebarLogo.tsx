@@ -4,6 +4,7 @@ import {KTIcon, toAbsoluteUrl} from '../../../helpers'
 import {useLayout} from '../../core'
 import {MutableRefObject, useEffect, useRef} from 'react'
 import {ToggleComponent} from '../../../assets/ts/components'
+import {atisaStyles} from '../../../../app/styles/atisaStyles'
 
 type PropsType = {
   sidebarRef: MutableRefObject<HTMLDivElement | null>
@@ -48,34 +49,50 @@ const SidebarLogo = (props: PropsType) => {
   }, [toggleRef, props.sidebarRef])
 
   return (
-    <div className='app-sidebar-logo px-6' id='kt_app_sidebar_logo'>
-      <Link to='/dashboard'>
-        {config.layoutType === 'dark-sidebar' ? (
-          <img
-            alt='Logo'
-            src={toAbsoluteUrl('media/logos/default-dark.svg')}
-            className='h-25px app-sidebar-logo-default'
-          />
-        ) : (
-          <>
-            <img
-              alt='Logo'
-              src={toAbsoluteUrl('media/logos/default.svg')}
-              className='h-25px app-sidebar-logo-default theme-light-show'
-            />
-            <img
-              alt='Logo'
-              src={toAbsoluteUrl('media/logos/default-dark.svg')}
-              className='h-25px app-sidebar-logo-default theme-dark-show'
-            />
-          </>
-        )}
-
-        <img
-          alt='Logo'
-          src={toAbsoluteUrl('media/logos/default-small.svg')}
-          className='h-20px app-sidebar-logo-minimize'
-        />
+    <div
+      className='app-sidebar-logo px-6'
+      id='kt_app_sidebar_logo'
+      style={{
+        backgroundColor: atisaStyles.colors.dark,
+        borderBottom: `2px solid ${atisaStyles.colors.secondary}`,
+        padding: '20px 24px',
+        marginBottom: '8px'
+      }}
+    >
+      <Link
+        to='/dashboard'
+        style={{
+          textDecoration: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <div style={{
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: 'white',
+            fontFamily: atisaStyles.fonts.primary,
+            textAlign: 'center'
+          }}>
+            ATISA
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: atisaStyles.colors.light,
+            fontFamily: atisaStyles.fonts.secondary,
+            textAlign: 'center',
+            letterSpacing: '1px'
+          }}>
+            GESTIÓN CALENDARIO / DOCUMENTAL
+          </div>
+        </div>
       </Link>
 
       {(appSidebarDefaultMinimizeDesktopEnabled || appSidebarDefaultCollapseDesktopEnabled) && (
@@ -86,6 +103,12 @@ const SidebarLogo = (props: PropsType) => {
             'app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate',
             {active: appSidebarDefaultMinimizeDefault}
           )}
+          style={{
+            backgroundColor: atisaStyles.colors.secondary,
+            border: `2px solid ${atisaStyles.colors.accent}`,
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(0, 80, 92, 0.3)'
+          }}
           data-kt-toggle='true'
           data-kt-toggle-state={toggleState}
           data-kt-toggle-target='body'

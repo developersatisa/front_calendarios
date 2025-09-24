@@ -15,6 +15,12 @@ const SidebarMenuMain = () => {
         fontIcon='bi-table'
         title='Dashboard'
       />
+      <SidebarMenuItem
+        to='/metricas'
+        icon='table'
+        fontIcon='bi-graph-up'
+        title='Dashboard de Métricas'
+      />
     </>
   )
 }

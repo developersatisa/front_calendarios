@@ -3,6 +3,7 @@ import { Modal, Button, Form, Accordion, ProgressBar, Alert } from 'react-bootst
 import { updateClienteProcesoHito, getClienteProcesoHitoById } from '../../../../api/clienteProcesoHitos'
 import { subirDocumento } from '../../../../api/documentos'
 import { createClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
+import { atisaStyles } from '../../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
@@ -202,6 +203,12 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
       return
     }
 
+    // Validar que si se edita la fecha de cumplimiento, las observaciones sean obligatorias
+    if (fechaEditable && (!observacion || observacion.trim() === '')) {
+      alert('Las observaciones son obligatorias cuando se edita la fecha de cumplimiento')
+      return
+    }
+
     setLoading(true)
     try {
       // Si se incluyen documentos, subirlos uno por uno con manejo de errores individual
@@ -295,73 +302,208 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Cumplimentar hito - {nombreDocumento}</Modal.Title>
+    <Modal
+      show={show}
+      onHide={onHide}
+      size="lg"
+      style={{
+        fontFamily: atisaStyles.fonts.secondary
+      }}
+    >
+      <Modal.Header
+        closeButton
+        style={{
+          backgroundColor: atisaStyles.colors.primary,
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px 12px 0 0'
+        }}
+      >
+        <Modal.Title
+          style={{
+            fontFamily: atisaStyles.fonts.primary,
+            fontWeight: 'bold',
+            color: 'white',
+            fontSize: '1.5rem'
+          }}
+        >
+          <i className="bi bi-check-circle me-2"></i>
+          Cumplimentar hito - {nombreDocumento}
+        </Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body
+        style={{
+          backgroundColor: 'white',
+          padding: '24px'
+        }}
+      >
         {isFinalized ? (
-          <div className="alert alert-info">
-            <h6 className="alert-heading">Proceso Finalizado</h6>
+          <div
+            className="alert"
+            style={{
+              backgroundColor: '#d1ecf1',
+              border: `1px solid #bee5eb`,
+              color: '#0c5460',
+              borderRadius: '8px',
+              fontFamily: atisaStyles.fonts.secondary
+            }}
+          >
+            <h6
+              className="alert-heading"
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                color: atisaStyles.colors.primary,
+                fontWeight: 'bold'
+              }}
+            >
+              <i className="bi bi-info-circle me-2"></i>
+              Proceso Finalizado
+            </h6>
             <p className="mb-0">Este hito ya está finalizado. No es posible realizar cambios adicionales.</p>
           </div>
         ) : (
           <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-bold">Fecha de Cumplimiento</Form.Label>
+            <Form.Group className="mb-4">
+              <Form.Label
+                className="fw-bold"
+                style={{
+                  fontFamily: atisaStyles.fonts.primary,
+                  color: atisaStyles.colors.primary,
+                  fontSize: '16px'
+                }}
+              >
+                <i className="bi bi-calendar-event me-2"></i>
+                Fecha de Cumplimiento
+              </Form.Label>
               <Form.Control
                 type="date"
                 value={fechaCumplimiento}
                 onChange={(e) => setFechaCumplimiento(e.target.value)}
                 disabled={!fechaEditable}
                 className={fechaEditable ? 'form-control' : 'form-control bg-light'}
+                style={{
+                  border: `2px solid ${fechaEditable ? atisaStyles.colors.light : '#e9ecef'}`,
+                  borderRadius: '8px',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '14px',
+                  height: '48px',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  if (fechaEditable) {
+                    e.target.style.borderColor = atisaStyles.colors.accent
+                    e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
+                  }
+                }}
+                onBlur={(e) => {
+                  if (fechaEditable) {
+                    e.target.style.borderColor = atisaStyles.colors.light
+                    e.target.style.boxShadow = 'none'
+                  }
+                }}
               />
-              <Form.Text className="text-muted">
+              <Form.Text
+                className="text-muted"
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '13px'
+                }}
+              >
                 {fechaEditable ? 'Puedes modificar la fecha de cumplimiento' : 'Fecha actual por defecto'}
               </Form.Text>
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-4">
               <Form.Check
                 type="checkbox"
                 id="editarFecha"
                 label="Editar fecha de cumplimiento"
                 checked={fechaEditable}
                 onChange={handleCheckboxChange}
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: atisaStyles.colors.dark
+                }}
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-bold">Hora de Cumplimiento</Form.Label>
+            <Form.Group className="mb-4">
+              <Form.Label
+                className="fw-bold"
+                style={{
+                  fontFamily: atisaStyles.fonts.primary,
+                  color: atisaStyles.colors.primary,
+                  fontSize: '16px'
+                }}
+              >
+                <i className="bi bi-clock me-2"></i>
+                Hora de Cumplimiento
+              </Form.Label>
               <Form.Control
                 type="time"
                 value={horaCumplimiento}
                 onChange={(e) => setHoraCumplimiento(e.target.value)}
                 disabled={!horaEditable}
                 className={horaEditable ? 'form-control' : 'form-control bg-light'}
+                style={{
+                  border: `2px solid ${horaEditable ? atisaStyles.colors.light : '#e9ecef'}`,
+                  borderRadius: '8px',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '14px',
+                  height: '48px',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  if (horaEditable) {
+                    e.target.style.borderColor = atisaStyles.colors.accent
+                    e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
+                  }
+                }}
+                onBlur={(e) => {
+                  if (horaEditable) {
+                    e.target.style.borderColor = atisaStyles.colors.light
+                    e.target.style.boxShadow = 'none'
+                  }
+                }}
               />
-              <Form.Text className="text-muted">
+              <Form.Text
+                className="text-muted"
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '13px'
+                }}
+              >
                 {horaEditable ? 'Puedes modificar la hora de cumplimiento' : 'Hora actual por defecto'}
               </Form.Text>
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-4">
               <Form.Check
                 type="checkbox"
                 id="editarHora"
                 label="Editar hora de cumplimiento"
                 checked={horaEditable}
                 onChange={handleHoraCheckboxChange}
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: atisaStyles.colors.dark
+                }}
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-4">
               <Form.Check
                 type="checkbox"
                 id="incluirDocumento"
                 label="Incluir documento/s adjunto/s (opcional)"
                 checked={incluirDocumento}
                 onChange={(e) => setIncluirDocumento(e.target.checked)}
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: atisaStyles.colors.dark,
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}
               />
             </Form.Group>
 
@@ -375,15 +517,39 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  style={{ cursor: 'pointer', minHeight: '120px' }}
+                  style={{
+                    cursor: 'pointer',
+                    minHeight: '120px',
+                    borderColor: dragActive ? atisaStyles.colors.accent : atisaStyles.colors.light,
+                    backgroundColor: dragActive ? '#f8f9fa' : 'white',
+                    borderRadius: '12px',
+                    transition: 'all 0.3s ease'
+                  }}
                   onClick={handleFileSelectClick}
                 >
                   <div className="d-flex flex-column align-items-center justify-content-center h-100">
-                    <i className="bi bi-upload fs-1 text-muted mb-2"></i>
-                    <p className="text-muted mb-1">
+                    <i
+                      className="bi bi-upload fs-1 mb-2"
+                      style={{
+                        color: dragActive ? atisaStyles.colors.accent : atisaStyles.colors.primary
+                      }}
+                    ></i>
+                    <p
+                      className="mb-1"
+                      style={{
+                        fontFamily: atisaStyles.fonts.secondary,
+                        color: atisaStyles.colors.dark,
+                        fontWeight: '600'
+                      }}
+                    >
                       Arrastra y suelta tus archivos aquí o haz clic para seleccionar
                     </p>
-                    <small className="text-muted">
+                    <small
+                      style={{
+                        fontFamily: atisaStyles.fonts.secondary,
+                        color: atisaStyles.colors.dark
+                      }}
+                    >
                       Puedes seleccionar múltiples archivos
                     </small>
                   </div>
@@ -399,29 +565,82 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
                 {/* Lista de archivos seleccionados */}
                 {files.length > 0 && (
                   <div className="mt-3">
-                    <h6 className="fw-bold mb-2">Archivos seleccionados ({files.length})</h6>
+                    <h6
+                      className="fw-bold mb-2"
+                      style={{
+                        fontFamily: atisaStyles.fonts.primary,
+                        color: atisaStyles.colors.primary,
+                        fontSize: '16px'
+                      }}
+                    >
+                      <i className="bi bi-files me-2"></i>
+                      Archivos seleccionados ({files.length})
+                    </h6>
                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       {files.map((file, index) => (
-                        <div key={index} className="border rounded mb-2 p-3">
+                        <div
+                          key={index}
+                          className="border rounded mb-2 p-3"
+                          style={{
+                            borderColor: atisaStyles.colors.light,
+                            borderRadius: '8px',
+                            backgroundColor: 'white',
+                            boxShadow: '0 2px 4px rgba(0, 80, 92, 0.1)'
+                          }}
+                        >
                           {/* Cabecera del archivo */}
                           <div className="d-flex align-items-center justify-content-between">
                             <div className="d-flex align-items-center">
-                              <i className="bi bi-file-earmark text-primary me-2"></i>
+                              <i
+                                className="bi bi-file-earmark me-2"
+                                style={{
+                                  color: atisaStyles.colors.accent,
+                                  fontSize: '20px'
+                                }}
+                              ></i>
                               <div>
-                                <div className="fw-semibold">{file.name}</div>
-                                <small className="text-muted">
+                                <div
+                                  className="fw-semibold"
+                                  style={{
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    color: atisaStyles.colors.primary
+                                  }}
+                                >
+                                  {file.name}
+                                </div>
+                                <small
+                                  style={{
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    color: atisaStyles.colors.dark
+                                  }}
+                                >
                                   {(file.size / 1024 / 1024).toFixed(2)} MB
                                 </small>
                               </div>
                             </div>
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-danger"
+                              className="btn btn-sm"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 removeFile(index)
                               }}
                               title="Eliminar archivo"
+                              style={{
+                                backgroundColor: 'transparent',
+                                color: '#dc3545',
+                                border: '1px solid #dc3545',
+                                borderRadius: '6px',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#dc3545'
+                                e.currentTarget.style.color = 'white'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent'
+                                e.currentTarget.style.color = '#dc3545'
+                              }}
                             >
                               <i className="bi bi-trash"></i>
                             </button>
@@ -516,24 +735,102 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
               </div>
             )}
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-bold">Observaciones</Form.Label>
+            <Form.Group className="mb-4">
+              <Form.Label
+                className="fw-bold"
+                style={{
+                  fontFamily: atisaStyles.fonts.primary,
+                  color: atisaStyles.colors.primary,
+                  fontSize: '16px'
+                }}
+              >
+                <i className="bi bi-chat-text me-2"></i>
+                Observaciones
+                {fechaEditable && <span className="text-danger"> *</span>}
+              </Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
                 value={observacion}
                 onChange={(e) => setObservacion(e.target.value)}
-                placeholder="Añade observaciones sobre el cumplimiento del hito (opcional)"
+                placeholder={fechaEditable
+                  ? "Las observaciones son obligatorias cuando se edita la fecha de cumplimiento"
+                  : "Añade observaciones sobre el cumplimiento del hito (opcional)"
+                }
+                className={fechaEditable && (!observacion || observacion.trim() === '') ? 'is-invalid' : ''}
+                style={{
+                  border: `2px solid ${fechaEditable && (!observacion || observacion.trim() === '') ? '#dc3545' : atisaStyles.colors.light}`,
+                  borderRadius: '8px',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '14px',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = atisaStyles.colors.accent
+                  e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = fechaEditable && (!observacion || observacion.trim() === '') ? '#dc3545' : atisaStyles.colors.light
+                  e.target.style.boxShadow = 'none'
+                }}
               />
+              {fechaEditable && (
+                <Form.Text
+                  style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '13px',
+                    color: atisaStyles.colors.dark
+                  }}
+                >
+                  Campo obligatorio cuando se edita la fecha de cumplimiento
+                </Form.Text>
+              )}
             </Form.Group>
 
             <Button
-              variant="primary"
               type="submit"
               className="mt-3"
               disabled={loading || (incluirDocumento && files.length === 0)}
+              style={{
+                backgroundColor: atisaStyles.colors.secondary,
+                border: `2px solid ${atisaStyles.colors.secondary}`,
+                color: 'white',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                fontSize: '16px',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 15px rgba(156, 186, 57, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                  e.currentTarget.style.borderColor = atisaStyles.colors.accent
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 161, 222, 0.4)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                  e.currentTarget.style.borderColor = atisaStyles.colors.secondary
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(156, 186, 57, 0.3)'
+                }
+              }}
             >
-              {loading ? 'Procesando...' : 'Cumplimentar'}
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle me-2"></i>
+                  Cumplimentar
+                </>
+              )}
             </Button>
           </Form>
         )}

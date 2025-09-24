@@ -18,101 +18,378 @@ import {
 } from '../../../_metronic/partials/widgets'
 import { ToolbarWrapper } from '../../../_metronic/layout/components/toolbar'
 import { Content } from '../../../_metronic/layout/components/content'
+import { atisaStyles } from '../../styles/atisaStyles'
 
 const DashboardPage: FC = () => (
   <>
     <ToolbarWrapper />
     <Content>
     {/* begin::Row */}
-    <div className='row g-5 g-xl-10 mb-5 mb-xl-10'>
+    <div
+      className='row g-5 g-xl-10 mb-5 mb-xl-10'
+      style={{
+        fontFamily: atisaStyles.fonts.secondary
+      }}
+    >
       {/* begin::Col */}
       <div className='col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10'>
-        <CardsWidget20
-          className='h-md-50 mb-5 mb-xl-10'
-          description='Active Projects'
-          color='#F1416C'
-          img={toAbsoluteUrl('media/patterns/vector-1.png')}
-        />
-        <CardsWidget7
-          className='h-md-50 mb-5 mb-xl-10'
-          description='Professionals'
-          icon={false}
-          stats={357}
-          labelColor='dark'
-          textColor='gray-300'
-        />
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            border: `1px solid ${atisaStyles.colors.light}`,
+            padding: '24px',
+            marginBottom: '20px',
+            height: '200px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              backgroundColor: atisaStyles.colors.secondary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              boxShadow: '0 4px 12px rgba(156, 186, 57, 0.3)'
+            }}
+          >
+            <i
+              className="bi bi-folder-check"
+              style={{
+                fontSize: '32px',
+                color: 'white'
+              }}
+            ></i>
+          </div>
+          <h4
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              color: atisaStyles.colors.primary,
+              fontWeight: 'bold',
+              fontSize: '1.5rem',
+              margin: '0 0 8px 0'
+            }}
+          >
+            Proyectos Activos
+          </h4>
+          <p
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              color: atisaStyles.colors.dark,
+              fontSize: '14px',
+              margin: 0
+            }}
+          >
+            Gestión de proyectos en curso
+          </p>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            border: `1px solid ${atisaStyles.colors.light}`,
+            padding: '24px',
+            height: '200px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              backgroundColor: atisaStyles.colors.accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              boxShadow: '0 4px 12px rgba(0, 161, 222, 0.3)'
+            }}
+          >
+            <i
+              className="bi bi-people"
+              style={{
+                fontSize: '32px',
+                color: 'white'
+              }}
+            ></i>
+          </div>
+          <h4
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              color: atisaStyles.colors.primary,
+              fontWeight: 'bold',
+              fontSize: '1.5rem',
+              margin: '0 0 8px 0'
+            }}
+          >
+            Profesionales
+          </h4>
+          <p
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              color: atisaStyles.colors.dark,
+              fontSize: '14px',
+              margin: 0
+            }}
+          >
+            Equipo de trabajo especializado
+          </p>
+        </div>
       </div>
       {/* end::Col */}
 
       {/* begin::Col */}
       <div className='col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10'>
-        <CardsWidget17 className='h-md-50 mb-5 mb-xl-10' />
-        <ListsWidget26 className='h-lg-50' />
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            border: `1px solid ${atisaStyles.colors.light}`,
+            padding: '24px',
+            marginBottom: '20px',
+            height: '200px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              backgroundColor: atisaStyles.colors.primary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              boxShadow: '0 4px 12px rgba(0, 80, 92, 0.3)'
+            }}
+          >
+            <i
+              className="bi bi-graph-up"
+              style={{
+                fontSize: '32px',
+                color: 'white'
+              }}
+            ></i>
+          </div>
+          <h4
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              color: atisaStyles.colors.primary,
+              fontWeight: 'bold',
+              fontSize: '1.5rem',
+              margin: '0 0 8px 0'
+            }}
+          >
+            Métricas
+          </h4>
+          <p
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              color: atisaStyles.colors.dark,
+              fontSize: '14px',
+              margin: 0
+            }}
+          >
+            Análisis de rendimiento
+          </p>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            border: `1px solid ${atisaStyles.colors.light}`,
+            padding: '24px',
+            height: '200px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              backgroundColor: atisaStyles.colors.light,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              boxShadow: '0 4px 12px rgba(128, 224, 211, 0.3)'
+            }}
+          >
+            <i
+              className="bi bi-list-ul"
+              style={{
+                fontSize: '32px',
+                color: atisaStyles.colors.primary
+              }}
+            ></i>
+          </div>
+          <h4
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              color: atisaStyles.colors.primary,
+              fontWeight: 'bold',
+              fontSize: '1.5rem',
+              margin: '0 0 8px 0'
+            }}
+          >
+            Listas
+          </h4>
+          <p
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              color: atisaStyles.colors.dark,
+              fontSize: '14px',
+              margin: 0
+            }}
+          >
+            Elementos organizados
+          </p>
+        </div>
       </div>
       {/* end::Col */}
 
       {/* begin::Col */}
       <div className='col-xxl-6'>
-        <EngageWidget10 className='h-md-100' />
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            border: `1px solid ${atisaStyles.colors.light}`,
+            padding: '32px',
+            height: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '20px',
+              backgroundColor: atisaStyles.colors.secondary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '24px',
+              boxShadow: '0 6px 20px rgba(156, 186, 57, 0.4)'
+            }}
+          >
+            <i
+              className="bi bi-calendar-check"
+              style={{
+                fontSize: '40px',
+                color: 'white'
+              }}
+            ></i>
+          </div>
+          <h3
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              color: atisaStyles.colors.primary,
+              fontWeight: 'bold',
+              fontSize: '2rem',
+              margin: '0 0 16px 0'
+            }}
+          >
+            Sistema de Gestión
+          </h3>
+          <p
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              color: atisaStyles.colors.dark,
+              fontSize: '16px',
+              margin: '0 0 24px 0',
+              lineHeight: '1.6'
+            }}
+          >
+            Plataforma integral para la gestión de calendarios y documentos empresariales
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}
+          >
+            <span
+              style={{
+                backgroundColor: atisaStyles.colors.light,
+                color: atisaStyles.colors.primary,
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: '600',
+                fontFamily: atisaStyles.fonts.secondary
+              }}
+            >
+              Calendarios
+            </span>
+            <span
+              style={{
+                backgroundColor: atisaStyles.colors.light,
+                color: atisaStyles.colors.primary,
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: '600',
+                fontFamily: atisaStyles.fonts.secondary
+              }}
+            >
+              Documentos
+            </span>
+            <span
+              style={{
+                backgroundColor: atisaStyles.colors.light,
+                color: atisaStyles.colors.primary,
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: '600',
+                fontFamily: atisaStyles.fonts.secondary
+              }}
+            >
+              Procesos
+            </span>
+          </div>
+        </div>
       </div>
       {/* end::Col */}
     </div>
     {/* end::Row */}
-
-    {/* begin::Row */}
-    <div className='row gx-5 gx-xl-10'>
-      {/* begin::Col */}
-      <div className='col-xxl-6 mb-5 mb-xl-10'>
-        {/* <app-new-charts-widget8 cssclassName="h-xl-100" chartHeight="275px" [chartHeightNumber]="275"></app-new-charts-widget8> */}
-      </div>
-      {/* end::Col */}
-
-      {/* begin::Col */}
-      <div className='col-xxl-6 mb-5 mb-xl-10'>
-        {/* <app-cards-widget18 cssclassName="h-xl-100" image="./assetsmedia/stock/600x600/img-65.jpg"></app-cards-widget18> */}
-      </div>
-      {/* end::Col */}
-    </div>
-    {/* end::Row */}
-
-    {/* begin::Row */}
-    <div className='row gy-5 gx-xl-8'>
-      <div className='col-xxl-4'>
-        <ListsWidget3 className='card-xxl-stretch mb-xl-3' />
-      </div>
-      <div className='col-xl-8'>
-        <TablesWidget10 className='card-xxl-stretch mb-5 mb-xl-8' />
-      </div>
-    </div>
-    {/* end::Row */}
-
-    {/* begin::Row */}
-    <div className='row gy-5 g-xl-8'>
-      <div className='col-xl-4'>
-        <ListsWidget2 className='card-xl-stretch mb-xl-8' />
-      </div>
-      <div className='col-xl-4'>
-        <ListsWidget6 className='card-xl-stretch mb-xl-8' />
-      </div>
-      <div className='col-xl-4'>
-        <ListsWidget4 className='card-xl-stretch mb-5 mb-xl-8' items={5} />
-        {/* partials/widgets/lists/_widget-4', 'class' => 'card-xl-stretch mb-5 mb-xl-8', 'items' => '5' */}
-      </div>
-    </div>
-    {/* end::Row */}
-
-    <div className='row g-5 gx-xxl-8'>
-      <div className='col-xxl-4'>
-        <MixedWidget8
-          className='card-xxl-stretch mb-xl-3'
-          chartColor='success'
-          chartHeight='150px'
-        />
-      </div>
-      <div className='col-xxl-8'>
-        <TablesWidget5 className='card-xxl-stretch mb-5 mb-xxl-8' />
-      </div>
-    </div>
     </Content>
   </>
 )

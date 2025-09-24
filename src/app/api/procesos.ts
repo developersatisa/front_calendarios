@@ -6,8 +6,6 @@ export interface Proceso {
   descripcion: string | null
   frecuencia: number
   temporalidad: string
-  fecha_inicio: string
-  fecha_fin: string | null
 }
 
 export interface ProcesosResponse {

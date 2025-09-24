@@ -7,6 +7,7 @@ import { getClienteProcesoHitosByProceso, ClienteProcesoHito } from '../../../..
 import { Hito, getAllHitos } from '../../../../api/hitos'
 import { getClienteProcesoHitoCumplimientosByHito, ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 import CumplimentarHitoModal from './CumplimentarHitoModal'
+import { atisaStyles } from '../../../../styles/atisaStyles'
 
 interface Props {
   clienteId: string
@@ -320,17 +321,87 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   }
 
   return (
-    <div className="container py-5">
-      <h2 className="mb-4 text-center">Calendario {cliente?.razsoc || clienteId}</h2>
-      <div className="mb-4 position-relative">
-        <div className="d-flex gap-2 overflow-auto pb-2 justify-content-end" style={{ scrollbarWidth: 'thin' }}>
+    <div
+      className="container py-5"
+      style={{
+        fontFamily: atisaStyles.fonts.secondary,
+        backgroundColor: '#f8f9fa',
+        minHeight: '100vh'
+      }}
+    >
+      {/* Header del calendario */}
+      <div
+        style={{
+          backgroundColor: atisaStyles.colors.primary,
+          color: 'white',
+          padding: '32px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
+          marginBottom: '16px',
+          textAlign: 'center'
+        }}
+      >
+        <h2
+          style={{
+            fontFamily: atisaStyles.fonts.primary,
+            fontWeight: 'bold',
+            color: 'white',
+            margin: 0,
+            fontSize: '2.5rem'
+          }}
+        >
+          <i className="bi bi-calendar3 me-3"></i>
+          Calendario de {cliente?.razsoc || clienteId}
+        </h2>
+      </div>
+
+      {/* Selector de períodos */}
+      <div
+        className="mb-4 position-relative"
+        style={{
+          backgroundColor: 'white',
+          padding: '20px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+          border: `1px solid ${atisaStyles.colors.light}`
+        }}
+      >
+        <div className="d-flex overflow-auto justify-content-end" style={{ scrollbarWidth: 'thin' }}>
           {periodos.map((periodo) => {
             const [year, month] = periodo.split('-')
+            const isSelected = selectedPeriod === periodo
             return (
               <button
                 key={periodo}
-                className={`btn btn-sm ${selectedPeriod === periodo ? 'btn-primary' : 'btn-light-primary'}`}
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: isSelected ? atisaStyles.colors.secondary : 'white',
+                  color: isSelected ? 'white' : atisaStyles.colors.primary,
+                  border: `2px solid ${isSelected ? atisaStyles.colors.accent : atisaStyles.colors.light}`,
+                  borderRadius: '8px',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontWeight: '600',
+                  padding: '6px 12px',
+                  fontSize: '13px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: isSelected ? '0 4px 12px rgba(156, 186, 57, 0.3)' : '0 2px 8px rgba(0, 80, 92, 0.1)',
+                  whiteSpace: 'nowrap'
+                }}
                 onClick={() => setSelectedPeriod(periodo)}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                    e.currentTarget.style.borderColor = atisaStyles.colors.accent
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'white'
+                    e.currentTarget.style.borderColor = atisaStyles.colors.light
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }
+                }}
               >
                 {getMesName(parseInt(month))} {year}
               </button>
@@ -338,7 +409,16 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           })}
         </div>
       </div>
-      <Accordion defaultActiveKey="0">
+      <Accordion
+        defaultActiveKey="0"
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+          border: `1px solid ${atisaStyles.colors.light}`,
+          overflow: 'hidden'
+        }}
+      >
         {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
           const procesosFiltradosPorPeriodo = selectedPeriod
             ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
@@ -354,41 +434,223 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           }, 0)
 
           return (
-            <Accordion.Item key={nombreProceso} eventKey={index.toString()}>
-              <Accordion.Header>
+            <Accordion.Item
+              key={nombreProceso}
+              eventKey={index.toString()}
+              style={{
+                border: 'none',
+                borderBottom: `1px solid ${atisaStyles.colors.light}`
+              }}
+            >
+              <Accordion.Header
+                style={{
+                  backgroundColor: atisaStyles.colors.light,
+                  border: 'none',
+                  padding: '20px 24px'
+                }}
+              >
                 <div className='d-flex justify-content-between w-100 me-3'>
-                  <span>{nombreProceso}</span>
-                  <span className='badge badge-light-primary'>
+                  <span
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      color: atisaStyles.colors.primary,
+                      fontWeight: 'bold',
+                      fontSize: '1.2rem'
+                    }}
+                  >
+                    <i className="bi bi-diagram-3 me-2"></i>
+                    {nombreProceso}
+                  </span>
+                  <span
+                    style={{
+                      backgroundColor: atisaStyles.colors.secondary,
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      fontFamily: atisaStyles.fonts.secondary
+                    }}
+                  >
                     {totalHitos} hitos
                   </span>
                 </div>
               </Accordion.Header>
-              <Accordion.Body>
+              <Accordion.Body
+                style={{
+                  backgroundColor: 'white',
+                  padding: '24px'
+                }}
+              >
                 {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
                   <div key={periodoKey} className='mb-5'>
-                    <div className='table-responsive'>
-                      <table className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0'>
+                    <div
+                      className='table-responsive'
+                      style={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 10px rgba(0, 80, 92, 0.05)',
+                        border: `1px solid ${atisaStyles.colors.light}`,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <table
+                        className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0'
+                        style={{
+                          fontFamily: atisaStyles.fonts.secondary,
+                          margin: 0
+                        }}
+                      >
                         <thead>
-                          <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                            <th>Hito</th>
-                            <th>Estado</th>
-                            <th>Fecha Actualización</th>
-                            <th>Fecha Inicio</th>
-                            <th>Fecha Límite</th>
-                            <th>Hora Límite</th>
-                            <th>Responsable</th>
-                            <th>Fecha Cumplimiento</th>
-                            <th className='text-end'>Acciones</th>
+                          <tr
+                            style={{
+                              backgroundColor: atisaStyles.colors.primary,
+                              color: 'white'
+                            }}
+                          >
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Hito
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Estado
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Fecha Actualización
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Fecha Inicio
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Fecha Límite
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Hora Límite
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Responsable
+                            </th>
+                            <th
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Fecha Cumplimiento
+                            </th>
+                            <th
+                              className='text-end'
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                padding: '16px 12px',
+                                border: 'none',
+                                color: 'white'
+                              }}
+                            >
+                              Acciones
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {loadingHitos ? (
                             <tr>
-                              <td colSpan={9} className="text-center py-4">
-                                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                              <td
+                                colSpan={9}
+                                className="text-center py-4"
+                                style={{
+                                  backgroundColor: '#f8f9fa',
+                                  fontFamily: atisaStyles.fonts.secondary
+                                }}
+                              >
+                                <div
+                                  className="spinner-border"
+                                  role="status"
+                                  style={{
+                                    color: atisaStyles.colors.primary,
+                                    width: '2rem',
+                                    height: '2rem'
+                                  }}
+                                >
                                   <span className="visually-hidden">Cargando hitos...</span>
                                 </div>
-                                <span className="ms-2">Cargando hitos...</span>
+                                <span
+                                  className="ms-2"
+                                  style={{
+                                    color: atisaStyles.colors.dark,
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    fontWeight: '500'
+                                  }}
+                                >
+                                  Cargando hitos...
+                                </span>
                               </td>
                             </tr>
                           ) : (
@@ -397,9 +659,22 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
                               if (hitosDelProceso.length === 0) {
                                 return (
-                                  <tr key={proceso.id}>
-                                    <td className="fw-bold text-gray-800">{formatDate(proceso.fecha_inicio)}</td>
-                                    <td colSpan={8} className="text-muted text-center py-3">
+                                  <tr
+                                    key={proceso.id}
+                                    style={{
+                                      backgroundColor: '#f8f9fa'
+                                    }}
+                                  >
+                                    <td
+                                      colSpan={8}
+                                      className="text-center py-3"
+                                      style={{
+                                        color: atisaStyles.colors.dark,
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      <i className="bi bi-info-circle me-2"></i>
                                       No hay hitos para este proceso
                                     </td>
                                   </tr>
@@ -411,22 +686,122 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 const isFirstHito = hitoIndex === 0
 
                                 return (
-                                  <tr key={`${proceso.id}-${hito.id}`}>
-                                    <td>{getNombreHito(hito.hito_id)}</td>
-                                    <td>
-                                      <span className={`badge ${isFinalized ? 'badge-success' : 'badge-primary'}`}>
+                                  <tr
+                                    key={`${proceso.id}-${hito.id}`}
+                                    style={{
+                                      backgroundColor: hitoIndex % 2 === 0 ? 'white' : '#f8f9fa',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                                      e.currentTarget.style.transform = 'translateY(-1px)'
+                                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'
+                                      e.currentTarget.style.transform = 'translateY(0)'
+                                      e.currentTarget.style.boxShadow = 'none'
+                                    }}
+                                  >
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.primary,
+                                        fontWeight: '600',
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {getNombreHito(hito.hito_id)}
+                                    </td>
+                                    <td style={{ padding: '16px 12px' }}>
+                                      <span
+                                        style={{
+                                          backgroundColor: isFinalized ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
+                                          color: 'white',
+                                          padding: '6px 12px',
+                                          borderRadius: '20px',
+                                          fontSize: '12px',
+                                          fontWeight: '600',
+                                          fontFamily: atisaStyles.fonts.secondary
+                                        }}
+                                      >
                                         {hito.estado}
                                       </span>
                                     </td>
-                                    <td>{hito.fecha_estado ? formatDateWithTime(hito.fecha_estado) : '-'}</td>
-                                    <td>{formatDate(hito.fecha_inicio)}</td>
-                                    <td>{hito.fecha_fin ? formatDate(hito.fecha_fin ?? null) : '-'}</td>
-                                    <td>{hito.hora_limite ? formatTime(hito.hora_limite) : '-'}</td>
-                                    <td>{hito.tipo}</td>
-                                    <td>{getUltimaFechaCumplimiento(hito.id)}</td>
-                                    <td className='text-end'>
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.dark,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {hito.fecha_estado ? formatDateWithTime(hito.fecha_estado) : '-'}
+                                    </td>
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.dark,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {formatDate(hito.fecha_inicio)}
+                                    </td>
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.dark,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {hito.fecha_fin ? formatDate(hito.fecha_fin ?? null) : '-'}
+                                    </td>
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.dark,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {hito.hora_limite ? formatTime(hito.hora_limite) : '-'}
+                                    </td>
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.dark,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {hito.tipo}
+                                    </td>
+                                    <td
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.dark,
+                                        padding: '16px 12px'
+                                      }}
+                                    >
+                                      {getUltimaFechaCumplimiento(hito.id)}
+                                    </td>
+                                    <td
+                                      className='text-end'
+                                      style={{ padding: '16px 12px' }}
+                                    >
                                       <button
-                                        className={`btn btn-sm ${isFinalized ? 'btn-light-secondary' : 'btn-light-primary'}`}
+                                        className="btn btn-sm"
+                                        style={{
+                                          backgroundColor: isFinalized ? '#6c757d' : atisaStyles.colors.secondary,
+                                          color: 'white',
+                                          border: 'none',
+                                          borderRadius: '8px',
+                                          fontFamily: atisaStyles.fonts.secondary,
+                                          fontWeight: '600',
+                                          padding: '8px 16px',
+                                          fontSize: '12px',
+                                          transition: 'all 0.3s ease',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '6px'
+                                        }}
                                         onClick={() => {
                                           if (!isFinalized) {
                                             setHitoSeleccionado(hito)
@@ -435,8 +810,21 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         }}
                                         disabled={isFinalized}
                                         title={isFinalized ? "Proceso finalizado - No se pueden subir documentos" : "Insertar documento"}
+                                        onMouseEnter={(e) => {
+                                          if (!isFinalized) {
+                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                                            e.currentTarget.style.transform = 'translateY(-2px)'
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          if (!isFinalized) {
+                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                                            e.currentTarget.style.transform = 'translateY(0)'
+                                          }
+                                        }}
                                       >
-                                        <i className="bi bi-upload"></i> {isFinalized ? 'Finalizado' : 'Cumplimentar'}
+                                        <i className="bi bi-upload"></i>
+                                        {isFinalized ? 'Finalizado' : 'Cumplimentar'}
                                       </button>
                                     </td>
                                   </tr>
@@ -471,15 +859,70 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       )}
       {/* Modal para mostrar observación */}
       {showObservacionModal && (
-        <div className="modal fade show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.2)' }}>
+        <div
+          className="modal fade show d-block"
+          tabIndex={-1}
+          style={{
+            background: 'rgba(0, 80, 92, 0.3)',
+            zIndex: 9999
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Observación</h5>
-                <button type="button" className="btn-close" onClick={() => setShowObservacionModal(false)}></button>
+            <div
+              className="modal-content"
+              style={{
+                borderRadius: '12px',
+                border: `2px solid ${atisaStyles.colors.light}`,
+                boxShadow: '0 8px 30px rgba(0, 80, 92, 0.3)',
+                fontFamily: atisaStyles.fonts.secondary
+              }}
+            >
+              <div
+                className="modal-header"
+                style={{
+                  backgroundColor: atisaStyles.colors.primary,
+                  color: 'white',
+                  borderRadius: '10px 10px 0 0',
+                  border: 'none'
+                }}
+              >
+                <h5
+                  className="modal-title"
+                  style={{
+                    fontFamily: atisaStyles.fonts.primary,
+                    fontWeight: 'bold',
+                    margin: 0
+                  }}
+                >
+                  <i className="bi bi-info-circle me-2"></i>
+                  Observación
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowObservacionModal(false)}
+                  style={{
+                    filter: 'invert(1)'
+                  }}
+                ></button>
               </div>
-              <div className="modal-body">
-                <p>{observacionSeleccionada}</p>
+              <div
+                className="modal-body"
+                style={{
+                  padding: '24px',
+                  backgroundColor: 'white'
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    color: atisaStyles.colors.dark,
+                    margin: 0,
+                    lineHeight: '1.6'
+                  }}
+                >
+                  {observacionSeleccionada}
+                </p>
               </div>
             </div>
           </div>

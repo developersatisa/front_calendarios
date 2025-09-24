@@ -16,7 +16,7 @@ import PlantillasList from '../pages/dashboard/PlantillasList'
 import ClientesDocumentalCalendarioList from '../pages/cliente-documental/ClientesDocumentalCalendarioList'
 import CalendarioCliente from '../pages/cliente-documental/components/calendario/CalendarioCliente'
 import GestorDocumental from '../pages/cliente-documental/components/gestor_documental/GestorDocumental'
-import MetricasList from '../pages/dashboard/MetricasList'
+import MetricasList from '../pages/dashboard-metricas/MetricasList'
 
 
 

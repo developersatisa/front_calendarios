@@ -5,6 +5,7 @@ import {ILayout, useLayout} from '../../core'
 import {SidebarMenu} from './sidebar-menu/SidebarMenu'
 import {SidebarFooter} from './SidebarFooter'
 import {SidebarLogo} from './SidebarLogo'
+import {atisaStyles} from '../../../../app/styles/atisaStyles'
 
 const Sidebar = () => {
   const {config} = useLayout()
@@ -25,6 +26,12 @@ const Sidebar = () => {
           ref={sidebarRef}
           id='kt_app_sidebar'
           className={clsx('app-sidebar', config.app?.sidebar?.default?.class)}
+          style={{
+            backgroundColor: atisaStyles.colors.primary,
+            borderRight: `3px solid ${atisaStyles.colors.secondary}`,
+            boxShadow: '2px 0 10px rgba(0, 80, 92, 0.3)',
+            fontFamily: atisaStyles.fonts.secondary
+          }}
         >
           <SidebarLogo sidebarRef={sidebarRef} />
           <SidebarMenu />

@@ -16,8 +16,6 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
     descripcion: null,
     frecuencia: 1,
     temporalidad: 'mes',
-    fecha_inicio: new Date().toISOString().split('T')[0],
-    fecha_fin: null,
   })
 
   useEffect(() => {
@@ -27,8 +25,6 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
         descripcion: proceso.descripcion,
         frecuencia: 1,
         temporalidad: proceso.temporalidad,
-        fecha_inicio: proceso.fecha_inicio,
-        fecha_fin: proceso.fecha_fin,
       })
     } else {
       setFormData({
@@ -36,8 +32,6 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
         descripcion: null,
         frecuencia: 1,
         temporalidad: 'mes',
-        fecha_inicio: new Date().toISOString().split('T')[0],
-        fecha_fin: null,
       })
     }
   }, [proceso, show])
@@ -87,31 +81,11 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
               >
                 <option value='mes'>Mensual</option>
                 <option value='trimestre'>Trimestral</option>
+                <option value='semestre'>Semestral</option>
                 <option value='año'>Anual</option>
               </select>
             </div>
 
-            <div className='row mb-7'>
-              <div className='col-6'>
-                <label className='required fw-bold fs-6 mb-2'>Fecha Inicio</label>
-                <input
-                  type='date'
-                  className='form-control form-control-solid'
-                  value={formData.fecha_inicio}
-                  onChange={(e) => setFormData({...formData, fecha_inicio: e.target.value})}
-                  required
-                />
-              </div>
-              <div className='col-6'>
-                <label className='fw-bold fs-6 mb-2'>Fecha Cumplimiento</label>
-                <input
-                  type='date'
-                  className='form-control form-control-solid'
-                  value={formData.fecha_fin || ''}
-                  onChange={(e) => setFormData({...formData, fecha_fin: e.target.value || null})}
-                />
-              </div>
-            </div>
 
             <div className='fv-row mb-7'>
               <label className='fw-bold fs-6 mb-2'>Descripción</label>
