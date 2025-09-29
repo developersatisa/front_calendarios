@@ -350,7 +350,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             fontSize: '2.5rem'
           }}
         >
-          <i className="bi bi-calendar3 me-3"></i>
+          <i className="bi bi-calendar3 me-3" style={{ color: 'white' }}></i>
           Calendario de {cliente?.razsoc || clienteId}
         </h2>
       </div>
@@ -458,7 +458,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                       fontSize: '1.2rem'
                     }}
                   >
-                    <i className="bi bi-diagram-3 me-2"></i>
+                    <i className="bi bi-diagram-3 me-2" style={{ color: atisaStyles.colors.primary }}></i>
                     {nombreProceso}
                   </span>
                   <span
@@ -674,7 +674,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      <i className="bi bi-info-circle me-2"></i>
+                                      <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
                                       No hay hitos para este proceso
                                     </td>
                                   </tr>
@@ -823,7 +823,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                           }
                                         }}
                                       >
-                                        <i className="bi bi-upload"></i>
+                                        <i className="bi bi-upload" style={{ color: 'white' }}></i>
                                         {isFinalized ? 'Finalizado' : 'Cumplimentar'}
                                       </button>
                                     </td>
@@ -894,7 +894,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                     margin: 0
                   }}
                 >
-                  <i className="bi bi-info-circle me-2"></i>
+                  <i className="bi bi-info-circle me-2" style={{ color: 'white' }}></i>
                   Observación
                 </h5>
                 <button

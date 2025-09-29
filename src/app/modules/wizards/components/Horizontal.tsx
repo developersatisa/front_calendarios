@@ -48,8 +48,6 @@ const Horizontal: FC = () => {
 
     setSubmitButton(stepper.currentStepIndex === stepper.totalStepsNumber)
 
-    console.log(values);
-
     setCurrentSchema(createAccountSchemas[stepper.currentStepIndex - 1])
   }
 

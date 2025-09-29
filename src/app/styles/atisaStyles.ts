@@ -6,6 +6,7 @@ export const atisaStyles = {
     accent: '#00A1DE',       // Azul
     light: '#80E0D3',        // Verde claro secundario
     dark: '#007C92',         // Verde oscuro secundario
+    warning: '#FFC107',      // Amarillo de advertencia
   },
   fonts: {
     primary: 'Aleo, Georgia, serif',

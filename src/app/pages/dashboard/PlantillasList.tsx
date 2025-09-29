@@ -678,7 +678,7 @@ const PlantillasList: FC = () => {
                   e.currentTarget.style.color = atisaStyles.colors.primary
                 }}
               >
-                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px' }}></i>
+                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
                 Editar
               </button>
 
@@ -719,7 +719,7 @@ const PlantillasList: FC = () => {
                   e.currentTarget.style.color = '#dc3545'
                 }}
               >
-                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px' }}></i>
+                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'white' }}></i>
                 Eliminar
               </button>
             </div>

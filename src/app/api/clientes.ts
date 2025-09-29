@@ -37,7 +37,6 @@ export const getAllClientes = async (
       params.append('limit', '50')
     }
 
-    console.log('Requesting clientes with params:', params.toString())
     const response = await api.get<ClientesResponse>('/clientes' + (params.toString() ? `?${params.toString()}` : ''))
 
     // En caso de que la respuesta no tenga la estructura esperada

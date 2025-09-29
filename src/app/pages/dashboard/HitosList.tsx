@@ -5,21 +5,7 @@ import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import HitoModal from './components/HitoModal'
 import { Hito, getAllHitos, createHito, updateHito, deleteHito } from '../../api/hitos'
 import SharedPagination from '../../components/pagination/SharedPagination'
-
-// Estilos corporativos Atisa
-const atisaStyles = {
-  colors: {
-    primary: '#00505C',      // Verde oscuro
-    secondary: '#9CBA39',    // Verde claro
-    accent: '#00A1DE',       // Azul
-    light: '#80E0D3',        // Verde claro secundario
-    dark: '#007C92',         // Verde oscuro secundario
-  },
-  fonts: {
-    primary: 'Aleo, Georgia, serif',
-    secondary: 'Lato, Arial, sans-serif',
-  }
-}
+import { atisaStyles } from '../../styles/atisaStyles'
 
 const HitosList: FC = () => {
   const navigate = useNavigate()
@@ -825,7 +811,7 @@ const HitosList: FC = () => {
                 e.currentTarget.style.color = atisaStyles.colors.primary
               }}
             >
-              <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px' }}></i>
+              <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
               Editar
             </button>
 
@@ -866,7 +852,7 @@ const HitosList: FC = () => {
                 e.currentTarget.style.color = '#dc3545'
               }}
             >
-              <i className="bi bi-trash3 me-3" style={{ fontSize: '16px' }}></i>
+              <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'white' }}></i>
               Eliminar
             </button>
           </div>

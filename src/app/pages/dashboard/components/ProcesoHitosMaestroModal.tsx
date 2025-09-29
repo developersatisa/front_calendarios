@@ -162,12 +162,15 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
       }}
     >
       <Modal.Header
-        closeButton
         style={{
           backgroundColor: atisaStyles.colors.primary,
           color: 'white',
           border: 'none',
-          borderRadius: '12px 12px 0 0'
+          borderRadius: '12px 12px 0 0',
+          padding: '20px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}
       >
         <Modal.Title
@@ -175,12 +178,41 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
             fontFamily: atisaStyles.fonts.primary,
             fontWeight: 'bold',
             color: 'white',
-            fontSize: '1.5rem'
+            fontSize: '1.5rem',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
           }}
         >
-          <i className="bi bi-diagram-3 me-2"></i>
+          <i className="bi bi-diagram-3 me-2" style={{ color: 'white' }}></i>
           Asignar Hitos a Proceso
         </Modal.Title>
+        <div
+          className='btn btn-icon btn-sm'
+          onClick={onHide}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: 'none',
+            borderRadius: '8px',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+        </div>
       </Modal.Header>
       <Modal.Body
         style={{

@@ -15,6 +15,9 @@ export interface ClienteProcesoHito {
 export interface ClienteProcesoHitoUpdate {
   estado: string
   fecha_estado: string | null
+  fecha_inicio?: string
+  fecha_fin?: string | null
+  hora_limite?: string | null
 }
 
 export interface ClienteProcesoHitosResponse {

@@ -1,6 +1,7 @@
 import { FC, useRef, useState, useEffect } from 'react'
 import { Modal, Button, Form, ProgressBar, Alert } from 'react-bootstrap'
 import { crearDocumento } from '../../../../api/documentalDocumentos'
+import { atisaStyles } from '../../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
@@ -199,8 +200,6 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
           console.warn(message)
           alert(message)
           return
-        } else {
-          console.log(message)
         }
       }
 
@@ -220,8 +219,58 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
 
   return (
     <Modal show={show} onHide={onHide} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Subir Documentos - {categoriaNombre}</Modal.Title>
+      <Modal.Header
+        style={{
+          backgroundColor: atisaStyles.colors.primary,
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px 12px 0 0',
+          padding: '20px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Modal.Title
+          style={{
+            fontFamily: atisaStyles.fonts.primary,
+            fontWeight: 'bold',
+            color: 'white',
+            fontSize: '1.5rem',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <i className="bi bi-upload me-2" style={{ color: 'white' }}></i>
+          Subir Documentos - {categoriaNombre}
+        </Modal.Title>
+        <div
+          className='btn btn-icon btn-sm'
+          onClick={onHide}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: 'none',
+            borderRadius: '8px',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+        </div>
       </Modal.Header>
       <Modal.Body>
         <Form onSubmit={handleSubmit}>

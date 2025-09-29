@@ -6,6 +6,9 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 // Apps
 import {MetronicI18nProvider} from './_metronic/i18n/Metronici18n'
+// Tailwind CSS
+import './styles/tailwind.css'
+// Metronic styles (mantener para compatibilidad)
 import './_metronic/assets/sass/style.react.scss'
 import './_metronic/assets/fonticon/fonticon.css'
 import './_metronic/assets/keenicons/duotone/style.css'

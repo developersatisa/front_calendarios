@@ -1,6 +1,7 @@
 import React, { FC, useEffect, useState } from 'react'
 import { Modal, Button, Table, Badge, Spinner, Alert } from 'react-bootstrap'
 import { DocumentalDocumento, getDocumentosByClienteAndCategoria, descargarDocumento, eliminarDocumento } from '../../../../api/documentalDocumentos'
+import { atisaStyles } from '../../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
@@ -139,11 +140,58 @@ const DocumentosCategoriaList: FC<Props> = ({
       centered
       backdrop="static"
     >
-      <Modal.Header closeButton className="bg-light-primary">
-        <Modal.Title className="d-flex align-items-center">
-          <i className="bi bi-folder-fill text-primary me-2"></i>
+      <Modal.Header
+        style={{
+          backgroundColor: atisaStyles.colors.primary,
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px 12px 0 0',
+          padding: '20px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Modal.Title
+          style={{
+            fontFamily: atisaStyles.fonts.primary,
+            fontWeight: 'bold',
+            color: 'white',
+            fontSize: '1.5rem',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <i className="bi bi-folder-fill me-2" style={{ color: 'white' }}></i>
           Documentos de: {categoriaNombre}
         </Modal.Title>
+        <div
+          className='btn btn-icon btn-sm'
+          onClick={onHide}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: 'none',
+            borderRadius: '8px',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+        </div>
       </Modal.Header>
 
       <Modal.Body className="p-0">
@@ -261,11 +309,58 @@ const DocumentosCategoriaList: FC<Props> = ({
 
       {showDeleteConfirm && documentoToDelete && (
         <Modal show={showDeleteConfirm} onHide={handleDeleteCancel} centered>
-          <Modal.Header closeButton className="bg-light-danger">
-            <Modal.Title className="d-flex align-items-center">
-              <i className="bi bi-trash-fill text-danger me-2"></i>
+          <Modal.Header
+            style={{
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px 12px 0 0',
+              padding: '20px 24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <Modal.Title
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                fontSize: '1.5rem',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+            >
+              <i className="bi bi-trash-fill me-2" style={{ color: 'white' }}></i>
               Confirmar eliminación
             </Modal.Title>
+            <div
+              className='btn btn-icon btn-sm'
+              onClick={handleDeleteCancel}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                borderRadius: '8px',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                e.currentTarget.style.transform = 'scale(1.1)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+            </div>
           </Modal.Header>
           <Modal.Body>
             ¿Estás seguro de que quieres eliminar el documento "{documentoToDelete.original_file_name}"?

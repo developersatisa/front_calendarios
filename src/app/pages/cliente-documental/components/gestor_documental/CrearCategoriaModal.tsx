@@ -1,6 +1,7 @@
 import React, { FC, useState, useEffect } from 'react'
 import { Modal, Button, Form, Alert } from 'react-bootstrap'
 import { createDocumentalCategoria, DocumentalCategoriaCreate } from '../../../../api/documentalCategorias'
+import { atisaStyles } from '../../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
@@ -68,11 +69,58 @@ const CrearCategoriaModal: FC<Props> = ({ show, onHide, clienteId, onSuccess }) 
 
   return (
     <Modal show={show} onHide={handleClose} centered>
-      <Modal.Header closeButton className="bg-light-primary">
-        <Modal.Title className="d-flex align-items-center">
-          <i className="bi bi-folder-plus text-primary me-2"></i>
+      <Modal.Header
+        style={{
+          backgroundColor: atisaStyles.colors.primary,
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px 12px 0 0',
+          padding: '20px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <Modal.Title
+          style={{
+            fontFamily: atisaStyles.fonts.primary,
+            fontWeight: 'bold',
+            color: 'white',
+            fontSize: '1.5rem',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <i className="bi bi-folder-plus me-2" style={{ color: 'white' }}></i>
           Crear Nueva Categoría
         </Modal.Title>
+        <div
+          className='btn btn-icon btn-sm'
+          onClick={handleClose}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: 'none',
+            borderRadius: '8px',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+        </div>
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>

@@ -3,7 +3,6 @@ import {FC, useState, useEffect, createContext, useContext, Dispatch, SetStateAc
 import {LayoutSplashScreen} from '../../../../_metronic/layout/core'
 import {AuthModel, UserModel} from './_models'
 import * as authHelper from './AuthHelpers'
-import {getUserByToken} from './_requests'
 import {WithChildren} from '../../../../_metronic/helpers'
 
 type AuthContextProps = {
@@ -56,28 +55,11 @@ const AuthInit: FC<WithChildren> = ({children}) => {
   const {auth, currentUser, logout, setCurrentUser} = useAuth()
   const [showSplashScreen, setShowSplashScreen] = useState(true)
 
-  // We should request user by authToken (IN OUR EXAMPLE IT'S API_TOKEN) before rendering the application
+  // Initialize authentication state
   useEffect(() => {
-    const requestUser = async (apiToken: string) => {
-      try {
-        if (!currentUser) {
-          const {data} = await getUserByToken(apiToken)
-          if (data) {
-            setCurrentUser(data)
-          }
-        }
-      } catch (error) {
-        console.error(error)
-        if (currentUser) {
-          logout()
-        }
-      } finally {
-        setShowSplashScreen(false)
-      }
-    }
-
     if (auth && auth.api_token) {
-      requestUser(auth.api_token)
+      // User is authenticated, no need to verify token
+      setShowSplashScreen(false)
     } else {
       logout()
       setShowSplashScreen(false)

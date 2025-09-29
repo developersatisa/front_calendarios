@@ -28,7 +28,7 @@ const InboxCompose: FC<Props> = ({show, handleClose}) => {
     >
       <div className='modal-content'>
         {/* begin::Form */}
-        <form ref={formRef} id='kt_inbox_compose_form' onSubmit={() => console.log('submit')}>
+        <form ref={formRef} id='kt_inbox_compose_form' onSubmit={() => {}}>
           {/*begin::Header*/}
           <div className='d-flex align-items-center justify-content-between py-5 ps-8 pe-5 border-bottom'>
             <h5 className='fw-bold m-0'>Compose</h5>

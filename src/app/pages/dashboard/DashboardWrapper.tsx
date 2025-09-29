@@ -2,6 +2,7 @@ import {FC} from 'react'
 import {useIntl} from 'react-intl'
 import {toAbsoluteUrl} from '../../../_metronic/helpers'
 import {PageTitle} from '../../../_metronic/layout/core'
+import { atisaStyles } from '../../styles/atisaStyles'
 import {
   ListsWidget2,
   ListsWidget3,
@@ -18,7 +19,7 @@ import {
 } from '../../../_metronic/partials/widgets'
 import { ToolbarWrapper } from '../../../_metronic/layout/components/toolbar'
 import { Content } from '../../../_metronic/layout/components/content'
-import { atisaStyles } from '../../styles/atisaStyles'
+// Removed atisaStyles import - now using Tailwind CSS
 
 const DashboardPage: FC = () => (
   <>
@@ -27,126 +28,35 @@ const DashboardPage: FC = () => (
     {/* begin::Row */}
     <div
       className='row g-5 g-xl-10 mb-5 mb-xl-10'
-      style={{
-        fontFamily: atisaStyles.fonts.secondary
-      }}
+      style={{ fontFamily: atisaStyles.fonts.secondary }}
     >
       {/* begin::Col */}
       <div className='col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10'>
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
-            padding: '24px',
-            marginBottom: '20px',
-            height: '200px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '16px',
-              backgroundColor: atisaStyles.colors.secondary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px',
-              boxShadow: '0 4px 12px rgba(156, 186, 57, 0.3)'
-            }}
-          >
-            <i
-              className="bi bi-folder-check"
-              style={{
-                fontSize: '32px',
-                color: 'white'
-              }}
-            ></i>
+        <div className="card-atisa mb-6 h-50 flex flex-col justify-center items-center text-center animate-fade-in">
+          <div className="ideogram-atisa ideogram-atisa-secondary mb-4 shadow-atisa-button">
+            <i className="bi bi-folder-check text-3xl text-white"></i>
           </div>
-          <h4
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              color: atisaStyles.colors.primary,
-              fontWeight: 'bold',
-              fontSize: '1.5rem',
-              margin: '0 0 8px 0'
-            }}
-          >
+          <h4 className="font-serif text-atisa-primary font-bold text-2xl m-0 mb-2">
             Proyectos Activos
           </h4>
           <p
-            style={{
-              fontFamily: atisaStyles.fonts.secondary,
-              color: atisaStyles.colors.dark,
-              fontSize: '14px',
-              margin: 0
-            }}
+            className="text-atisa-green-dark font-normal text-sm m-0"
+            style={{ fontFamily: atisaStyles.fonts.secondary }}
           >
             Gestión de proyectos en curso
           </p>
         </div>
 
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
-            padding: '24px',
-            height: '200px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '16px',
-              backgroundColor: atisaStyles.colors.accent,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px',
-              boxShadow: '0 4px 12px rgba(0, 161, 222, 0.3)'
-            }}
-          >
-            <i
-              className="bi bi-people"
-              style={{
-                fontSize: '32px',
-                color: 'white'
-              }}
-            ></i>
+        <div className="card-atisa h-50 flex flex-col justify-center items-center text-center animate-fade-in">
+          <div className="ideogram-atisa ideogram-atisa-accent mb-4 shadow-atisa-button">
+            <i className="bi bi-people text-3xl text-white"></i>
           </div>
-          <h4
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              color: atisaStyles.colors.primary,
-              fontWeight: 'bold',
-              fontSize: '1.5rem',
-              margin: '0 0 8px 0'
-            }}
-          >
+          <h4 className="font-serif text-atisa-primary font-bold text-2xl m-0 mb-2">
             Profesionales
           </h4>
           <p
-            style={{
-              fontFamily: atisaStyles.fonts.secondary,
-              color: atisaStyles.colors.dark,
-              fontSize: '14px',
-              margin: 0
-            }}
+            className="text-atisa-green-dark font-normal text-sm m-0"
+            style={{ fontFamily: atisaStyles.fonts.secondary }}
           >
             Equipo de trabajo especializado
           </p>
@@ -156,120 +66,31 @@ const DashboardPage: FC = () => (
 
       {/* begin::Col */}
       <div className='col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10'>
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
-            padding: '24px',
-            marginBottom: '20px',
-            height: '200px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '16px',
-              backgroundColor: atisaStyles.colors.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px',
-              boxShadow: '0 4px 12px rgba(0, 80, 92, 0.3)'
-            }}
-          >
-            <i
-              className="bi bi-graph-up"
-              style={{
-                fontSize: '32px',
-                color: 'white'
-              }}
-            ></i>
+        <div className="card-atisa mb-6 h-50 flex flex-col justify-center items-center text-center animate-fade-in">
+          <div className="ideogram-atisa ideogram-atisa-primary mb-4 shadow-atisa-button">
+            <i className="bi bi-graph-up text-3xl text-white"></i>
           </div>
-          <h4
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              color: atisaStyles.colors.primary,
-              fontWeight: 'bold',
-              fontSize: '1.5rem',
-              margin: '0 0 8px 0'
-            }}
-          >
+          <h4 className="font-serif text-atisa-primary font-bold text-2xl m-0 mb-2">
             Métricas
           </h4>
           <p
-            style={{
-              fontFamily: atisaStyles.fonts.secondary,
-              color: atisaStyles.colors.dark,
-              fontSize: '14px',
-              margin: 0
-            }}
+            className="text-atisa-green-dark font-normal text-sm m-0"
+            style={{ fontFamily: atisaStyles.fonts.secondary }}
           >
             Análisis de rendimiento
           </p>
         </div>
 
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
-            padding: '24px',
-            height: '200px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '16px',
-              backgroundColor: atisaStyles.colors.light,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px',
-              boxShadow: '0 4px 12px rgba(128, 224, 211, 0.3)'
-            }}
-          >
-            <i
-              className="bi bi-list-ul"
-              style={{
-                fontSize: '32px',
-                color: atisaStyles.colors.primary
-              }}
-            ></i>
+        <div className="card-atisa h-50 flex flex-col justify-center items-center text-center animate-fade-in">
+          <div className="ideogram-atisa ideogram-atisa-gradient mb-4 shadow-atisa-button">
+            <i className="bi bi-list-ul text-3xl text-white"></i>
           </div>
-          <h4
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              color: atisaStyles.colors.primary,
-              fontWeight: 'bold',
-              fontSize: '1.5rem',
-              margin: '0 0 8px 0'
-            }}
-          >
+          <h4 className="font-serif text-atisa-primary font-bold text-2xl m-0 mb-2">
             Listas
           </h4>
           <p
-            style={{
-              fontFamily: atisaStyles.fonts.secondary,
-              color: atisaStyles.colors.dark,
-              fontSize: '14px',
-              margin: 0
-            }}
+            className="text-atisa-green-dark font-normal text-sm m-0"
+            style={{ fontFamily: atisaStyles.fonts.secondary }}
           >
             Elementos organizados
           </p>
@@ -279,108 +100,35 @@ const DashboardPage: FC = () => (
 
       {/* begin::Col */}
       <div className='col-xxl-6'>
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
-            padding: '32px',
-            height: '400px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '20px',
-              backgroundColor: atisaStyles.colors.secondary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '24px',
-              boxShadow: '0 6px 20px rgba(156, 186, 57, 0.4)'
-            }}
-          >
-            <i
-              className="bi bi-calendar-check"
-              style={{
-                fontSize: '40px',
-                color: 'white'
-              }}
-            ></i>
+        <div className="card-atisa p-8 h-96 flex flex-col justify-center items-center text-center animate-slide-up">
+          <div className="ideogram-atisa ideogram-atisa-secondary mb-6 shadow-atisa-button-hover">
+            <i className="bi bi-calendar-check text-4xl text-white"></i>
           </div>
-          <h3
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              color: atisaStyles.colors.primary,
-              fontWeight: 'bold',
-              fontSize: '2rem',
-              margin: '0 0 16px 0'
-            }}
-          >
+          <h3 className="font-serif text-atisa-primary font-bold text-3xl m-0 mb-4">
             Sistema de Gestión
           </h3>
           <p
-            style={{
-              fontFamily: atisaStyles.fonts.secondary,
-              color: atisaStyles.colors.dark,
-              fontSize: '16px',
-              margin: '0 0 24px 0',
-              lineHeight: '1.6'
-            }}
+            className="text-atisa-green-dark font-normal text-base m-0 mb-6 leading-relaxed"
+            style={{ fontFamily: atisaStyles.fonts.secondary }}
           >
             Plataforma integral para la gestión de calendarios y documentos empresariales
           </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-              justifyContent: 'center'
-            }}
-          >
+          <div className="flex gap-3 flex-wrap justify-center">
             <span
-              style={{
-                backgroundColor: atisaStyles.colors.light,
-                color: atisaStyles.colors.primary,
-                padding: '6px 12px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
-                fontFamily: atisaStyles.fonts.secondary
-              }}
+              className="bg-atisa-green-light text-atisa-primary px-4 py-2 rounded-full text-xs font-semibold"
+              style={{ fontFamily: atisaStyles.fonts.secondary }}
             >
               Calendarios
             </span>
             <span
-              style={{
-                backgroundColor: atisaStyles.colors.light,
-                color: atisaStyles.colors.primary,
-                padding: '6px 12px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
-                fontFamily: atisaStyles.fonts.secondary
-              }}
+              className="bg-atisa-green-light text-atisa-primary px-4 py-2 rounded-full text-xs font-semibold"
+              style={{ fontFamily: atisaStyles.fonts.secondary }}
             >
               Documentos
             </span>
             <span
-              style={{
-                backgroundColor: atisaStyles.colors.light,
-                color: atisaStyles.colors.primary,
-                padding: '6px 12px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
-                fontFamily: atisaStyles.fonts.secondary
-              }}
+              className="bg-atisa-green-light text-atisa-primary px-4 py-2 rounded-full text-xs font-semibold"
+              style={{ fontFamily: atisaStyles.fonts.secondary }}
             >
               Procesos
             </span>

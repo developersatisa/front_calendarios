@@ -18,7 +18,6 @@ export const getAllProcesoHitosMaestro = async (page?: number, limit?: number) =
     if (limit) params.append('limit', limit.toString());
 
     const response = await api.get<{total: number, procesoHitos: ProcesoHitos[]}>(`/proceso-hitos?${params.toString()}`);
-    console.log('API Response raw:', response.data);
 
     // Transformar la respuesta al formato esperado
     return {
