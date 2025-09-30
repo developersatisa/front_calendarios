@@ -15,6 +15,7 @@ import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 import PlantillasList from '../pages/dashboard/PlantillasList'
 import ClientesDocumentalCalendarioList from '../pages/cliente-documental/ClientesDocumentalCalendarioList'
 import CalendarioCliente from '../pages/cliente-documental/components/calendario/CalendarioCliente'
+import EditarCalendarioCliente from '../pages/cliente-documental/components/calendario/EditarCalendarioCliente'
 import GestorDocumental from '../pages/cliente-documental/components/gestor_documental/GestorDocumental'
 import MetricasList from '../pages/dashboard-metricas/MetricasList'
 
@@ -43,6 +44,7 @@ const PrivateRoutes = () => {
         <Route path='plantillas' element={<PlantillasList />} />
         <Route path='clientes-documental-calendario' element={<ClientesDocumentalCalendarioList />} />
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioClienteWrapper />} />
+        <Route path='/editar-calendario/:clienteId' element={<EditarCalendarioClienteWrapper />} />
         <Route path='gestor-documental/:clienteId' element={<GestorDocumentalWrapper />} />
         {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
@@ -119,6 +121,13 @@ const CalendarioClienteWrapper: FC = () => {
   const { clienteId } = useParams<{ clienteId: string }>()
   if (!clienteId) return null
   return <CalendarioCliente clienteId={clienteId} />
+}
+
+// Componente wrapper para extraer el clienteId de la URL y pasarlo como prop al Editar Calendario
+const EditarCalendarioClienteWrapper: FC = () => {
+  const { clienteId } = useParams<{ clienteId: string }>()
+  if (!clienteId) return null
+  return <EditarCalendarioCliente clienteId={clienteId} />
 }
 
 // Componente wrapper para extraer el clienteId de la URL y pasarlo como prop al Gestor Documental
