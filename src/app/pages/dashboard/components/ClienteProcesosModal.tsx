@@ -56,8 +56,8 @@ const ClienteProcesosModal: FC<Props> = ({
     if (!selectedCliente || !formData.plantillaId || !procesos.length) return
 
     const calendarios = procesos.map(procesoId => ({
-      idcliente: Number(selectedCliente.idcliente),
-      id_proceso: procesoId,
+      cliente_id: selectedCliente.idcliente,
+      proceso_id: procesoId,
     }))
 
     onSave(calendarios)

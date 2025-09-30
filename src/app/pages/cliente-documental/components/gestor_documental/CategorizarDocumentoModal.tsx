@@ -156,8 +156,8 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
         try {
           // Usar la nueva función crearDocumento del API
           await crearDocumento({
-            id_cliente: clienteId,
-            id_categoria: categoriaId,
+            cliente_id: clienteId,
+            categoria_id: categoriaId,
             nombre_documento: fileName,
             file: file
           })

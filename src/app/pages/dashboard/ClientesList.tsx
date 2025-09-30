@@ -643,6 +643,32 @@ const ClientesList: FC = () => {
                                 <i className='bi bi-eye me-2'></i>
                                 Ver Calendario
                               </button>
+                              <button
+                                className='btn btn-sm'
+                                onClick={() => navigate(`/editar-calendario/${cliente.idcliente}`)}
+                                style={{
+                                  backgroundColor: atisaStyles.colors.primary,
+                                  border: `2px solid ${atisaStyles.colors.primary}`,
+                                  color: 'white',
+                                  fontFamily: atisaStyles.fonts.secondary,
+                                  fontWeight: '600',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  transition: 'all 0.3s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                                  e.currentTarget.style.borderColor = atisaStyles.colors.secondary
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                                  e.currentTarget.style.borderColor = atisaStyles.colors.primary
+                                }}
+                              >
+                                <i className='bi bi-pencil-square me-2'></i>
+                                Editar Calendario
+                              </button>
                             </div>
                           </td>
                         </tr>

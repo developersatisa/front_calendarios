@@ -2,12 +2,13 @@ import api from './axiosConfig'
 
 export interface ClienteProceso {
   id: number
-  idcliente: string
-  id_proceso: number
+  cliente_id: string
+  proceso_id: number
   fecha_inicio: string
   fecha_fin: string | null
   mes: number | null
   anio: number | null
+  anterior_id: number | null
 }
 
 export interface ClienteProcesosResponse {
@@ -16,8 +17,8 @@ export interface ClienteProcesosResponse {
 }
 
 export interface GenerarCalendarioParams {
-  idcliente: number
-  id_proceso: number
+  cliente_id: string
+  proceso_id: number
   fecha_inicio: string
 }
 

@@ -2,8 +2,10 @@ import api from './axiosConfig'
 
 export interface DocumentoResponse {
   id: number
-  nombre_documento: string
   cliente_proceso_hito_id: number
+  nombre_documento: string
+  original_file_name: string
+  stored_file_name: string
 }
 
 // Subir un documento para un cliente proceso hito
@@ -13,7 +15,7 @@ export const subirDocumento = async (
   file: File
 ) => {
   const formData = new FormData()
-  formData.append('id_cliente_proceso_hito', idClienteProcesoHito.toString())
+  formData.append('cliente_proceso_hito_id', idClienteProcesoHito.toString())
   formData.append('nombre_documento', nombreDocumento)
   formData.append('file', file)
 

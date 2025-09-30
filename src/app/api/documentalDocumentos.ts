@@ -2,8 +2,8 @@ import api from './axiosConfig'
 
 export interface DocumentalDocumento {
     id: number,
-    id_cliente: string,
-    id_categoria: number,
+    cliente_id: string,
+    categoria_id: number,
     nombre_documento: string,
     original_file_name: string,
     stored_file_name: string,
@@ -15,8 +15,8 @@ export interface DocumentalDocumentosResponse {
 }
 
 export interface CrearDocumentoRequest {
-    id_cliente: string,
-    id_categoria: number,
+    cliente_id: string,
+    categoria_id: number,
     nombre_documento: string,
     file: File
 }
@@ -32,8 +32,8 @@ export const getDocumentosByClienteAndCategoria = async (
 
 export const crearDocumento = async (data: CrearDocumentoRequest): Promise<DocumentalDocumento> => {
     const formData = new FormData()
-    formData.append('id_cliente', data.id_cliente)
-    formData.append('id_categoria', data.id_categoria.toString())
+    formData.append('cliente_id', data.cliente_id)
+    formData.append('categoria_id', data.categoria_id.toString())
     formData.append('nombre_documento', data.nombre_documento)
     formData.append('file', data.file)
 

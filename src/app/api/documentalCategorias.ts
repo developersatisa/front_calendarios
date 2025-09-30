@@ -2,12 +2,12 @@ import api from './axiosConfig'
 
 export interface DocumentalCategoria {
   id: number
-  id_cliente: string
+  cliente_id: string
   nombre: string
 }
 
 export interface DocumentalCategoriaCreate {
-  id_cliente: string
+  cliente_id: string
   nombre: string
 }
 

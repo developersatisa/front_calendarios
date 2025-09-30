@@ -12,6 +12,15 @@ export interface ClienteProcesoHito {
   tipo: string
 }
 
+export interface ClienteProcesoHitoCumplimiento {
+  id: number
+  cliente_proceso_hito_id: number
+  fecha: string
+  hora: string
+  observacion: string | null
+  usuario: string
+}
+
 export interface ClienteProcesoHitoUpdate {
   estado: string
   fecha_estado: string | null

@@ -214,19 +214,19 @@ const ProcesosList: FC = () => {
   })
 
   const groupedProcesoHitos = procesoHitos.reduce((groups, ph) => {
-    if (!groups[ph.id_proceso]) {
-      groups[ph.id_proceso] = []
+    if (!groups[ph.proceso_id]) {
+      groups[ph.proceso_id] = []
     }
-    const hito = hitos.find(h => h.id === ph.id_hito)
+    const hito = hitos.find(h => h.id === ph.hito_id)
     if (hito) {
-      groups[ph.id_proceso].push({...ph, hitoData: hito})
+      groups[ph.proceso_id].push({...ph, hitoData: hito})
     }
     return groups
   }, {} as Record<number, Array<ProcesoHitos & {hitoData: Hito}>>)
 
   const handleAddHitos = (proceso: Proceso) => {
     // Filtrar los hitos actuales del proceso seleccionado
-    const hitosActualesProceso = procesoHitos.filter(ph => ph.id_proceso === proceso.id)
+    const hitosActualesProceso = procesoHitos.filter(ph => ph.proceso_id === proceso.id)
     setSelectedProcesoForHitos(proceso)
     setShowHitosModal(true)
   }

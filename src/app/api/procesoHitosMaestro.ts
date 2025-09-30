@@ -2,8 +2,8 @@ import api from './axiosConfig'
 
 export interface ProcesoHitos {
   id: number
-  id_proceso: number
-  id_hito: number
+  proceso_id: number
+  hito_id: number
 }
 
 export interface ProcesoHitosMaestroResponse {

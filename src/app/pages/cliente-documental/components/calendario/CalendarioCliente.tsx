@@ -146,8 +146,8 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   // Agrupar procesos por tipo y subgrupar por período
   const groupedProcesos = useMemo(() => {
     const groups = procesos.reduce((acc, proceso) => {
-      const procesoInfo = procesosList.find(p => p.id === proceso.id_proceso)
-      const key = procesoInfo?.nombre || `Proceso ${proceso.id_proceso}`
+      const procesoInfo = procesosList.find(p => p.id === proceso.proceso_id)
+      const key = procesoInfo?.nombre || `Proceso ${proceso.proceso_id}`
       if (!acc[key]) {
         acc[key] = {
           items: [],

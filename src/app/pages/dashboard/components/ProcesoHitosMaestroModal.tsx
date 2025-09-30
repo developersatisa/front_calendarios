@@ -52,8 +52,8 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
     if (show) {
       if (selectedProcesoId) {
         const hitosDelProceso = hitosActuales
-          .filter(h => h.id_proceso === selectedProcesoId)
-          .map(h => h.id_hito)
+          .filter(h => h.proceso_id === selectedProcesoId)
+          .map(h => h.hito_id)
         setSelectedHitos(hitosDelProceso)
         setSelectAll(hitosDelProceso.length > 0)
       } else {
@@ -95,13 +95,13 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
 
     try {
       // Primero eliminar todos los hitos actuales del proceso
-      const hitosABorrar = hitosActuales.filter(h => h.id_proceso === selectedProcesoId)
+      const hitosABorrar = hitosActuales.filter(h => h.proceso_id === selectedProcesoId)
       await Promise.all(hitosABorrar.map(h => deleteProcesoHitosMaestro(h.id)))
 
       // Luego crear las nuevas relaciones
       const newRelations = selectedHitos.map(hitoId => ({
-        id_proceso: selectedProcesoId,
-        id_hito: hitoId
+        proceso_id: selectedProcesoId,
+        hito_id: hitoId
       }))
 
       await onSave(newRelations)

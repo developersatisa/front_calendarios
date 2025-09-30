@@ -12,7 +12,7 @@ interface Props {
 
 const CrearCategoriaModal: FC<Props> = ({ show, onHide, clienteId, onSuccess }) => {
   const [formData, setFormData] = useState<DocumentalCategoriaCreate>({
-    id_cliente: clienteId,
+    cliente_id: clienteId,
     nombre: ''
   })
   const [loading, setLoading] = useState(false)
@@ -21,7 +21,7 @@ const CrearCategoriaModal: FC<Props> = ({ show, onHide, clienteId, onSuccess }) 
   useEffect(() => {
     if (show) {
       setFormData({
-        id_cliente: clienteId,
+        cliente_id: clienteId,
         nombre: ''
       })
       setError(null)
@@ -44,7 +44,7 @@ const CrearCategoriaModal: FC<Props> = ({ show, onHide, clienteId, onSuccess }) 
 
       // Limpiar formulario y cerrar modal
       setFormData({
-        id_cliente: clienteId,
+        cliente_id: clienteId,
         nombre: ''
       })
 
@@ -60,7 +60,7 @@ const CrearCategoriaModal: FC<Props> = ({ show, onHide, clienteId, onSuccess }) 
 
   const handleClose = () => {
     setFormData({
-      id_cliente: clienteId,
+      cliente_id: clienteId,
       nombre: ''
     })
     setError(null)
