@@ -41,6 +41,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   }>>([])
   const [saving, setSaving] = useState(false)
   const [showHistorialAuditoria, setShowHistorialAuditoria] = useState(false)
+  const [observacionesGlobales, setObservacionesGlobales] = useState('')
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -406,19 +407,6 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     }
   }
 
-  const handleObservacionesChange = (hitoId: number, observaciones: string) => {
-    setHitosEditados(prev => ({
-      ...prev,
-      [hitoId]: {
-        ...prev[hitoId],
-        id: hitoId,
-        fecha_inicio: prev[hitoId]?.fecha_inicio || '',
-        fecha_fin: prev[hitoId]?.fecha_fin || null,
-        hora_limite: prev[hitoId]?.hora_limite || null,
-        observaciones
-      }
-    }))
-  }
 
   const validarTodosLosCambios = () => {
     for (const [hitoId, hitoEditado] of Object.entries(hitosEditados)) {
@@ -492,7 +480,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           cambio.campo,
           cambio.valorAnterior,
           cambio.valorNuevo,
-          hitosEditados[cambio.hitoId]?.observaciones
+          observacionesGlobales
         )
       }
 
@@ -513,6 +501,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
       // Limpiar cambios
       setHitosEditados({})
       setCambiosRealizados([])
+      setObservacionesGlobales('')
     } catch (error) {
       console.error('Error guardando cambios:', error)
       alert('Error al guardar los cambios. Por favor, inténtelo de nuevo.')
@@ -526,6 +515,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     if (confirmacion) {
       setHitosEditados({})
       setCambiosRealizados([])
+      setObservacionesGlobales('')
     }
   }
 
@@ -539,7 +529,9 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
       return `• ${nombreHito}: ${cambio.campo} (${cambio.valorAnterior} → ${cambio.valorNuevo})`
     }).join('\n')
 
-    alert(`Resumen de cambios:\n\n${resumen}`)
+    const observacionesTexto = observacionesGlobales ? `\n\nObservaciones:\n${observacionesGlobales}` : ''
+
+    alert(`Resumen de cambios:\n\n${resumen}${observacionesTexto}`)
   }
 
   const getValorHito = (hito: ClienteProcesoHito, campo: 'fecha_inicio' | 'fecha_fin' | 'hora_limite') => {
@@ -794,6 +786,61 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
         </div>
       </div>
 
+      {/* Campo de observaciones - Solo visible cuando hay cambios */}
+      {Object.keys(hitosEditados).length > 0 && (
+        <div
+          className="mb-4"
+          style={{
+            backgroundColor: 'white',
+            padding: '20px 24px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            border: `1px solid ${atisaStyles.colors.light}`
+          }}
+        >
+          <div className="row">
+            <div className="col-12">
+              <label className="form-label" style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: atisaStyles.colors.dark,
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <i className="bi bi-chat-text" style={{ color: atisaStyles.colors.primary }}></i>
+                Observaciones de los cambios realizados
+              </label>
+              <textarea
+                className="form-control"
+                value={observacionesGlobales}
+                onChange={(e) => setObservacionesGlobales(e.target.value)}
+                placeholder="Describa los cambios realizados en los hitos..."
+                rows={3}
+                style={{
+                  fontSize: '14px',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  border: `2px solid ${atisaStyles.colors.light}`,
+                  borderRadius: '8px',
+                  resize: 'vertical',
+                  transition: 'border-color 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = atisaStyles.colors.primary
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = atisaStyles.colors.light
+                }}
+              />
+              <small className="text-muted" style={{ fontSize: '12px', marginTop: '4px' }}>
+                Estas observaciones se aplicarán a todos los cambios realizados en esta sesión
+              </small>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Selector de períodos */}
       <div
         className="mb-4 position-relative"
@@ -1008,25 +1055,13 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                             >
                               Hora Límite
                             </th>
-                            <th
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
-                              }}
-                            >
-                              Observaciones
-                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {loadingHitos ? (
                             <tr>
                               <td
-                                colSpan={6}
+                                colSpan={5}
                                 className="text-center py-4"
                                 style={{
                                   backgroundColor: '#f8f9fa',
@@ -1215,23 +1250,6 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                           fontSize: '13px',
                                           border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
                                           borderRadius: '6px'
-                                        }}
-                                      />
-                                    </td>
-                                    <td style={{ padding: '16px 12px' }}>
-                                      <textarea
-                                        className="form-control form-control-sm"
-                                        value={hitosEditados[hito.id]?.observaciones || ''}
-                                        onChange={(e) => handleObservacionesChange(hito.id, e.target.value)}
-                                        placeholder="Observaciones del cambio..."
-                                        disabled={isFinalized}
-                                        rows={2}
-                                        style={{
-                                          fontFamily: atisaStyles.fonts.secondary,
-                                          fontSize: '13px',
-                                          border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                          borderRadius: '6px',
-                                          resize: 'vertical'
                                         }}
                                       />
                                     </td>

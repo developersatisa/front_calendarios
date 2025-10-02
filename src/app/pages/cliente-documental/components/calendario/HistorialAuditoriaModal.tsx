@@ -329,7 +329,7 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
                       {formatDate(item.fecha_modificacion)}
                     </td>
                     <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600' }}>
-                      Hito #{item.hito_id}
+                      {item.nombre_hito}
                     </td>
                     <td style={{ padding: '12px', fontSize: '14px' }}>
                       <span

@@ -4,6 +4,7 @@ export interface AuditoriaCalendario {
   id: number
   cliente_id: string
   hito_id: number
+  nombre_hito: string | null
   campo_modificado: string
   valor_anterior: string | null
   valor_nuevo: string | null
