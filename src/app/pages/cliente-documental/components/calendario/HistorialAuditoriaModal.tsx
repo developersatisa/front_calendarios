@@ -71,9 +71,9 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
       setTotalPages(1)
       setTotalItems(0)
 
-      // Establecer fechas por defecto (último año)
+      // Establecer fechas por defecto (último año) usando UTC
       const hoy = new Date()
-      const haceUnAno = new Date(hoy.getFullYear() - 1, hoy.getMonth(), hoy.getDate())
+      const haceUnAno = new Date(Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate()))
 
       setFechaDesde(haceUnAno.toISOString().split('T')[0])
       setFechaHasta(hoy.toISOString().split('T')[0])

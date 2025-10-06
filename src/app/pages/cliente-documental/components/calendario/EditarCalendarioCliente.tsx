@@ -88,10 +88,10 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
 
   useEffect(() => {
     if (periodos.length > 0) {
-      // Obtener el mes y año actual
+      // Obtener el mes y año actual usando UTC
       const ahora = new Date()
-      const anoActual = ahora.getFullYear()
-      const mesActual = (ahora.getMonth() + 1).toString().padStart(2, '0')
+      const anoActual = ahora.getUTCFullYear()
+      const mesActual = (ahora.getUTCMonth() + 1).toString().padStart(2, '0')
       const periodoActual = `${anoActual}-${mesActual}`
 
       // Buscar si existe el período actual en la lista
@@ -683,17 +683,19 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   const getCeldasCalendario = () => {
     if (!selectedPeriod) return [] as Array<{date: Date, actual: boolean}>
     const [year, month] = selectedPeriod.split('-').map(Number)
-    const primeroMes = new Date(year, month - 1, 1)
+
+    // Usar UTC para evitar problemas de zona horaria
+    const primeroMes = new Date(Date.UTC(year, month - 1, 1))
     // Lunes=0 ... Domingo=6 (ajustamos desde getDay() que es 0=Dom)
     const weekday = (primeroMes.getDay() + 6) % 7
-    const inicioGrid = new Date(primeroMes)
-    inicioGrid.setDate(primeroMes.getDate() - weekday)
+
+    // Calcular el primer día del grid (puede ser del mes anterior)
+    const inicioGrid = new Date(Date.UTC(year, month - 1, 1 - weekday))
 
     const celdas: Array<{date: Date, actual: boolean}> = []
     for (let i = 0; i < 42; i++) {
-      const d = new Date(inicioGrid)
-      d.setDate(inicioGrid.getDate() + i)
-      const esActual = d.getMonth() === (month - 1)
+      const d = new Date(Date.UTC(inicioGrid.getUTCFullYear(), inicioGrid.getUTCMonth(), inicioGrid.getUTCDate() + i))
+      const esActual = d.getUTCMonth() === (month - 1)
       celdas.push({ date: d, actual: esActual })
     }
     return celdas

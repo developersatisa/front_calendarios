@@ -53,10 +53,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
   useEffect(() => {
     if (periodos.length > 0) {
-      // Obtener el mes y año actual
+      // Obtener el mes y año actual usando UTC
       const ahora = new Date()
-      const anoActual = ahora.getFullYear()
-      const mesActual = (ahora.getMonth() + 1).toString().padStart(2, '0')
+      const anoActual = ahora.getUTCFullYear()
+      const mesActual = (ahora.getUTCMonth() + 1).toString().padStart(2, '0')
       const periodoActual = `${anoActual}-${mesActual}`
 
       // Buscar si existe el período actual en la lista
@@ -301,6 +301,46 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     }
   }
 
+  // Determinar estado temporal del hito respecto a hoy (UTC)
+  const getEstadoVencimiento = (fechaLimite?: string | null, estado?: string) => {
+    if (!fechaLimite) return 'sin_fecha'
+    if (estado === 'Finalizado') return 'finalizado'
+    try {
+      const hoy = new Date()
+      const hoyUTC = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()))
+      const [y, m, d] = fechaLimite.split('-').map(Number)
+      const fecha = new Date(Date.UTC(y, m - 1, d))
+      if (fecha.getTime() < hoyUTC.getTime()) return 'vencido'
+      if (fecha.getTime() === hoyUTC.getTime()) return 'hoy'
+      return 'en_plazo'
+    } catch {
+      return 'en_plazo'
+    }
+  }
+
+  // ¿Vence hoy en <= N horas? Ignora horas vacías o "00:00"
+  const esUrgenteEnHoras = (fechaLimite?: string | null, horaLimite?: string | null, horas: number = 2) => {
+    if (!fechaLimite || !horaLimite || horaLimite.startsWith('00:00')) return false
+    try {
+      const ahora = new Date()
+      const hoyUTC = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()))
+      const [y, m, d] = fechaLimite.split('-').map(Number)
+      const fechaUTC = new Date(Date.UTC(y, m - 1, d))
+      // Debe ser hoy
+      if (fechaUTC.getTime() !== hoyUTC.getTime()) return false
+
+      // Construir Date de vencimiento hoy con hora límite en local (mostrar urgencia relativa al usuario)
+      const [hh, mm] = (horaLimite.includes(':') ? horaLimite : `${horaLimite}:00`).split(':').map(Number)
+      const vencimiento = new Date()
+      vencimiento.setHours(hh || 0, mm || 0, 0, 0)
+      const diffMs = vencimiento.getTime() - Date.now()
+      const limiteMs = horas * 60 * 60 * 1000
+      return diffMs >= 0 && diffMs <= limiteMs
+    } catch {
+      return false
+    }
+  }
+
   // Recargar hitos después de subir documento
   const handleUploadSuccess = async () => {
     if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
@@ -501,11 +541,12 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                           margin: 0
                         }}
                       >
-                        <thead>
+                        <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
                           <tr
                             style={{
                               backgroundColor: atisaStyles.colors.primary,
-                              color: 'white'
+                              color: 'white',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                             }}
                           >
                             <th
@@ -672,22 +713,30 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
                               return hitosDelProceso.map((hito, hitoIndex) => {
                                 const isFinalized = hito.estado === 'Finalizado'
-                                const isFirstHito = hitoIndex === 0
+                                const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
+
+                                // Color de fondo por vencimiento (más notorio) y borde lateral
+                                const bgRow = estadoVenc === 'vencido'
+                                  ? '#ffe0e0'
+                                  : estadoVenc === 'hoy'
+                                  ? '#fff0c2'
+                                  : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa')
+                                // Sin barra lateral
 
                                 return (
                                   <tr
                                     key={`${proceso.id}-${hito.id}`}
                                     style={{
-                                      backgroundColor: hitoIndex % 2 === 0 ? 'white' : '#f8f9fa',
+                                      backgroundColor: bgRow,
                                       transition: 'all 0.2s ease'
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                                      e.currentTarget.style.backgroundColor = estadoVenc === 'vencido' ? '#ffcfcf' : (estadoVenc === 'hoy' ? '#ffe49a' : atisaStyles.colors.light)
                                       e.currentTarget.style.transform = 'translateY(-1px)'
                                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'
+                                      e.currentTarget.style.backgroundColor = bgRow
                                       e.currentTarget.style.transform = 'translateY(0)'
                                       e.currentTarget.style.boxShadow = 'none'
                                     }}
@@ -734,7 +783,23 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      {hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span>{hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}</span>
+                                        {estadoVenc === 'vencido' && (
+                                          <span style={{ backgroundColor: '#ef4444', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>Vencido</span>
+                                        )}
+                                        {estadoVenc === 'hoy' && (
+                                          <>
+                                            <span style={{ backgroundColor: '#f59e0b', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>Vence hoy</span>
+                                            {esUrgenteEnHoras(hito.fecha_limite, hito.hora_limite, 2) && (
+                                              <span style={{ backgroundColor: '#dc2626', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>≤ 2h</span>
+                                            )}
+                                          </>
+                                        )}
+                                        {estadoVenc === 'en_plazo' && (
+                                          <span style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>En plazo</span>
+                                        )}
+                                      </div>
                                     </td>
                                     <td
                                       style={{
