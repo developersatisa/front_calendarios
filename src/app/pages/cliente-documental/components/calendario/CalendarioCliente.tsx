@@ -26,6 +26,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [showObservacionModal, setShowObservacionModal] = useState(false)
   const [observacionSeleccionada, setObservacionSeleccionada] = useState('')
   const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
+  const [busquedaNombre, setBusquedaNombre] = useState('')
+  const [debouncedBusqueda, setDebouncedBusqueda] = useState('')
+  const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencido' | 'hoy' | 'en_plazo' | 'sin_fecha'>('todos')
+  const [filtroCumplimiento, setFiltroCumplimiento] = useState<'todos' | 'cumplimentado' | 'no_cumplimentado'>('todos')
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -66,6 +70,17 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       setSelectedPeriod(existePeriodoActual ? periodoActual : periodos[0])
     }
   }, [periodos])
+  // Debounce para búsqueda por nombre de hito
+  useEffect(() => {
+    const normalizeText = (text: string) =>
+      text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+    const id = setTimeout(() => setDebouncedBusqueda(normalizeText(busquedaNombre)), 300)
+    return () => clearTimeout(id)
+  }, [busquedaNombre])
 
   // Función para cargar todos los hitos de los procesos
   const cargarHitosDeProcesos = async (procesosACarga: ClienteProceso[]) => {
@@ -110,6 +125,8 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     setLoadingHitos(false)
   }
 
+  // Navegación de períodos eliminada a petición
+
   // Función separada para cargar cumplimientos de forma asíncrona
   const cargarCumplimientosAsync = async (hitosMap: Record<number, ClienteProcesoHito[]>) => {
     try {
@@ -142,6 +159,40 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       // No limpiar cumplimientos existentes en caso de error
     }
   }
+  // Memoizar texto de última fecha/hora de cumplimiento por hito
+  const ultimaFechaCumplimientoFmt = useMemo(() => {
+    const result: Record<number, string> = {}
+    Object.entries(cumplimientosPorHito).forEach(([hitoIdStr, cumplimientos]) => {
+      const hitoId = parseInt(hitoIdStr, 10)
+      if (!cumplimientos || cumplimientos.length === 0) {
+        result[hitoId] = '-'
+        return
+      }
+      try {
+        const ultimo = cumplimientos[0]
+        if (!ultimo.fecha || !ultimo.hora) {
+          result[hitoId] = '-'
+          return
+        }
+        let hhmm = ultimo.hora
+        if (hhmm.includes(':')) {
+          const p = hhmm.split(':')
+          hhmm = `${p[0]}:${p[1]}`
+        }
+        const fecha = new Date(`${ultimo.fecha}T${hhmm}:00`)
+        if (isNaN(fecha.getTime())) {
+          result[hitoId] = '-'
+          return
+        }
+        result[hitoId] = fecha.toLocaleDateString('es-ES', {
+          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        })
+      } catch {
+        result[hitoId] = '-'
+      }
+    })
+    return result
+  }, [cumplimientosPorHito])
 
   // Agrupar procesos por tipo y subgrupar por período
   const groupedProcesos = useMemo(() => {
@@ -340,6 +391,45 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       return false
     }
   }
+  // Predicados de filtros rápidos
+  const coincideVencimiento = (h: ClienteProcesoHito) => {
+    if (filtroVencimiento === 'todos') return true
+    const ev = getEstadoVencimiento(h.fecha_limite, h.estado)
+    return ev === filtroVencimiento
+  }
+  const coincideCumplimiento = (h: ClienteProcesoHito) => {
+    if (filtroCumplimiento === 'todos') return true
+    const tieneCumplimientos = (cumplimientosPorHito[h.id] && cumplimientosPorHito[h.id].length > 0)
+    return filtroCumplimiento === 'cumplimentado' ? tieneCumplimientos : !tieneCumplimientos
+  }
+
+  // Determinar si fue finalizado fuera de plazo (último cumplimiento > fecha límite + hora límite)
+  const getUltimoCumplimientoDate = (hitoId: number): Date | null => {
+    const lista = cumplimientosPorHito[hitoId]
+    if (!lista || lista.length === 0) return null
+    const c = lista[0]
+    if (!c.fecha) return null
+    const horaStr = c.hora ? (c.hora.includes(':') ? c.hora : `${c.hora}:00`) : '00:00'
+    const dt = new Date(`${c.fecha}T${horaStr.length === 5 ? horaStr + ':00' : horaStr}`)
+    return isNaN(dt.getTime()) ? null : dt
+  }
+
+  const getFechaLimiteDate = (fechaLimite?: string | null, horaLimite?: string | null): Date | null => {
+    if (!fechaLimite) return null
+    const horaStr = horaLimite && !horaLimite.startsWith('00:00')
+      ? (horaLimite.includes(':') ? horaLimite : `${horaLimite}:00`)
+      : '23:59:59'
+    const dt = new Date(`${fechaLimite}T${horaStr.length === 5 ? horaStr + ':00' : horaStr}`)
+    return isNaN(dt.getTime()) ? null : dt
+  }
+
+  const isFinalizadoFueraDePlazo = (h: ClienteProcesoHito): boolean => {
+    if (h.estado !== 'Finalizado') return false
+    const ult = getUltimoCumplimientoDate(h.id)
+    const limite = getFechaLimiteDate(h.fecha_limite, h.hora_limite)
+    if (!ult || !limite) return false
+    return ult.getTime() > limite.getTime()
+  }
 
   // Recargar hitos después de subir documento
   const handleUploadSuccess = async () => {
@@ -362,7 +452,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
   return (
     <div
-      className="container py-5"
+      className="container-fluid py-5"
       style={{
         fontFamily: atisaStyles.fonts.secondary,
         backgroundColor: '#f8f9fa',
@@ -378,7 +468,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
           marginBottom: '16px',
-          textAlign: 'center'
+          textAlign: 'center',
+          maxWidth: '1600px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
         }}
       >
         <h2
@@ -395,6 +488,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
         </h2>
       </div>
 
+
       {/* Selector de períodos */}
       <div
         className="mb-4 position-relative"
@@ -403,7 +497,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           padding: '20px 24px',
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-          border: `1px solid ${atisaStyles.colors.light}`
+          border: `1px solid ${atisaStyles.colors.light}`,
+          maxWidth: '1600px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
         }}
       >
         <div className="d-flex overflow-auto justify-content-end" style={{ scrollbarWidth: 'thin' }}>
@@ -449,6 +546,44 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           })}
         </div>
       </div>
+
+      {/* Barra de filtros y búsqueda sticky bajo el selector de períodos */}
+      <div
+        className="mb-3"
+        style={{
+          position: 'sticky',
+          top: 8,
+          zIndex: 2,
+          backgroundColor: 'white',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+          border: `1px solid ${atisaStyles.colors.light}`,
+          maxWidth: '1600px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}
+      >
+        <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <div className="d-flex flex-wrap gap-2">
+            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'todos' ? atisaStyles.colors.secondary : 'white', color: filtroVencimiento === 'todos' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('todos')}>Todos</button>
+            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'vencido' ? '#ef4444' : 'white', color: filtroVencimiento === 'vencido' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('vencido')}>Vencido</button>
+            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'hoy' ? '#f59e0b' : 'white', color: filtroVencimiento === 'hoy' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('hoy')}>Hoy</button>
+            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'en_plazo' ? '#10b981' : 'white', color: filtroVencimiento === 'en_plazo' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('en_plazo')}>En plazo</button>
+            {/* Botón 'Sin fecha' eliminado a petición */}
+
+            <div className="vr mx-2" style={{ height: 24 }}></div>
+
+            <button className="btn btn-sm" style={{ backgroundColor: filtroCumplimiento === 'todos' ? atisaStyles.colors.secondary : 'white', color: filtroCumplimiento === 'todos' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroCumplimiento('todos')}>Todos</button>
+            <button className="btn btn-sm" style={{ backgroundColor: filtroCumplimiento === 'cumplimentado' ? atisaStyles.colors.accent : 'white', color: filtroCumplimiento === 'cumplimentado' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroCumplimiento('cumplimentado')}>Cumplimentados</button>
+            <button className="btn btn-sm" style={{ backgroundColor: filtroCumplimiento === 'no_cumplimentado' ? '#adb5bd' : 'white', color: filtroCumplimiento === 'no_cumplimentado' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroCumplimiento('no_cumplimentado')}>No cumplimentados</button>
+          </div>
+
+          <div style={{ minWidth: 260 }}>
+            <input type="text" className="form-control form-control-sm" placeholder="Buscar por nombre de hito..." value={busquedaNombre} onChange={(e) => setBusquedaNombre(e.target.value)} style={{ fontFamily: atisaStyles.fonts.secondary, fontSize: '14px', border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '6px' }} />
+          </div>
+        </div>
+      </div>
       <Accordion
         defaultActiveKey="0"
         style={{
@@ -456,7 +591,9 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
           border: `1px solid ${atisaStyles.colors.light}`,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          maxWidth: '1600px',
+          margin: '0 auto'
         }}
       >
         {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
@@ -632,7 +769,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 color: 'white'
                               }}
                             >
-                              Fecha Hora Cumplimiento
+                              Fecha / Hora Cumplimiento
                             </th>
                             <th
                               className='text-start'
@@ -685,7 +822,16 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                             </tr>
                           ) : (
                             periodo.items.map((proceso) => {
-                              const hitosDelProceso = hitosPorProceso[proceso.id] || []
+                              const hitosDelProceso = (hitosPorProceso[proceso.id] || [])
+                                .filter((h) => coincideVencimiento(h) && coincideCumplimiento(h))
+                                .filter((h) => {
+                                  if (!debouncedBusqueda) return true
+                                  const nombre = getNombreHito(h.hito_id)
+                                    .toLowerCase()
+                                    .normalize('NFD')
+                                    .replace(/[\u0300-\u036f]/g, '')
+                                  return nombre.includes(debouncedBusqueda)
+                                })
 
                               if (hitosDelProceso.length === 0) {
                                 return (
@@ -714,13 +860,19 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                               return hitosDelProceso.map((hito, hitoIndex) => {
                                 const isFinalized = hito.estado === 'Finalizado'
                                 const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
+                                const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
 
-                                // Color de fondo por vencimiento (más notorio) y borde lateral
-                                const bgRow = estadoVenc === 'vencido'
-                                  ? '#ffe0e0'
-                                  : estadoVenc === 'hoy'
-                                  ? '#fff0c2'
-                                  : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa')
+                                // Color de fondo por vencimiento/finalización
+                                const bgRow = isFinalized
+                                  ? (finalizadoFuera
+                                      ? '#fff3e0' // Finalizado fuera de plazo (naranja muy claro)
+                                      : '#e6f4ea' // Finalizado en plazo (verde muy claro)
+                                    )
+                                  : (estadoVenc === 'vencido'
+                                      ? '#ffe0e0'
+                                      : estadoVenc === 'hoy'
+                                      ? '#fff0c2'
+                                      : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'))
                                 // Sin barra lateral
 
                                 return (
@@ -731,7 +883,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                       transition: 'all 0.2s ease'
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = estadoVenc === 'vencido' ? '#ffcfcf' : (estadoVenc === 'hoy' ? '#ffe49a' : atisaStyles.colors.light)
+                                      const hoverColor = isFinalized
+                                        ? (finalizadoFuera ? '#ffe6c7' : '#d1f0de')
+                                        : (estadoVenc === 'vencido' ? '#ffcfcf' : (estadoVenc === 'hoy' ? '#ffe49a' : atisaStyles.colors.light))
+                                      e.currentTarget.style.backgroundColor = hoverColor
                                       e.currentTarget.style.transform = 'translateY(-1px)'
                                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
                                     }}
@@ -749,22 +904,32 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      {getNombreHito(hito.hito_id)}
+                                      <span title={getNombreHito(hito.hito_id)}>
+                                        {getNombreHito(hito.hito_id)}
+                                      </span>
                                     </td>
                                     <td style={{ padding: '16px 12px' }}>
-                                      <span
-                                        style={{
-                                          backgroundColor: isFinalized ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
-                                          color: 'white',
-                                          padding: '6px 12px',
-                                          borderRadius: '20px',
-                                          fontSize: '12px',
-                                          fontWeight: '600',
-                                          fontFamily: atisaStyles.fonts.secondary
-                                        }}
-                                      >
-                                        {hito.estado}
-                                      </span>
+                                      {isFinalized ? (
+                                        finalizadoFuera ? (
+                                          <span style={{ backgroundColor: '#b45309', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                            Cumplido fuera de plazo
+                                          </span>
+                                        ) : (
+                                          <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                            Cumplido en plazo
+                                          </span>
+                                        )
+                                      ) : (
+                                        estadoVenc === 'vencido' ? (
+                                          <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                            Pendiente fuera de plazo
+                                          </span>
+                                        ) : (
+                                          <span style={{ backgroundColor: atisaStyles.colors.accent, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                            Pendiente en plazo
+                                          </span>
+                                        )
+                                      )}
                                     </td>
                                     <td
                                       style={{
@@ -783,23 +948,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span>{hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}</span>
-                                        {estadoVenc === 'vencido' && (
-                                          <span style={{ backgroundColor: '#ef4444', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>Vencido</span>
-                                        )}
-                                        {estadoVenc === 'hoy' && (
-                                          <>
-                                            <span style={{ backgroundColor: '#f59e0b', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>Vence hoy</span>
-                                            {esUrgenteEnHoras(hito.fecha_limite, hito.hora_limite, 2) && (
-                                              <span style={{ backgroundColor: '#dc2626', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>≤ 2h</span>
-                                            )}
-                                          </>
-                                        )}
-                                        {estadoVenc === 'en_plazo' && (
-                                          <span style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>En plazo</span>
-                                        )}
-                                      </div>
+                                      <span title={hito.fecha_limite || ''}>{hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}</span>
                                     </td>
                                     <td
                                       style={{
@@ -808,7 +957,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      {hito.hora_limite ? formatTime(hito.hora_limite) : '-'}
+                                      <span title={hito.hora_limite || ''}>{hito.hora_limite ? formatTime(hito.hora_limite) : '-'}</span>
                                     </td>
                                     <td
                                       style={{
@@ -826,7 +975,9 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      {getUltimaFechaCumplimiento(hito.id)}
+                                      <span title={ultimaFechaCumplimientoFmt[hito.id] || '-'}>
+                                        {ultimaFechaCumplimientoFmt[hito.id] || '-'}
+                                      </span>
                                     </td>
                                     <td
                                       className='text-start'

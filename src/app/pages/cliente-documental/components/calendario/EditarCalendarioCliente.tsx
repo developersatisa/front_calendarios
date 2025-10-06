@@ -744,14 +744,14 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
       `}</style>
       <div
         className="editar-calendario-container"
-        style={{
-          fontFamily: atisaStyles.fonts.secondary,
-          backgroundColor: '#f8f9fa',
+      style={{
+        fontFamily: atisaStyles.fonts.secondary,
+        backgroundColor: '#f8f9fa',
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column'
-        }}
-      >
+      }}
+    >
       {/* Header fijo */}
       <header
         className="calendario-header"
@@ -775,35 +775,35 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
             margin: '0 auto'
           }}
         >
-          <button
+        <button
             className="back-button"
-            onClick={() => navigate('/clientes')}
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontFamily: atisaStyles.fonts.secondary,
-              fontWeight: '600',
-              padding: '8px 16px',
-              fontSize: '14px',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-              e.currentTarget.style.transform = 'translateY(-2px)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
-          >
-            <i className="bi bi-arrow-left" style={{ color: 'white' }}></i>
-            Volver
-          </button>
+          onClick={() => navigate('/clientes')}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontFamily: atisaStyles.fonts.secondary,
+            fontWeight: '600',
+            padding: '8px 16px',
+            fontSize: '14px',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
+          <i className="bi bi-arrow-left" style={{ color: 'white' }}></i>
+          Volver
+        </button>
 
           <div
             className="title-section"
@@ -813,31 +813,31 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
             }}
           >
             <h1
-              style={{
-                fontFamily: atisaStyles.fonts.primary,
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0,
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              fontWeight: 'bold',
+              color: 'white',
+              margin: 0,
                 fontSize: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px'
-              }}
-            >
-              <i className="bi bi-pencil-square" style={{ color: 'white' }}></i>
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px'
+            }}
+          >
+            <i className="bi bi-pencil-square" style={{ color: 'white' }}></i>
               Editar Calendario
             </h1>
-            <p
-              style={{
-                margin: '8px 0 0 0',
-                fontSize: '1.1rem',
-                opacity: 0.9
-              }}
-            >
+        <p
+          style={{
+            margin: '8px 0 0 0',
+            fontSize: '1.1rem',
+            opacity: 0.9
+          }}
+        >
               {cliente?.razsoc || clienteId}
-            </p>
-          </div>
+        </p>
+        </div>
 
           <div
             className="header-actions"
@@ -868,7 +868,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
               <i className={`bi ${vistaCalendario ? 'bi-table' : 'bi-calendar3'}`} style={{ color: 'white' }}></i>
               {vistaCalendario ? 'Vista Tabla' : 'Vista Calendario'}
             </button>
-          </div>
+      </div>
         </div>
       </header>
 
@@ -888,10 +888,10 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           className="sidebar"
           style={{
             width: '20%',
-            backgroundColor: 'white',
-            borderRadius: '12px',
+          backgroundColor: 'white',
+          borderRadius: '12px',
             padding: '1.5rem',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
             height: 'fit-content',
             position: 'sticky',
             top: '120px'
@@ -939,32 +939,32 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                   const [year, month] = periodo.split('-')
                   const isSelected = selectedPeriod === periodo
                   return (
-                    <button
+          <button
                       key={periodo}
                       className={`period-card ${isSelected ? 'active' : ''}`}
                       onClick={() => setSelectedPeriod(periodo)}
-                      style={{
+            style={{
                         backgroundColor: isSelected ? atisaStyles.colors.secondary : 'white',
                         color: isSelected ? 'white' : atisaStyles.colors.primary,
                         border: `2px solid ${isSelected ? atisaStyles.colors.accent : atisaStyles.colors.light}`,
-                        borderRadius: '8px',
-                        fontFamily: atisaStyles.fonts.secondary,
-                        fontWeight: '600',
+              borderRadius: '8px',
+              fontFamily: atisaStyles.fonts.secondary,
+              fontWeight: '600',
                         padding: '12px 8px',
                         fontSize: '12px',
                         transition: 'all 0.3s ease',
                         boxShadow: isSelected ? '0 4px 12px rgba(156, 186, 57, 0.3)' : '0 2px 8px rgba(0, 80, 92, 0.1)',
                         textAlign: 'center',
                         cursor: 'pointer'
-                      }}
-                      onMouseEnter={(e) => {
+            }}
+            onMouseEnter={(e) => {
                         if (!isSelected) {
                           e.currentTarget.style.backgroundColor = atisaStyles.colors.light
                           e.currentTarget.style.borderColor = atisaStyles.colors.accent
                           e.currentTarget.style.transform = 'translateY(-2px)'
                         }
-                      }}
-                      onMouseLeave={(e) => {
+            }}
+            onMouseLeave={(e) => {
                         if (!isSelected) {
                           e.currentTarget.style.backgroundColor = 'white'
                           e.currentTarget.style.borderColor = atisaStyles.colors.light
@@ -1071,21 +1071,21 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                   }}
                 >
                   <i className="bi bi-clock-history" style={{ color: 'white' }}></i>
-                  Ver Historial
-                </button>
+            Ver Historial
+          </button>
 
-                {Object.keys(hitosEditados).length > 0 && (
+          {Object.keys(hitosEditados).length > 0 && (
                   <>
-                    <button
+              <button
                       className="btn btn-sm"
-                      onClick={mostrarResumenCambios}
-                      style={{
+                onClick={mostrarResumenCambios}
+                style={{
                         backgroundColor: atisaStyles.colors.primary,
-                        color: 'white',
-                        border: 'none',
+                  color: 'white',
+                  border: 'none',
                         borderRadius: '6px',
-                        fontFamily: atisaStyles.fonts.secondary,
-                        fontWeight: '600',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontWeight: '600',
                         padding: '8px 12px',
                         fontSize: '14px',
                         transition: 'all 0.3s ease',
@@ -1096,19 +1096,19 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       }}
                     >
                       <i className="bi bi-list-ul" style={{ color: 'white' }}></i>
-                      Ver Resumen
-                    </button>
+                Ver Resumen
+              </button>
 
-                    <button
+              <button
                       className="btn btn-sm"
-                      onClick={cancelarCambios}
-                      style={{
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
+                onClick={cancelarCambios}
+                style={{
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
                         borderRadius: '6px',
-                        fontFamily: atisaStyles.fonts.secondary,
-                        fontWeight: '600',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontWeight: '600',
                         padding: '8px 12px',
                         fontSize: '14px',
                         transition: 'all 0.3s ease',
@@ -1119,47 +1119,47 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       }}
                     >
                       <i className="bi bi-x-circle" style={{ color: 'white' }}></i>
-                      Cancelar
-                    </button>
+                Cancelar
+              </button>
 
-                    <button
+              <button
                       className="btn btn-sm"
-                      onClick={guardarCambios}
-                      disabled={saving}
-                      style={{
-                        backgroundColor: atisaStyles.colors.secondary,
-                        color: 'white',
-                        border: 'none',
+                onClick={guardarCambios}
+                disabled={saving}
+                style={{
+                  backgroundColor: atisaStyles.colors.secondary,
+                  color: 'white',
+                  border: 'none',
                         borderRadius: '6px',
-                        fontFamily: atisaStyles.fonts.secondary,
-                        fontWeight: '600',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontWeight: '600',
                         padding: '8px 12px',
                         fontSize: '14px',
-                        transition: 'all 0.3s ease',
+                  transition: 'all 0.3s ease',
                         opacity: saving ? 0.7 : 1,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px'
-                      }}
-                    >
-                      {saving ? (
-                        <>
+                }}
+              >
+                {saving ? (
+                  <>
                           <span className="spinner-border spinner-border-sm" role="status"></span>
-                          Guardando...
-                        </>
-                      ) : (
-                        <>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
                           <i className="bi bi-check-circle" style={{ color: 'white' }}></i>
-                          Guardar Cambios
-                        </>
-                      )}
-                    </button>
+                    Guardar Cambios
                   </>
                 )}
-              </div>
+              </button>
+                  </>
+          )}
+        </div>
             </div>
-          </div>
+            </div>
         </aside>
 
         {/* Área de contenido principal */}
@@ -1184,8 +1184,8 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
               <div
                 className="calendar-header"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
+                display: 'flex',
+                alignItems: 'center',
                   justifyContent: 'space-between',
                   marginBottom: '1.5rem',
                   padding: '1rem',
@@ -1194,7 +1194,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 }}
               >
                 <h3
-                  style={{
+                style={{
                     fontFamily: atisaStyles.fonts.primary,
                     color: atisaStyles.colors.primary,
                     fontWeight: 'bold',
@@ -1209,18 +1209,18 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                     className="btn btn-sm btn-outline-primary"
                     onClick={() => setVistaCalendario(false)}
                     style={{
-                      fontFamily: atisaStyles.fonts.secondary,
+                  fontFamily: atisaStyles.fonts.secondary,
                       fontSize: '12px'
                     }}
                   >
                     <i className="bi bi-table me-1"></i>
                     Vista Tabla
                   </button>
-                </div>
-              </div>
+            </div>
+          </div>
 
-              <div
-                style={{
+      <div
+        style={{
                   display: 'flex',
                   justifyContent: 'center',
                   width: '100%',
@@ -1231,7 +1231,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 {/* Cabeceras de días de la semana */}
                 <div
                   className="calendar-weekdays"
-                  style={{
+                style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(7, 1fr)',
                     gap: '14px',
@@ -1254,12 +1254,12 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       }}
                     >
                       {d}
-                    </div>
+        </div>
                   ))}
-                </div>
+      </div>
                 <div
                   className="calendar-grid"
-                  style={{
+        style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(7, 1fr)',
                     gridTemplateRows: 'repeat(6, 1fr)', // 6 filas fijas
@@ -1271,11 +1271,11 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 >
                 {getCeldasCalendario().map(({ date, actual }, idx) => {
                   const hitosDelDia = getHitosDeFecha(date)
-                  return (
+          return (
                     <div
                       key={idx}
                       className="calendar-day"
-                      style={{
+              style={{
                         backgroundColor: actual ? '#f8f9fa' : '#f1f3f5',
                         border: '1px solid #e9ecef',
                         borderRadius: '8px',
@@ -1289,7 +1289,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                     >
                       <div
                         className="day-number"
-                        style={{
+                style={{
                           fontWeight: 'bold',
                           fontSize: '14px',
                           color: actual ? atisaStyles.colors.primary : '#adb5bd',
@@ -1306,7 +1306,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       </div>
                       <div
                         className="day-hitos"
-                        style={{
+                    style={{
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '7px',
@@ -1318,7 +1318,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       >
                         {hitosDelDia.length === 0 ? (
                           <div
-                            style={{
+                    style={{
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1330,14 +1330,14 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                             }}
                           >
                             Sin hitos
-                          </div>
+                </div>
                         ) : (
                           hitosDelDia.map(hito => (
                             <div
                               key={hito.id}
                               className={`hito-card ${hito.estado.toLowerCase()}`}
                               onClick={() => editarHito(hito)}
-                              style={{
+                style={{
                                 backgroundColor: hito.estado === 'Finalizado' ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
                                 color: 'white',
                                 padding: '10px 12px',
@@ -1365,7 +1365,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                             >
                               <div
                                 className="hito-name"
-                                style={{
+                      style={{
                                   fontWeight: '700',
                                   whiteSpace: 'normal',
                                   overflow: 'hidden',
@@ -1384,7 +1384,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                               </div>
                               <div
                                 className="hito-proceso"
-                                style={{
+                        style={{
                                   fontSize: '11px',
                                   opacity: 0.95,
                                   whiteSpace: 'normal',
@@ -1403,7 +1403,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                               {hito.hora_limite && (
                                 <div
                                   className="hito-time"
-                                  style={{
+                            style={{
                                     fontSize: '10px',
                                     opacity: 0.8,
                                     textAlign: 'center',
@@ -1417,7 +1417,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                               )}
                               {hitosEditados[hito.id] && (
                                 <div
-                                  style={{
+                              style={{
                                     position: 'absolute',
                                     top: '2px',
                                     right: '2px',
@@ -1436,7 +1436,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       {/* Indicador de scroll vertical si hay más de 2 hitos */}
                       {hitosDelDia.length > 2 && (
                         <div
-                          style={{
+                              style={{
                             position: 'absolute',
                             bottom: '4px',
                             right: '4px',
@@ -1445,7 +1445,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                             borderRadius: '4px',
                             padding: '2px 6px',
                             fontSize: '9px',
-                            fontWeight: 'bold',
+                                fontWeight: 'bold',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '2px'
@@ -1466,7 +1466,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
             /* Vista de tabla mejorada */
             <div
               className="hitos-table-container"
-              style={{
+                              style={{
                 width: '100%',
                 maxWidth: '2000px' // Aprovechar el 80% del espacio
               }}
@@ -1484,10 +1484,10 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 }}
               >
                 <h3
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
+                              style={{
+                                fontFamily: atisaStyles.fonts.primary,
                     color: atisaStyles.colors.primary,
-                    fontWeight: 'bold',
+                                fontWeight: 'bold',
                     margin: 0,
                     fontSize: '1.5rem'
                   }}
@@ -1524,7 +1524,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                   <div className="row">
                     <div className="col-12">
                       <label className="form-label" style={{
-                        fontSize: '14px',
+                                fontSize: '14px',
                         fontWeight: '600',
                         color: '#856404',
                         marginBottom: '8px',
@@ -1569,9 +1569,9 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       placeholder="Buscar por nombre de hito..."
                       value={busquedaNombre}
                       onChange={(e) => setBusquedaNombre(e.target.value)}
-                      style={{
+                              style={{
                         fontFamily: atisaStyles.fonts.secondary,
-                        fontSize: '14px',
+                                fontSize: '14px',
                         border: `1px solid ${atisaStyles.colors.light}`,
                         borderRadius: '6px'
                       }}
@@ -1600,69 +1600,69 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                         Fecha Límite
                       </th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '120px' }}>
-                        Hora Límite
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loadingHitos ? (
-                      <tr>
-                        <td
+                              Hora Límite
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loadingHitos ? (
+                            <tr>
+                              <td
                           colSpan={6}
-                          className="text-center py-4"
-                          style={{
-                            backgroundColor: '#f8f9fa',
+                                className="text-center py-4"
+                                style={{
+                                  backgroundColor: '#f8f9fa',
                             fontFamily: atisaStyles.fonts.secondary,
                             padding: '2rem'
-                          }}
-                        >
-                          <div
-                            className="spinner-border"
-                            role="status"
-                            style={{
-                              color: atisaStyles.colors.primary,
-                              width: '2rem',
-                              height: '2rem'
-                            }}
-                          >
-                            <span className="visually-hidden">Cargando hitos...</span>
-                          </div>
-                          <span
-                            className="ms-2"
-                            style={{
-                              color: atisaStyles.colors.dark,
-                              fontFamily: atisaStyles.fonts.secondary,
-                              fontWeight: '500'
-                            }}
-                          >
-                            Cargando hitos...
-                          </span>
-                        </td>
-                      </tr>
-                    ) : (
+                                }}
+                              >
+                                <div
+                                  className="spinner-border"
+                                  role="status"
+                                  style={{
+                                    color: atisaStyles.colors.primary,
+                                    width: '2rem',
+                                    height: '2rem'
+                                  }}
+                                >
+                                  <span className="visually-hidden">Cargando hitos...</span>
+                                </div>
+                                <span
+                                  className="ms-2"
+                                  style={{
+                                    color: atisaStyles.colors.dark,
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    fontWeight: '500'
+                                  }}
+                                >
+                                  Cargando hitos...
+                                </span>
+                              </td>
+                            </tr>
+                          ) : (
                       getHitosFiltrados().map((hito, index) => {
-                        const hasChanges = hitosEditados[hito.id] !== undefined
+                                const hasChanges = hitosEditados[hito.id] !== undefined
                         const isFinalized = false
 
-                        return (
-                          <tr
+                                return (
+                                  <tr
                             key={hito.id}
-                            style={{
+                                    style={{
                               backgroundColor: hasChanges ? '#fff3cd' : (index % 2 === 0 ? 'white' : '#f8f9fa'),
-                              transition: 'all 0.2s ease',
-                              borderLeft: hasChanges ? `4px solid ${atisaStyles.colors.warning}` : 'none'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = hasChanges ? '#ffeaa7' : atisaStyles.colors.light
-                              e.currentTarget.style.transform = 'translateY(-1px)'
-                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                            }}
-                            onMouseLeave={(e) => {
+                                      transition: 'all 0.2s ease',
+                                      borderLeft: hasChanges ? `4px solid ${atisaStyles.colors.warning}` : 'none'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = hasChanges ? '#ffeaa7' : atisaStyles.colors.light
+                                      e.currentTarget.style.transform = 'translateY(-1px)'
+                                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                                    }}
+                                    onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor = hasChanges ? '#fff3cd' : (index % 2 === 0 ? 'white' : '#f8f9fa')
-                              e.currentTarget.style.transform = 'translateY(0)'
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
+                                      e.currentTarget.style.transform = 'translateY(0)'
+                                      e.currentTarget.style.boxShadow = 'none'
+                                    }}
+                                  >
                             <td style={{ padding: '16px', verticalAlign: 'top' }}>
                               <div
                                 className="hito-info"
@@ -1673,83 +1673,83 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 }}
                               >
                                 <span
-                                  style={{
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    color: atisaStyles.colors.primary,
-                                    fontWeight: '600',
+                                      style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        color: atisaStyles.colors.primary,
+                                        fontWeight: '600',
                                     fontSize: '15px',
                                     lineHeight: '1.4'
-                                  }}
-                                >
-                                  {getNombreHito(hito.hito_id)}
+                                      }}
+                                    >
+                                      {getNombreHito(hito.hito_id)}
                                 </span>
-                                {hasChanges && (
+                                      {hasChanges && (
                                   <i className="bi bi-pencil-square" style={{ color: '#ffc107' }}></i>
-                                )}
+                                      )}
 
                               </div>
-                            </td>
+                                    </td>
                             <td style={{ padding: '16px', verticalAlign: 'top' }}>
-                              <span
-                                style={{
+                                      <span
+                                        style={{
                                   fontFamily: atisaStyles.fonts.secondary,
                                   color: atisaStyles.colors.dark,
                                   fontSize: '14px',
                                   backgroundColor: atisaStyles.colors.light,
-                                  padding: '6px 12px',
+                                          padding: '6px 12px',
                                   borderRadius: '6px',
                                   display: 'inline-block',
                                   fontWeight: '500'
                                 }}
                               >
                                 {getNombreProceso(hito.cliente_proceso_id)}
-                              </span>
-                            </td>
+                                      </span>
+                                    </td>
 
                             <td style={{ padding: '16px', verticalAlign: 'top' }}>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                <input
-                                  type="date"
-                                  className="form-control form-control-sm"
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <input
+                                          type="date"
+                                          className="form-control form-control-sm"
                                   value={formatDateForInput(getValorHito(hito, 'fecha_limite'))}
                                   onChange={(e) => handleFechaChange(hito.id, 'fecha_limite', e.target.value)}
                                   data-hito-id={hito.id}
                                   data-campo="fecha_limite"
                                   min={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.start) : undefined}
                                   max={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.end) : undefined}
-                                  style={{
-                                    fontFamily: atisaStyles.fonts.secondary,
+                                          style={{
+                                            fontFamily: atisaStyles.fonts.secondary,
                                     fontSize: '14px',
-                                    border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                    borderRadius: '6px',
-                                    flex: 1
-                                  }}
-                                />
-                              </div>
-                            </td>
+                                            border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '6px',
+                                            flex: 1
+                                          }}
+                                        />
+                                      </div>
+                                    </td>
                             <td style={{ padding: '16px', verticalAlign: 'top' }}>
-                              <input
-                                type="time"
-                                className="form-control form-control-sm"
-                                value={formatTimeForInput(getValorHito(hito, 'hora_limite'))}
-                                onChange={(e) => handleHoraChange(hito.id, e.target.value)}
+                                      <input
+                                        type="time"
+                                        className="form-control form-control-sm"
+                                        value={formatTimeForInput(getValorHito(hito, 'hora_limite'))}
+                                        onChange={(e) => handleHoraChange(hito.id, e.target.value)}
 
-                                style={{
-                                  fontFamily: atisaStyles.fonts.secondary,
+                                        style={{
+                                          fontFamily: atisaStyles.fonts.secondary,
                                   fontSize: '14px',
-                                  border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                  borderRadius: '6px'
-                                }}
-                              />
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                                          border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
+                                          borderRadius: '6px'
+                                        }}
+                                      />
+                                    </td>
+                                  </tr>
+                                )
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
           )}
         </main>
       </div>

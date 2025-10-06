@@ -34,6 +34,18 @@ const ClienteProcesosModal: FC<Props> = ({
   const [loading, setLoading] = useState(false)
   const [showAllMonths, setShowAllMonths] = useState(false)
 
+  // Resetear formulario al cerrar el modal
+  useEffect(() => {
+    if (!show) {
+      setFormData({
+        plantillaId: '',
+        fecha_inicio: new Date().toISOString().split('T')[0],
+      })
+      setProcesos([])
+      setLoading(false)
+    }
+  }, [show])
+
   const handlePlantillaChange = async (option: any) => {
     setFormData({...formData, plantillaId: option?.value || ''})
     if (option?.value) {
@@ -63,6 +75,13 @@ const ClienteProcesosModal: FC<Props> = ({
     }))
 
     onSave(calendarios)
+
+    // Limpiar tras guardar correctamente
+    setFormData({
+      plantillaId: '',
+      fecha_inicio: new Date().toISOString().split('T')[0],
+    })
+    setProcesos([])
   }
 
   const getProcesosInfo = (procesoId: number) => {
@@ -181,6 +200,11 @@ const ClienteProcesosModal: FC<Props> = ({
                 Plantilla
               </label>
               <Select
+                value={(() => {
+                  const id = Number(formData.plantillaId)
+                  const match = plantillas.find(p => p.id === id)
+                  return match ? { value: match.id, label: match.nombre } : null
+                })()}
                 onChange={handlePlantillaChange}
                 options={plantillas.map(p => ({
                   value: p.id,
