@@ -450,7 +450,7 @@ const HitosList: FC = () => {
                     </th>
                     <th
                       className='cursor-pointer user-select-none'
-                      onClick={() => handleSort('fecha_inicio')}
+                      onClick={() => handleSort('fecha_limite')}
                       style={{
                         transition: 'all 0.2s',
                         padding: '16px 8px',
@@ -469,30 +469,7 @@ const HitosList: FC = () => {
                         e.currentTarget.style.color = atisaStyles.colors.primary
                       }}
                     >
-                      Fecha Inicio {getSortIcon('fecha_inicio')}
-                    </th>
-                    <th
-                      className='cursor-pointer user-select-none'
-                      onClick={() => handleSort('fecha_fin')}
-                      style={{
-                        transition: 'all 0.2s',
-                        padding: '16px 8px',
-                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                        fontFamily: atisaStyles.fonts.primary,
-                        fontWeight: 'bold',
-                        borderLeft: 'none',
-                        borderRight: 'none'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                        e.currentTarget.style.color = 'white'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                        e.currentTarget.style.color = atisaStyles.colors.primary
-                      }}
-                    >
-                      Fecha Límite {getSortIcon('fecha_fin')}
+                      Fecha Límite {getSortIcon('fecha_limite')}
                     </th>
                     <th
                       className='cursor-pointer user-select-none'
@@ -562,6 +539,29 @@ const HitosList: FC = () => {
                       }}
                     >
                       Tipo {getSortIcon('tipo')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('habilitado')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Habilitado {getSortIcon('habilitado')}
                     </th>
                     <th
                       className='text-start'
@@ -640,16 +640,7 @@ const HitosList: FC = () => {
                         borderLeft: 'none',
                         borderRight: 'none'
                       }}>
-                        {new Date(hito.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                      </td>
-                      <td style={{
-                        padding: '12px 8px',
-                        color: atisaStyles.colors.dark,
-                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                        borderLeft: 'none',
-                        borderRight: 'none'
-                      }}>
-                        {hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                        {hito.fecha_limite ? new Date(hito.fecha_limite).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                       </td>
                       <td style={{
                         padding: '12px 8px',
@@ -689,6 +680,27 @@ const HitosList: FC = () => {
                         borderRight: 'none'
                       }}>
                         {hito.tipo}
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        <span
+                          className='badge'
+                          style={{
+                            backgroundColor: hito.habilitado === 1 ? atisaStyles.colors.secondary : '#6c757d',
+                            color: 'white',
+                            fontFamily: atisaStyles.fonts.secondary,
+                            fontWeight: '600',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px'
+                          }}
+                        >
+                          {hito.habilitado === 1 ? 'Sí' : 'No'}
+                        </span>
                       </td>
                       <td className='text-start' style={{
                         padding: '12px 8px',

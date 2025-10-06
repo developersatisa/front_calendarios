@@ -88,10 +88,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
       const resultados = await Promise.all(hitosPromises)
 
-      // Organizar hitos por proceso y ordenar por fecha de inicio
+      // Organizar hitos por proceso y ordenar por fecha límite
       resultados.forEach(({ procesoId, hitos }) => {
         hitosMap[procesoId] = hitos.sort((a, b) =>
-          new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+          new Date(a.fecha_limite).getTime() - new Date(b.fecha_limite).getTime()
         )
       })
 
@@ -544,18 +544,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                             >
                               Fecha Actualización
                             </th>
-                            <th
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
-                              }}
-                            >
-                              Fecha Inicio
-                            </th>
+
                             <th
                               style={{
                                 fontFamily: atisaStyles.fonts.primary,
@@ -602,10 +591,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 color: 'white'
                               }}
                             >
-                              Fecha Cumplimiento
+                              Fecha Hora Cumplimiento
                             </th>
                             <th
-                              className='text-end'
+                              className='text-start'
                               style={{
                                 fontFamily: atisaStyles.fonts.primary,
                                 fontWeight: 'bold',
@@ -737,6 +726,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                     >
                                       {hito.fecha_estado ? formatDateWithTime(hito.fecha_estado) : '-'}
                                     </td>
+
                                     <td
                                       style={{
                                         fontFamily: atisaStyles.fonts.secondary,
@@ -744,16 +734,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         padding: '16px 12px'
                                       }}
                                     >
-                                      {formatDate(hito.fecha_inicio)}
-                                    </td>
-                                    <td
-                                      style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        color: atisaStyles.colors.dark,
-                                        padding: '16px 12px'
-                                      }}
-                                    >
-                                      {hito.fecha_fin ? formatDate(hito.fecha_fin ?? null) : '-'}
+                                      {hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}
                                     </td>
                                     <td
                                       style={{
@@ -783,7 +764,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                       {getUltimaFechaCumplimiento(hito.id)}
                                     </td>
                                     <td
-                                      className='text-end'
+                                      className='text-start'
                                       style={{ padding: '16px 12px' }}
                                     >
                                       <button

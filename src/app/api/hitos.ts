@@ -3,12 +3,12 @@ import api from './axiosConfig'
 export interface Hito {
   id: number
   nombre: string
-  fecha_inicio: string
-  fecha_fin: string | null
+  fecha_limite: string
   hora_limite: string | null
   descripcion: string | null
   obligatorio: number
   tipo: string
+  habilitado: number
 }
 
 export interface HitosResponse {

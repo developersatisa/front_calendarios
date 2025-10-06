@@ -15,11 +15,11 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
   const initialFormState = {
     nombre: '',
     descripcion: null,
-    fecha_inicio: new Date().toISOString().split('T')[0],
-    fecha_fin: null,
+    fecha_limite: new Date().toISOString().split('T')[0],
     hora_limite: '00:00',
     obligatorio: 0,
-    tipo: 'Atisa' // Valor por defecto válido ya que es requerido
+    tipo: 'Atisa', // Valor por defecto válido ya que es requerido
+    habilitado: 1 // Valor por defecto según la estructura de la base de datos
   }
 
   const [formData, setFormData] = useState<Omit<Hito, 'id'>>(initialFormState)
@@ -29,11 +29,11 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
       setFormData({
         nombre: hito.nombre,
         descripcion: hito.descripcion,
-        fecha_inicio: hito.fecha_inicio,
-        fecha_fin: hito.fecha_fin,
+        fecha_limite: hito.fecha_limite,
         hora_limite: hito.hora_limite,
         obligatorio: hito.obligatorio,
-        tipo: hito.tipo
+        tipo: hito.tipo,
+        habilitado: hito.habilitado
       })
     } else {
       setFormData(initialFormState)
@@ -47,7 +47,6 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
     const dataToSave = {
       ...formData,
       descripcion: formData.descripcion?.trim() || null,
-      fecha_fin: formData.fecha_fin || null,
       hora_limite: formData.hora_limite || '00:00'
     }
 
@@ -196,78 +195,41 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
             </select>
           </div>
 
-          <div className='row mb-4'>
-            <div className='col-6'>
-              <label
-                className='required fw-bold fs-6 mb-2'
-                style={{
-                  fontFamily: atisaStyles.fonts.primary,
-                  color: atisaStyles.colors.primary,
-                  fontSize: '16px'
-                }}
-              >
-                <i className="bi bi-calendar-event me-2"></i>
-                Fecha Inicio
-              </label>
-              <input
-                type='date'
-                className='form-control form-control-solid'
-                value={formData.fecha_inicio}
-                onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
-                required
-                style={{
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  height: '48px',
-                  transition: 'all 0.3s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = atisaStyles.colors.accent
-                  e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = atisaStyles.colors.light
-                  e.target.style.boxShadow = 'none'
-                }}
-              />
-            </div>
-            <div className='col-6'>
-              <label
-                className='fw-bold fs-6 mb-2'
-                style={{
-                  fontFamily: atisaStyles.fonts.primary,
-                  color: atisaStyles.colors.primary,
-                  fontSize: '16px'
-                }}
-              >
-                <i className="bi bi-calendar-x me-2"></i>
-                Fecha Límite
-              </label>
-              <input
-                type='date'
-                className='form-control form-control-solid'
-                value={formData.fecha_fin || ''}
-                onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value || null })}
-                style={{
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  height: '48px',
-                  transition: 'all 0.3s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = atisaStyles.colors.accent
-                  e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = atisaStyles.colors.light
-                  e.target.style.boxShadow = 'none'
-                }}
-              />
-            </div>
+          <div className='fv-row mb-4'>
+            <label
+              className='required fw-bold fs-6 mb-2'
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                color: atisaStyles.colors.primary,
+                fontSize: '16px'
+              }}
+            >
+              <i className="bi bi-calendar-x me-2"></i>
+              Fecha Límite
+            </label>
+            <input
+              type='date'
+              className='form-control form-control-solid'
+              value={formData.fecha_limite}
+              onChange={(e) => setFormData({ ...formData, fecha_limite: e.target.value })}
+              required
+              style={{
+                border: `2px solid ${atisaStyles.colors.light}`,
+                borderRadius: '8px',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontSize: '14px',
+                height: '48px',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = atisaStyles.colors.accent
+                e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = atisaStyles.colors.light
+                e.target.style.boxShadow = 'none'
+              }}
+            />
           </div>
 
           <div className='fv-row mb-4'>
@@ -369,6 +331,36 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
               >
                 <i className="bi bi-exclamation-triangle me-2"></i>
                 Obligatorio
+              </label>
+            </div>
+          </div>
+
+          <div className='fv-row mb-4'>
+            <div className='form-check form-switch'>
+              <input
+                className='form-check-input'
+                type='checkbox'
+                checked={formData.habilitado === 1}
+                onChange={(e) => setFormData({ ...formData, habilitado: e.target.checked ? 1 : 0 })}
+                id='habilitado'
+                style={{
+                  width: '48px',
+                  height: '24px'
+                }}
+              />
+              <label
+                className='form-check-label'
+                htmlFor='habilitado'
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: atisaStyles.colors.dark,
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  marginLeft: '8px'
+                }}
+              >
+                <i className="bi bi-toggle-on me-2"></i>
+                Habilitado
               </label>
             </div>
           </div>

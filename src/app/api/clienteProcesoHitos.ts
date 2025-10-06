@@ -6,8 +6,7 @@ export interface ClienteProcesoHito {
   hito_id: number
   estado: string
   fecha_estado: string | null
-  fecha_inicio: string
-  fecha_fin: string | null
+  fecha_limite: string
   hora_limite: string | null
   tipo: string
 }
@@ -24,8 +23,7 @@ export interface ClienteProcesoHitoCumplimiento {
 export interface ClienteProcesoHitoUpdate {
   estado: string
   fecha_estado: string | null
-  fecha_inicio?: string
-  fecha_fin?: string | null
+  fecha_limite?: string
   hora_limite?: string | null
 }
 

@@ -1,6 +1,6 @@
 import { FC, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Accordion } from 'react-bootstrap'
+import { Accordion, Modal, Toast, ToastContainer } from 'react-bootstrap'
 import { Cliente, getClienteById } from '../../../../api/clientes'
 import { ClienteProceso, getClienteProcesosByCliente } from '../../../../api/clienteProcesos'
 import { Proceso, getAllProcesos } from '../../../../api/procesos'
@@ -16,10 +16,15 @@ interface Props {
 
 interface HitoEditado {
   id: number
-  fecha_inicio: string
-  fecha_fin: string | null
+  fecha_limite: string | null
   hora_limite: string | null
   observaciones?: string
+}
+
+interface EditForm {
+  fecha_limite: string | null
+  hora_limite: string | null
+  observaciones: string
 }
 
 const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
@@ -42,6 +47,20 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [saving, setSaving] = useState(false)
   const [showHistorialAuditoria, setShowHistorialAuditoria] = useState(false)
   const [observacionesGlobales, setObservacionesGlobales] = useState('')
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedHito, setSelectedHito] = useState<ClienteProcesoHito | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>({
+    fecha_limite: null,
+    hora_limite: null,
+    observaciones: ''
+  })
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [showError, setShowError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  // Estado eliminado: ya no se filtra por estado
+  const [filtroProceso, setFiltroProceso] = useState('')
+  const [busquedaNombre, setBusquedaNombre] = useState('')
+  const [vistaCalendario, setVistaCalendario] = useState(false)
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -103,10 +122,10 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
 
       const resultados = await Promise.all(hitosPromises)
 
-      // Organizar hitos por proceso y ordenar por fecha de inicio
+      // Organizar hitos por proceso y ordenar por fecha límite
       resultados.forEach(({ procesoId, hitos }) => {
         hitosMap[procesoId] = hitos.sort((a, b) =>
-          new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
+          new Date(a.fecha_limite).getTime() - new Date(b.fecha_limite).getTime()
         )
       })
 
@@ -154,9 +173,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
 
     Object.keys(groups).forEach(key => {
       Object.values(groups[key].periodos).forEach(periodo => {
-        periodo.items.sort((a, b) =>
-          new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime()
-        )
+        // Mantener el orden de procesos; el orden por fecha se aplica a nivel de hitos
       })
       groups[key].periodos = Object.fromEntries(
         Object.entries(groups[key].periodos)
@@ -192,6 +209,15 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   const getNombreHito = (hito_id: number) => {
     const hito = hitosMaestro.find(h => h.id === hito_id)
     return hito ? hito.nombre : `Hito ${hito_id}`
+  }
+
+  const getNombreProceso = (cliente_proceso_id: number) => {
+    const clienteProceso = procesos.find(p => p.id === cliente_proceso_id)
+    if (clienteProceso) {
+      const proceso = procesosList.find(proc => proc.id === clienteProceso.proceso_id)
+      return proceso ? proceso.nombre : `Proceso ${clienteProceso.proceso_id}`
+    }
+    return 'Proceso no encontrado'
   }
 
   const formatDate = (date: string) => {
@@ -259,37 +285,68 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     return true
   }
 
-  const handleFechaChange = (hitoId: number, campo: 'fecha_inicio' | 'fecha_fin', valor: string) => {
+  // Devuelve los límites (inicio y fin) del mes seleccionado en los filtros (selectedPeriod: YYYY-MM)
+  const getSelectedMonthBounds = () => {
+    if (!selectedPeriod) return null
+    const [yearStr, monthStr] = selectedPeriod.split('-')
+    const year = parseInt(yearStr, 10)
+    const month = parseInt(monthStr, 10)
+    if (Number.isNaN(year) || Number.isNaN(month)) return null
+    const start = new Date(year, month - 1, 1)
+    const end = new Date(year, month, 0)
+    return { start, end }
+  }
+
+  const formatDateInputFromDate = (date: Date) => date.toISOString().slice(0, 10)
+
+  // Valida que una fecha (YYYY-MM-DD) esté dentro del mes seleccionado
+  const isWithinSelectedMonth = (dateStr: string) => {
+    const bounds = getSelectedMonthBounds()
+    if (!bounds) return true
+    const d = new Date(dateStr)
+    return d >= bounds.start && d <= bounds.end
+  }
+
+  const handleFechaChange = (hitoId: number, campo: 'fecha_limite', valor: string) => {
     const hitoOriginal = Object.values(hitosPorProceso)
       .flat()
       .find(h => h.id === hitoId)
 
     if (!hitoOriginal) return
 
-    const valorAnterior = campo === 'fecha_inicio' ? hitoOriginal.fecha_inicio : (hitoOriginal.fecha_fin || '')
-
-    // Convertir valor vacío a null para fecha_fin
-    const valorFinal = campo === 'fecha_fin' && valor === '' ? null : valor
-
-    // Obtener las fechas actuales para validación
-    const fechaInicioActual = campo === 'fecha_inicio' ? valorFinal : (hitosEditados[hitoId]?.fecha_inicio || hitoOriginal.fecha_inicio)
-    const fechaFinActual = campo === 'fecha_fin' ? valorFinal : (hitosEditados[hitoId]?.fecha_fin || hitoOriginal.fecha_fin)
-
-    // Validar que la fecha de inicio no sea posterior a la fecha fin
-    if (!validarFechas(fechaInicioActual, fechaFinActual)) {
-      alert('La fecha de inicio no puede ser posterior a la fecha límite')
+    const valorAnterior = hitoOriginal.fecha_limite || ''
+    // No se permite borrar fecha_limite
+    if (valor === '') {
+      alert('La fecha límite es obligatoria y no se puede dejar vacía')
+      const lastValue = (hitosEditados[hitoId]?.fecha_limite || hitoOriginal.fecha_limite || '')
+      const inputElement = document.querySelector(`input[data-hito-id="${hitoId}"][data-campo="${campo}"]`) as HTMLInputElement
+      if (inputElement) {
+        inputElement.value = formatDateForInput(lastValue)
+      }
       return
     }
+    const valorFinal = valor
+
+    // Validar que la fecha seleccionada permanezca dentro del mes seleccionado
+    if (valorFinal && !isWithinSelectedMonth(valorFinal)) {
+      alert('La fecha debe estar dentro del mes asignado (período seleccionado)')
+      // Restablecer el valor del input al valor anterior
+      const inputElement = document.querySelector(`input[data-hito-id="${hitoId}"][data-campo="${campo}"]`) as HTMLInputElement
+      if (inputElement) {
+        inputElement.value = formatDateForInput(valorAnterior)
+      }
+      return
+    }
+
+    // No hay validación entre inicio y fin, solo validación de mes
 
     setHitosEditados(prev => ({
       ...prev,
       [hitoId]: {
         ...prev[hitoId],
         id: hitoId,
-        fecha_inicio: prev[hitoId]?.fecha_inicio || hitoOriginal.fecha_inicio,
-        fecha_fin: prev[hitoId]?.fecha_fin || hitoOriginal.fecha_fin,
-        hora_limite: prev[hitoId]?.hora_limite || hitoOriginal.hora_limite,
-        [campo]: valorFinal
+        fecha_limite: valorFinal,
+        hora_limite: prev[hitoId]?.hora_limite || hitoOriginal.hora_limite
       }
     }))
 
@@ -314,58 +371,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   }
 
 
-  const limpiarFechaFin = (hitoId: number) => {
-    const hitoOriginal = Object.values(hitosPorProceso)
-      .flat()
-      .find(h => h.id === hitoId)
-
-    if (!hitoOriginal) return
-
-    const valorAnterior = hitoOriginal.fecha_fin || ''
-
-    // Obtener las fechas actuales para validación
-    const fechaInicioActual = hitosEditados[hitoId]?.fecha_inicio || hitoOriginal.fecha_inicio
-    const fechaFinActual = null
-
-    // Validar que la fecha de inicio no sea posterior a la fecha fin
-    if (!validarFechas(fechaInicioActual, fechaFinActual)) {
-      alert('La fecha de inicio no puede ser posterior a la fecha límite')
-      return
-    }
-
-    setHitosEditados(prev => ({
-      ...prev,
-      [hitoId]: {
-        ...prev[hitoId],
-        id: hitoId,
-        fecha_inicio: prev[hitoId]?.fecha_inicio || hitoOriginal.fecha_inicio,
-        fecha_fin: null,
-        hora_limite: prev[hitoId]?.hora_limite || hitoOriginal.hora_limite
-      }
-    }))
-
-    // Registrar el cambio
-    if (null !== valorAnterior) {
-      const cambioExistente = cambiosRealizados.findIndex(c => c.hitoId === hitoId && c.campo === 'fecha_fin')
-      const nuevoCambio = {
-        hitoId,
-        campo: 'fecha_fin' as const,
-        valorAnterior,
-        valorNuevo: ''
-      }
-
-      if (cambioExistente >= 0) {
-        setCambiosRealizados(prev =>
-          prev.map((c, index) => index === cambioExistente ? nuevoCambio : c)
-        )
-      } else {
-        setCambiosRealizados(prev => [...prev, nuevoCambio])
-      }
-
-      // Registrar auditoría
-      registrarAuditoria(hitoId, 'fecha_fin', valorAnterior, '')
-    }
-  }
+  // Quitar función de limpiar: fecha_limite no se puede borrar
 
   const handleHoraChange = (hitoId: number, valor: string) => {
     const hitoOriginal = Object.values(hitosPorProceso)
@@ -375,20 +381,22 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     if (!hitoOriginal) return
 
     const valorAnterior = hitoOriginal.hora_limite || ''
+    // Normalizar formato de hora para comparación (quitar segundos)
+    const valorAnteriorNormalizado = valorAnterior ? valorAnterior.substring(0, 5) : ''
+    const valorNormalizado = valor ? valor.substring(0, 5) : ''
 
     setHitosEditados(prev => ({
       ...prev,
       [hitoId]: {
         ...prev[hitoId],
         id: hitoId,
-        fecha_inicio: prev[hitoId]?.fecha_inicio || hitoOriginal.fecha_inicio,
-        fecha_fin: prev[hitoId]?.fecha_fin || hitoOriginal.fecha_fin,
+        fecha_limite: prev[hitoId]?.fecha_limite || hitoOriginal.fecha_limite,
         hora_limite: valor
       }
     }))
 
-    // Registrar el cambio
-    if (valor !== valorAnterior) {
+    // Registrar el cambio solo si realmente cambió (comparando formatos normalizados)
+    if (valorNormalizado !== valorAnteriorNormalizado) {
       const cambioExistente = cambiosRealizados.findIndex(c => c.hitoId === hitoId && c.campo === 'hora_limite')
       const nuevoCambio = {
         hitoId,
@@ -408,15 +416,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   }
 
 
-  const validarTodosLosCambios = () => {
-    for (const [hitoId, hitoEditado] of Object.entries(hitosEditados)) {
-      if (!validarFechas(hitoEditado.fecha_inicio, hitoEditado.fecha_fin)) {
-        alert(`Error en el hito ${hitoId}: La fecha de inicio no puede ser posterior a la fecha límite`)
-        return false
-      }
-    }
-    return true
-  }
+  const validarTodosLosCambios = () => true
 
   const registrarAuditoria = async (hitoId: number, campo: string, valorAnterior: string, valorNuevo: string, observaciones?: string) => {
     try {
@@ -465,10 +465,9 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           .find(h => h.id === parseInt(hitoId))
 
         await updateClienteProcesoHito(parseInt(hitoId), {
-          estado: hitoOriginal?.estado || 'Pendiente', // Mantener el estado actual del hito
+          estado: hitoOriginal?.estado || 'Pendiente',
           fecha_estado: new Date().toISOString(),
-          fecha_inicio: hitoEditado.fecha_inicio,
-          fecha_fin: hitoEditado.fecha_fin,
+          fecha_limite: hitoEditado.fecha_limite || undefined,
           hora_limite: hitoEditado.hora_limite
         })
       }
@@ -534,15 +533,13 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     alert(`Resumen de cambios:\n\n${resumen}${observacionesTexto}`)
   }
 
-  const getValorHito = (hito: ClienteProcesoHito, campo: 'fecha_inicio' | 'fecha_fin' | 'hora_limite') => {
+  const getValorHito = (hito: ClienteProcesoHito, campo: 'fecha_limite' | 'hora_limite') => {
     const hitoEditado = hitosEditados[hito.id]
     if (hitoEditado && hitoEditado[campo] !== undefined) {
       return hitoEditado[campo] || ''
     }
 
-    const valorOriginal = campo === 'fecha_inicio' ? hito.fecha_inicio :
-                         campo === 'fecha_fin' ? hito.fecha_fin :
-                         hito.hora_limite
+    const valorOriginal = campo === 'fecha_limite' ? hito.fecha_limite : hito.hora_limite
 
     // Manejar valores nulos, undefined o vacíos
     if (!valorOriginal || valorOriginal === 'null' || valorOriginal === 'undefined') {
@@ -552,722 +549,1376 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     return valorOriginal
   }
 
+  // Funciones para el modal de edición
+  const editarHito = (hito: ClienteProcesoHito) => {
+    // Permitir edición siempre (se elimina restricción por estado)
+
+    setSelectedHito(hito)
+    setEditForm({
+      fecha_limite: formatDateForInput(hito.fecha_limite || ''),
+      hora_limite: formatTimeForInput(hito.hora_limite),
+      observaciones: ''
+    })
+    setShowEditModal(true)
+  }
+
+  const guardarHito = async () => {
+    if (!selectedHito) return
+
+    try {
+      // Obtener valores originales para comparar
+      const hitoOriginal = hitosPorProceso[selectedHito.cliente_proceso_id]?.find(h => h.id === selectedHito.id)
+      if (!hitoOriginal) return
+
+      await updateClienteProcesoHito(selectedHito.id, {
+        estado: selectedHito.estado,
+        fecha_estado: new Date().toISOString(),
+        fecha_limite: editForm.fecha_limite || undefined,
+        hora_limite: editForm.hora_limite || null
+      })
+
+      // Registrar auditoría para cada campo que cambió
+      const cambios: Array<{campo: string, anterior: string, nuevo: string}> = []
+
+      // Verificar cambios en fecha_limite
+      if ((hitoOriginal.fecha_limite || '') !== (editForm.fecha_limite || '')) {
+        cambios.push({
+          campo: 'fecha_limite',
+          anterior: hitoOriginal.fecha_limite || '',
+          nuevo: editForm.fecha_limite || ''
+        })
+      }
+
+      // Verificar cambios en hora_limite (normalizar formato para comparación)
+      const horaOriginalNormalizada = hitoOriginal.hora_limite ? hitoOriginal.hora_limite.substring(0, 5) : ''
+      const horaNuevaNormalizada = editForm.hora_limite ? editForm.hora_limite.substring(0, 5) : ''
+
+      if (horaOriginalNormalizada !== horaNuevaNormalizada) {
+        cambios.push({
+          campo: 'hora_limite',
+          anterior: horaOriginalNormalizada,
+          nuevo: horaNuevaNormalizada
+        })
+      }
+
+      // Registrar auditoría para cada cambio
+      for (const cambio of cambios) {
+        await registrarAuditoria(
+          selectedHito.id,
+          cambio.campo,
+          cambio.anterior,
+          cambio.nuevo,
+          editForm.observaciones
+        )
+      }
+
+      // Si no hubo cambios específicos pero se guardó, registrar como edición general
+      if (cambios.length === 0) {
+        await registrarAuditoria(
+          selectedHito.id,
+          'hito_completo',
+          'Sin cambios específicos',
+          'Hito editado desde modal',
+          editForm.observaciones
+        )
+      }
+
+      setShowEditModal(false)
+      setShowSuccess(true)
+
+      // Recargar hitos
+      if (selectedPeriod && Object.keys(groupedProcesos).length > 0) {
+        const procesosVisibles: ClienteProceso[] = []
+        Object.values(groupedProcesos).forEach(grupo => {
+          const periodoData = grupo.periodos[selectedPeriod]
+          if (periodoData) {
+            procesosVisibles.push(...periodoData.items)
+          }
+        })
+        await cargarHitosDeProcesos(procesosVisibles)
+      }
+    } catch (error) {
+      console.error('Error guardando hito:', error)
+      setErrorMessage('Error al guardar el hito')
+      setShowError(true)
+    }
+  }
+
+  const verHistorial = (hitoId: number) => {
+    setShowHistorialAuditoria(true)
+  }
+
+  // Función para obtener hitos filtrados
+  const getHitosFiltrados = () => {
+    let hitosFiltrados = Object.values(hitosPorProceso).flat()
+
+    // Filtro por estado eliminado
+
+    if (filtroProceso) {
+      hitosFiltrados = hitosFiltrados.filter(hito => {
+        const proceso = procesos.find(p => p.id === hito.cliente_proceso_id)
+        return proceso?.proceso_id === parseInt(filtroProceso)
+      })
+    }
+
+    // Filtro por nombre de hito
+    if (busquedaNombre.trim() !== '') {
+      const termino = busquedaNombre.trim().toLowerCase()
+      hitosFiltrados = hitosFiltrados.filter(hito => {
+        const nombre = getNombreHito(hito.hito_id).toLowerCase()
+        return nombre.includes(termino)
+      })
+    }
+
+    // Ordenar por fecha límite (ascendente)
+    return hitosFiltrados.sort((a, b) => {
+      const fechaA = new Date(a.fecha_limite).getTime()
+      const fechaB = new Date(b.fecha_limite).getTime()
+      return fechaA - fechaB
+    })
+  }
+
+  // Función para obtener días del mes actual
+  // Construye 6x7 celdas con días del mes anterior y siguiente
+  const getCeldasCalendario = () => {
+    if (!selectedPeriod) return [] as Array<{date: Date, actual: boolean}>
+    const [year, month] = selectedPeriod.split('-').map(Number)
+    const primeroMes = new Date(year, month - 1, 1)
+    // Lunes=0 ... Domingo=6 (ajustamos desde getDay() que es 0=Dom)
+    const weekday = (primeroMes.getDay() + 6) % 7
+    const inicioGrid = new Date(primeroMes)
+    inicioGrid.setDate(primeroMes.getDate() - weekday)
+
+    const celdas: Array<{date: Date, actual: boolean}> = []
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(inicioGrid)
+      d.setDate(inicioGrid.getDate() + i)
+      const esActual = d.getMonth() === (month - 1)
+      celdas.push({ date: d, actual: esActual })
+    }
+    return celdas
+  }
+
+  // Función para obtener hitos de una fecha completa (YYYY-MM-DD)
+  const getHitosDeFecha = (fecha: Date) => {
+    const fechaStr = fecha.toISOString().split('T')[0]
+    return getHitosFiltrados().filter(hito => hito.fecha_limite === fechaStr)
+  }
+
   return (
-    <div
-      className="container py-5"
-      style={{
-        fontFamily: atisaStyles.fonts.secondary,
-        backgroundColor: '#f8f9fa',
-        minHeight: '100vh'
-      }}
-    >
-      {/* Header del calendario */}
+    <>
+      <style>{`
+        .calendar-day .day-hitos::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .calendar-day .day-hitos::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+
+        .calendar-day .day-hitos::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+        }
+
+        .calendar-day .day-hitos::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+        }
+
+        .calendar-day .day-hitos {
+          scrollbar-width: thin;
+          scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+
+        .hito-card {
+          position: relative;
+          flex-shrink: 0;
+        }
+
+        .hito-card:hover {
+          z-index: 10;
+        }
+      `}</style>
       <div
+        className="editar-calendario-container"
         style={{
-          backgroundColor: atisaStyles.colors.primary,
-          color: 'white',
-          padding: '32px 24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
-          marginBottom: '16px',
-          position: 'relative'
+          fontFamily: atisaStyles.fonts.secondary,
+          backgroundColor: '#f8f9fa',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
-        {/* Botón de volver */}
-        <button
-          className="btn"
-          onClick={() => navigate('/clientes')}
+      {/* Header fijo */}
+      <header
+        className="calendario-header"
+        style={{
+          background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
+          color: 'white',
+          padding: '1.5rem 2rem',
+          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10
+        }}
+      >
+        <div
+          className="header-content"
           style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontFamily: atisaStyles.fonts.secondary,
-            fontWeight: '600',
-            padding: '8px 16px',
-            fontSize: '14px',
-            transition: 'all 0.3s ease',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-            e.currentTarget.style.transform = 'translateY(-2px)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-            e.currentTarget.style.transform = 'translateY(0)'
+            justifyContent: 'space-between',
+            maxWidth: '1200px',
+            margin: '0 auto'
           }}
         >
-          <i className="bi bi-arrow-left" style={{ color: 'white' }}></i>
-          Volver
-        </button>
-
-        {/* Título principal */}
-        <div className="text-center">
-          <h2
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0,
-              fontSize: '2.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px'
-            }}
-          >
-            <i className="bi bi-pencil-square" style={{ color: 'white' }}></i>
-            Editar Calendario - {cliente?.razsoc || clienteId}
-          </h2>
-        <p
-          style={{
-            margin: '8px 0 0 0',
-            fontSize: '1.1rem',
-            opacity: 0.9
-          }}
-        >
-          Modifica las fechas de los hitos según sea necesario
-        </p>
-        </div>
-      </div>
-
-      {/* Barra de acciones */}
-      <div
-        className="mb-4 d-flex justify-content-between align-items-center"
-        style={{
-          backgroundColor: 'white',
-          padding: '20px 24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-          border: `1px solid ${atisaStyles.colors.light}`
-        }}
-      >
-        <div className="d-flex gap-3">
-
           <button
-            className="btn"
-            onClick={() => setShowHistorialAuditoria(true)}
+            className="back-button"
+            onClick={() => navigate('/clientes')}
             style={{
-              backgroundColor: atisaStyles.colors.accent,
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               fontFamily: atisaStyles.fonts.secondary,
               fontWeight: '600',
               padding: '8px 16px',
-              transition: 'all 0.3s ease'
+              fontSize: '14px',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              e.currentTarget.style.transform = 'translateY(-2px)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              e.currentTarget.style.transform = 'translateY(0)'
             }}
           >
-            <i className="bi bi-clock-history me-2" style={{ color: 'white' }}></i>
-            Ver Historial
+            <i className="bi bi-arrow-left" style={{ color: 'white' }}></i>
+            Volver
           </button>
 
-          {Object.keys(hitosEditados).length > 0 && (
-            <div className="d-flex gap-2">
-              <button
-                className="btn"
-                onClick={mostrarResumenCambios}
-                style={{
-                  backgroundColor: atisaStyles.colors.accent,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '8px 16px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                }}
-              >
-                <i className="bi bi-list-ul me-2" style={{ color: 'white' }}></i>
-                Ver Resumen
-              </button>
+          <div
+            className="title-section"
+            style={{
+              textAlign: 'center',
+              flex: 1
+            }}
+          >
+            <h1
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                fontSize: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px'
+              }}
+            >
+              <i className="bi bi-pencil-square" style={{ color: 'white' }}></i>
+              Editar Calendario
+            </h1>
+            <p
+              style={{
+                margin: '8px 0 0 0',
+                fontSize: '1.1rem',
+                opacity: 0.9
+              }}
+            >
+              {cliente?.razsoc || clienteId}
+            </p>
+          </div>
 
-              <button
-                className="btn"
-                onClick={cancelarCambios}
-                style={{
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '8px 16px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#c82333'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dc3545'
-                }}
-              >
-                <i className="bi bi-x-circle me-2" style={{ color: 'white' }}></i>
-                Cancelar
-              </button>
-
-              <button
-                className="btn"
-                onClick={guardarCambios}
-                disabled={saving}
-                style={{
-                  backgroundColor: atisaStyles.colors.secondary,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '8px 16px',
-                  transition: 'all 0.3s ease',
-                  opacity: saving ? 0.7 : 1
-                }}
-                onMouseEnter={(e) => {
-                  if (!saving) {
-                    e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!saving) {
-                    e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                  }
-                }}
-              >
-                {saving ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-check-circle me-2" style={{ color: 'white' }}></i>
-                    Guardar Cambios
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="d-flex align-items-center gap-3">
-          {Object.keys(hitosEditados).length > 0 && (
-            <div className="text-warning">
-              <small>
-                <i className="bi bi-exclamation-triangle me-1" style={{ color: '#ffc107' }}></i>
-                <strong>{Object.keys(hitosEditados).length}</strong> hitos modificados
-              </small>
-            </div>
-          )}
-          {cambiosRealizados.length > 0 && (
-            <div className="text-info">
-              <small>
-                <i className="bi bi-list-check me-1" style={{ color: atisaStyles.colors.accent }}></i>
-                <strong>{cambiosRealizados.length}</strong> cambios pendientes
-              </small>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Campo de observaciones - Solo visible cuando hay cambios */}
-      {Object.keys(hitosEditados).length > 0 && (
-        <div
-          className="mb-4"
-          style={{
-            backgroundColor: 'white',
-            padding: '20px 24px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`
-          }}
-        >
-          <div className="row">
-            <div className="col-12">
-              <label className="form-label" style={{
-                fontSize: '16px',
+          <div
+            className="header-actions"
+            style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center'
+            }}
+          >
+            <button
+              className="btn"
+              onClick={() => setVistaCalendario(!vistaCalendario)}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontFamily: atisaStyles.fonts.secondary,
                 fontWeight: '600',
-                color: atisaStyles.colors.dark,
-                marginBottom: '12px',
+                padding: '8px 16px',
+                fontSize: '14px',
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
-              }}>
-                <i className="bi bi-chat-text" style={{ color: atisaStyles.colors.primary }}></i>
-                Observaciones de los cambios realizados
-              </label>
-              <textarea
-                className="form-control"
-                value={observacionesGlobales}
-                onChange={(e) => setObservacionesGlobales(e.target.value)}
-                placeholder="Describa los cambios realizados en los hitos..."
-                rows={3}
-                style={{
-                  fontSize: '14px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  resize: 'vertical',
-                  transition: 'border-color 0.3s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = atisaStyles.colors.primary
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = atisaStyles.colors.light
-                }}
-              />
-              <small className="text-muted" style={{ fontSize: '12px', marginTop: '4px' }}>
-                Estas observaciones se aplicarán a todos los cambios realizados en esta sesión
-              </small>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Selector de períodos */}
-      <div
-        className="mb-4 position-relative"
-        style={{
-          backgroundColor: 'white',
-          padding: '20px 24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-          border: `1px solid ${atisaStyles.colors.light}`
-        }}
-      >
-        <div className="d-flex overflow-auto justify-content-end" style={{ scrollbarWidth: 'thin' }}>
-          {periodos.map((periodo) => {
-            const [year, month] = periodo.split('-')
-            const isSelected = selectedPeriod === periodo
-            return (
-              <button
-                key={periodo}
-                className="btn btn-sm"
-                style={{
-                  backgroundColor: isSelected ? atisaStyles.colors.secondary : 'white',
-                  color: isSelected ? 'white' : atisaStyles.colors.primary,
-                  border: `2px solid ${isSelected ? atisaStyles.colors.accent : atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: isSelected ? '0 4px 12px rgba(156, 186, 57, 0.3)' : '0 2px 8px rgba(0, 80, 92, 0.1)',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={() => setSelectedPeriod(periodo)}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                    e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'white'
-                    e.currentTarget.style.borderColor = atisaStyles.colors.light
-                    e.currentTarget.style.transform = 'translateY(0)'
-                  }
-                }}
-              >
-                {getMesName(parseInt(month))} {year}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <Accordion
-        defaultActiveKey="0"
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-          border: `1px solid ${atisaStyles.colors.light}`,
-          overflow: 'hidden'
-        }}
-      >
-        {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
-          const procesosFiltradosPorPeriodo = selectedPeriod
-            ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
-            : Object.entries(grupo.periodos)
-          if (procesosFiltradosPorPeriodo.length === 0) return null
-
-          // Calcular total de hitos para este grupo de procesos
-          const totalHitos = procesosFiltradosPorPeriodo.reduce((total, [, periodo]) => {
-            return total + periodo.items.reduce((subtotal, proceso) => {
-              const hitosDelProceso = hitosPorProceso[proceso.id] || []
-              return subtotal + hitosDelProceso.length
-            }, 0)
-          }, 0)
-
-          return (
-            <Accordion.Item
-              key={nombreProceso}
-              eventKey={index.toString()}
-              style={{
-                border: 'none',
-                borderBottom: `1px solid ${atisaStyles.colors.light}`
               }}
             >
-              <Accordion.Header
+              <i className={`bi ${vistaCalendario ? 'bi-table' : 'bi-calendar3'}`} style={{ color: 'white' }}></i>
+              {vistaCalendario ? 'Vista Tabla' : 'Vista Calendario'}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Layout principal */}
+      <div
+        className="main-layout"
+        style={{
+          display: 'flex',
+          flex: 1,
+          gap: '1rem',
+          padding: '1rem',
+          width: '100%'
+        }}
+      >
+        {/* Sidebar con filtros */}
+        <aside
+          className="sidebar"
+          style={{
+            width: '20%',
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            height: 'fit-content',
+            position: 'sticky',
+            top: '120px'
+          }}
+        >
+          <div className="filter-section">
+            <h3
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                color: atisaStyles.colors.primary,
+                fontWeight: 'bold',
+                fontSize: '1.2rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="bi bi-funnel" style={{ color: atisaStyles.colors.primary }}></i>
+              Filtros
+            </h3>
+
+            {/* Selector de período */}
+            <div className="period-selector" style={{ marginBottom: '1.5rem' }}>
+              <label
                 style={{
-                  backgroundColor: atisaStyles.colors.light,
-                  border: 'none',
-                  padding: '20px 24px'
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: atisaStyles.colors.dark,
+                  marginBottom: '8px',
+                  display: 'block'
                 }}
               >
-                <div className='d-flex justify-content-between w-100 me-3'>
-                  <span
-                    style={{
-                      fontFamily: atisaStyles.fonts.primary,
-                      color: atisaStyles.colors.primary,
-                      fontWeight: 'bold',
-                      fontSize: '1.2rem'
-                    }}
-                  >
-                    <i className="bi bi-diagram-3 me-2" style={{ color: atisaStyles.colors.primary }}></i>
-                    {nombreProceso}
-                  </span>
-                  <span
-                    style={{
-                      backgroundColor: atisaStyles.colors.secondary,
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      fontFamily: atisaStyles.fonts.secondary
-                    }}
-                  >
-                    {totalHitos} hitos
-                  </span>
-                </div>
-              </Accordion.Header>
-              <Accordion.Body
+                Período
+              </label>
+              <div
+                className="period-grid"
                 style={{
-                  backgroundColor: 'white',
-                  padding: '24px'
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
+                  gap: '8px'
                 }}
               >
-                {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
-                  <div key={periodoKey} className='mb-5'>
-                    <div
-                      className='table-responsive'
+                {periodos.map((periodo) => {
+                  const [year, month] = periodo.split('-')
+                  const isSelected = selectedPeriod === periodo
+                  return (
+                    <button
+                      key={periodo}
+                      className={`period-card ${isSelected ? 'active' : ''}`}
+                      onClick={() => setSelectedPeriod(periodo)}
                       style={{
-                        backgroundColor: 'white',
+                        backgroundColor: isSelected ? atisaStyles.colors.secondary : 'white',
+                        color: isSelected ? 'white' : atisaStyles.colors.primary,
+                        border: `2px solid ${isSelected ? atisaStyles.colors.accent : atisaStyles.colors.light}`,
                         borderRadius: '8px',
-                        boxShadow: '0 2px 10px rgba(0, 80, 92, 0.05)',
-                        border: `1px solid ${atisaStyles.colors.light}`,
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontWeight: '600',
+                        padding: '12px 8px',
+                        fontSize: '12px',
+                        transition: 'all 0.3s ease',
+                        boxShadow: isSelected ? '0 4px 12px rgba(156, 186, 57, 0.3)' : '0 2px 8px rgba(0, 80, 92, 0.1)',
+                        textAlign: 'center',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                          e.currentTarget.style.borderColor = atisaStyles.colors.accent
+                          e.currentTarget.style.transform = 'translateY(-2px)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = 'white'
+                          e.currentTarget.style.borderColor = atisaStyles.colors.light
+                          e.currentTarget.style.transform = 'translateY(0)'
+                        }
+                      }}
+                    >
+                      <div className="month" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                        {getMesName(parseInt(month))}
+                      </div>
+                      <div className="year" style={{ fontSize: '10px', opacity: 0.8 }}>
+                        {year}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Filtros adicionales */}
+            <div className="additional-filters">
+
+
+              <div className="filter-group" style={{ marginBottom: '1.5rem' }}>
+                <label
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: atisaStyles.colors.dark,
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}
+                >
+                  Proceso
+                </label>
+                <select
+                  className="form-select form-select-sm"
+                  value={filtroProceso}
+                  onChange={(e) => setFiltroProceso(e.target.value)}
+                  style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '14px',
+                    border: `1px solid ${atisaStyles.colors.light}`,
+                    borderRadius: '6px'
+                  }}
+                >
+                  <option value="">Todos los procesos</option>
+                  {procesosList.map(proceso => (
+                    <option key={proceso.id} value={proceso.id.toString()}>
+                      {proceso.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Indicadores de cambios */}
+              {Object.keys(hitosEditados).length > 0 && (
+                <div
+                  className="changes-indicator"
+                  style={{
+                    backgroundColor: '#fff3cd',
+                    border: '1px solid #ffeaa7',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <div
+                    className="changes-badge"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#856404',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <i className="bi bi-pencil-square" style={{ color: '#ffc107' }}></i>
+                    <span>{Object.keys(hitosEditados).length} hitos modificados</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Botones de acción */}
+              <div className="action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => setShowHistorialAuditoria(true)}
+                  style={{
+                    backgroundColor: atisaStyles.colors.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontWeight: '600',
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <i className="bi bi-clock-history" style={{ color: 'white' }}></i>
+                  Ver Historial
+                </button>
+
+                {Object.keys(hitosEditados).length > 0 && (
+                  <>
+                    <button
+                      className="btn btn-sm"
+                      onClick={mostrarResumenCambios}
+                      style={{
+                        backgroundColor: atisaStyles.colors.primary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontWeight: '600',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <i className="bi bi-list-ul" style={{ color: 'white' }}></i>
+                      Ver Resumen
+                    </button>
+
+                    <button
+                      className="btn btn-sm"
+                      onClick={cancelarCambios}
+                      style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontWeight: '600',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <i className="bi bi-x-circle" style={{ color: 'white' }}></i>
+                      Cancelar
+                    </button>
+
+                    <button
+                      className="btn btn-sm"
+                      onClick={guardarCambios}
+                      disabled={saving}
+                      style={{
+                        backgroundColor: atisaStyles.colors.secondary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontWeight: '600',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        transition: 'all 0.3s ease',
+                        opacity: saving ? 0.7 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      {saving ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm" role="status"></span>
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check-circle" style={{ color: 'white' }}></i>
+                          Guardar Cambios
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Área de contenido principal */}
+        <main
+          className="content-area"
+          style={{
+            width: '80%',
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+            minHeight: '600px',
+            display: 'flex',
+            justifyContent: 'center'
+          }}
+        >
+
+          {/* Vista de calendario o tabla */}
+          {vistaCalendario ? (
+            /* Vista de calendario */
+            <div className="calendar-view">
+              <div
+                className="calendar-header"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.5rem',
+                  padding: '1rem',
+                  backgroundColor: atisaStyles.colors.light,
+                  borderRadius: '8px'
+                }}
+              >
+                <h3
+                  style={{
+                    fontFamily: atisaStyles.fonts.primary,
+                    color: atisaStyles.colors.primary,
+                    fontWeight: 'bold',
+                    margin: 0,
+                    fontSize: '1.5rem'
+                  }}
+                >
+                  {selectedPeriod ? `${getMesName(parseInt(selectedPeriod.split('-')[1]))} ${selectedPeriod.split('-')[0]}` : 'Seleccione un período'}
+                </h3>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setVistaCalendario(false)}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '12px'
+                    }}
+                  >
+                    <i className="bi bi-table me-1"></i>
+                    Vista Tabla
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  width: '100%',
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}
+              >
+                {/* Cabeceras de días de la semana */}
+                <div
+                  className="calendar-weekdays"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, 1fr)',
+                    gap: '14px',
+                    width: '100%',
+                    maxWidth: '2000px',
+                    marginBottom: '8px'
+                  }}
+                >
+                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+                    <div
+                      key={d}
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 600,
+                        color: atisaStyles.colors.dark,
+                        backgroundColor: 'white',
+                        border: '1px solid #e9ecef',
+                        borderRadius: '6px',
+                        padding: '8px'
+                      }}
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div
+                  className="calendar-grid"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, 1fr)',
+                    gridTemplateRows: 'repeat(6, 1fr)', // 6 filas fijas
+                    gap: '14px',
+                    height: '1000px', // Altura fija más grande para el grid completo
+                    width: '100%',
+                    maxWidth: '2000px' // Ancho máximo más grande para aprovechar el 80%
+                  }}
+                >
+                {getCeldasCalendario().map(({ date, actual }, idx) => {
+                  const hitosDelDia = getHitosDeFecha(date)
+                  return (
+                    <div
+                      key={idx}
+                      className="calendar-day"
+                      style={{
+                        backgroundColor: actual ? '#f8f9fa' : '#f1f3f5',
+                        border: '1px solid #e9ecef',
+                        borderRadius: '8px',
+                        padding: '14px',
+                        height: '155px', // Altura fija más grande para todos los días
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
                         overflow: 'hidden'
                       }}
                     >
-                      <table
-                        className='table align-middle gs-0 gy-4 mb-0'
+                      <div
+                        className="day-number"
                         style={{
-                          fontFamily: atisaStyles.fonts.secondary,
-                          margin: 0
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          color: actual ? atisaStyles.colors.primary : '#adb5bd',
+                          marginBottom: '8px',
+                          flexShrink: 0,
+                          textAlign: 'center',
+                          padding: '4px',
+                          backgroundColor: 'white',
+                          borderRadius: '4px',
+                          border: '1px solid #e9ecef'
                         }}
                       >
-                        <thead>
-                          <tr
+                        {date.getDate()}
+                      </div>
+                      <div
+                        className="day-hitos"
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '7px',
+                          flex: 1,
+                          overflowY: 'auto',
+                          maxHeight: '125px', // Altura máxima más grande para el área de hitos
+                          paddingRight: '5px'
+                        }}
+                      >
+                        {hitosDelDia.length === 0 ? (
+                          <div
                             style={{
-                              backgroundColor: atisaStyles.colors.primary,
-                              color: 'white'
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: '100%',
+                              color: '#6c757d',
+                              fontSize: '11px',
+                              fontStyle: 'italic',
+                              textAlign: 'center'
                             }}
                           >
-                            <th
+                            Sin hitos
+                          </div>
+                        ) : (
+                          hitosDelDia.map(hito => (
+                            <div
+                              key={hito.id}
+                              className={`hito-card ${hito.estado.toLowerCase()}`}
+                              onClick={() => editarHito(hito)}
                               style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
+                                backgroundColor: hito.estado === 'Finalizado' ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
+                                color: 'white',
+                                padding: '10px 12px',
+                                borderRadius: '6px',
                                 fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                border: hitosEditados[hito.id] ? '2px solid #ffc107' : 'none',
+                                flexShrink: 0,
+                                minHeight: '70px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.02)'
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.3)'
+                                e.currentTarget.style.zIndex = '10'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)'
+                                e.currentTarget.style.boxShadow = 'none'
+                                e.currentTarget.style.zIndex = '1'
                               }}
                             >
-                              Hito
-                            </th>
-                            <th
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
-                              }}
-                            >
-                              Estado
-                            </th>
-                            <th
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
-                              }}
-                            >
-                              Fecha Inicio
-                            </th>
-                            <th
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
-                              }}
-                            >
-                              Fecha Límite
-                            </th>
-                            <th
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                padding: '16px 12px',
-                                border: 'none',
-                                color: 'white'
-                              }}
-                            >
-                              Hora Límite
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {loadingHitos ? (
-                            <tr>
-                              <td
-                                colSpan={5}
-                                className="text-center py-4"
+                              <div
+                                className="hito-name"
                                 style={{
-                                  backgroundColor: '#f8f9fa',
-                                  fontFamily: atisaStyles.fonts.secondary
+                                  fontWeight: '700',
+                                  whiteSpace: 'normal',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  fontSize: '14px',
+                                  lineHeight: '1.3',
+                                  marginBottom: '5px',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  maxHeight: '32px'
                                 }}
+                                title={getNombreHito(hito.hito_id)}
                               >
+                                {getNombreHito(hito.hito_id)}
+                              </div>
+                              <div
+                                className="hito-proceso"
+                                style={{
+                                  fontSize: '11px',
+                                  opacity: 0.95,
+                                  whiteSpace: 'normal',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  marginBottom: '5px',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: 'vertical',
+                                  fontWeight: '500'
+                                }}
+                                title={getNombreProceso(hito.cliente_proceso_id)}
+                              >
+                                {getNombreProceso(hito.cliente_proceso_id)}
+                              </div>
+                              {hito.hora_limite && (
                                 <div
-                                  className="spinner-border"
-                                  role="status"
+                                  className="hito-time"
                                   style={{
-                                    color: atisaStyles.colors.primary,
-                                    width: '2rem',
-                                    height: '2rem'
+                                    fontSize: '10px',
+                                    opacity: 0.8,
+                                    textAlign: 'center',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderRadius: '3px',
+                                    padding: '3px 8px'
                                   }}
                                 >
-                                  <span className="visually-hidden">Cargando hitos...</span>
+                                  {hito.hora_limite.substring(0, 5)}
                                 </div>
-                                <span
-                                  className="ms-2"
+                              )}
+                              {hitosEditados[hito.id] && (
+                                <div
                                   style={{
-                                    color: atisaStyles.colors.dark,
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    fontWeight: '500'
+                                    position: 'absolute',
+                                    top: '2px',
+                                    right: '2px',
+                                    fontSize: '8px',
+                                    color: '#ffc107'
                                   }}
                                 >
-                                  Cargando hitos...
-                                </span>
-                              </td>
-                            </tr>
-                          ) : (
-                            periodo.items.map((proceso) => {
-                              const hitosDelProceso = hitosPorProceso[proceso.id] || []
+                                  <i className="bi bi-pencil-square"></i>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
 
-                              if (hitosDelProceso.length === 0) {
-                                return (
-                                  <tr
-                                    key={proceso.id}
-                                    style={{
-                                      backgroundColor: '#f8f9fa'
-                                    }}
-                                  >
-                                    <td
-                                      colSpan={6}
-                                      className="text-center py-3"
-                                      style={{
-                                        color: atisaStyles.colors.dark,
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        padding: '16px 12px'
-                                      }}
-                                    >
-                                      <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
-                                      No hay hitos para este proceso
-                                    </td>
-                                  </tr>
-                                )
-                              }
+                      {/* Indicador de scroll vertical si hay más de 2 hitos */}
+                      {hitosDelDia.length > 2 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: '4px',
+                            right: '4px',
+                            backgroundColor: 'rgba(0, 80, 92, 0.8)',
+                            color: 'white',
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                          }}
+                          title={`${hitosDelDia.length} hitos - Desliza verticalmente para ver más`}
+                        >
+                          <i className="bi bi-arrow-up-down" style={{ fontSize: '8px' }}></i>
+                          {hitosDelDia.length}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Vista de tabla mejorada */
+            <div
+              className="hitos-table-container"
+              style={{
+                width: '100%',
+                maxWidth: '2000px' // Aprovechar el 80% del espacio
+              }}
+            >
+              <div
+                className="table-header"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '1.5rem',
+                  padding: '1.5rem',
+                  backgroundColor: atisaStyles.colors.light,
+                  borderRadius: '8px'
+                }}
+              >
+                <h3
+                  style={{
+                    fontFamily: atisaStyles.fonts.primary,
+                    color: atisaStyles.colors.primary,
+                    fontWeight: 'bold',
+                    margin: 0,
+                    fontSize: '1.5rem'
+                  }}
+                >
+                  Hitos del Período
+                </h3>
+                <div className="table-actions" style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setVistaCalendario(true)}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '12px'
+                    }}
+                  >
+                    <i className="bi bi-calendar3 me-1"></i>
+                    Vista Calendario
+                  </button>
+                </div>
+              </div>
 
-                              return hitosDelProceso.map((hito, hitoIndex) => {
-                                const isFinalized = hito.estado === 'Finalizado'
-                                const hasChanges = hitosEditados[hito.id] !== undefined
-
-                                return (
-                                  <tr
-                                    key={`${proceso.id}-${hito.id}`}
-                                    style={{
-                                      backgroundColor: hasChanges ? '#fff3cd' : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'),
-                                      transition: 'all 0.2s ease',
-                                      borderLeft: hasChanges ? `4px solid ${atisaStyles.colors.warning}` : 'none'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = hasChanges ? '#ffeaa7' : atisaStyles.colors.light
-                                      e.currentTarget.style.transform = 'translateY(-1px)'
-                                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = hasChanges ? '#fff3cd' : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa')
-                                      e.currentTarget.style.transform = 'translateY(0)'
-                                      e.currentTarget.style.boxShadow = 'none'
-                                    }}
-                                  >
-                                    <td
-                                      style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        color: atisaStyles.colors.primary,
-                                        fontWeight: '600',
-                                        padding: '16px 12px'
-                                      }}
-                                    >
-                                      {getNombreHito(hito.hito_id)}
-                                      {hasChanges && (
-                                        <i className="bi bi-pencil-square ms-2" style={{ color: '#ffc107' }}></i>
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '16px 12px' }}>
-                                      <span
-                                        style={{
-                                          backgroundColor: isFinalized ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
-                                          color: 'white',
-                                          padding: '6px 12px',
-                                          borderRadius: '20px',
-                                          fontSize: '12px',
-                                          fontWeight: '600',
-                                          fontFamily: atisaStyles.fonts.secondary
-                                        }}
-                                      >
-                                        {hito.estado}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '16px 12px' }}>
-                                      <input
-                                        type="date"
-                                        className="form-control form-control-sm"
-                                        value={formatDateForInput(getValorHito(hito, 'fecha_inicio'))}
-                                        onChange={(e) => handleFechaChange(hito.id, 'fecha_inicio', e.target.value)}
-                                        disabled={isFinalized}
-                                        style={{
-                                          fontFamily: atisaStyles.fonts.secondary,
-                                          fontSize: '13px',
-                                          border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                          borderRadius: '6px'
-                                        }}
-                                      />
-                                    </td>
-                                    <td style={{ padding: '16px 12px' }}>
-                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <input
-                                          type="date"
-                                          className="form-control form-control-sm"
-                                          value={formatDateForInput(getValorHito(hito, 'fecha_fin'))}
-                                          onChange={(e) => handleFechaChange(hito.id, 'fecha_fin', e.target.value)}
-                                          disabled={isFinalized}
-                                          style={{
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            fontSize: '13px',
-                                            border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '6px',
-                                            flex: 1
-                                          }}
-                                        />
-                                        <button
-                                          type="button"
-                                          className="btn btn-sm"
-                                          onClick={() => limpiarFechaFin(hito.id)}
-                                          disabled={isFinalized}
-                                          style={{
-                                            backgroundColor: atisaStyles.colors.secondary,
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            padding: '6px 8px',
-                                            fontSize: '12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            minWidth: '32px',
-                                            height: '32px',
-                                            transition: 'all 0.2s ease'
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            if (!isFinalized) {
-                                              e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                              e.currentTarget.style.transform = 'scale(1.05)'
-                                            }
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            if (!isFinalized) {
-                                              e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                                              e.currentTarget.style.transform = 'scale(1)'
-                                            }
-                                          }}
-                                          title="Limpiar fecha límite"
-                                        >
-                                          <i className="bi bi-x-circle" style={{ fontSize: '14px', color: 'white' }}></i>
-                                        </button>
-                                      </div>
-                                    </td>
-                                    <td style={{ padding: '16px 12px' }}>
-                                      <input
-                                        type="time"
-                                        className="form-control form-control-sm"
-                                        value={formatTimeForInput(getValorHito(hito, 'hora_limite'))}
-                                        onChange={(e) => handleHoraChange(hito.id, e.target.value)}
-                                        disabled={isFinalized}
-                                        style={{
-                                          fontFamily: atisaStyles.fonts.secondary,
-                                          fontSize: '13px',
-                                          border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                          borderRadius: '6px'
-                                        }}
-                                      />
-                                    </td>
-                                  </tr>
-                                )
-                              })
-                            })
-                          )}
-                        </tbody>
-                      </table>
+              {/* Campo de observaciones - Solo visible cuando hay cambios */}
+              {Object.keys(hitosEditados).length > 0 && (
+                <div
+                  className="mb-4"
+                  style={{
+                    backgroundColor: '#fff3cd',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #ffeaa7',
+                    marginBottom: '1.5rem'
+                  }}
+                >
+                  <div className="row">
+                    <div className="col-12">
+                      <label className="form-label" style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#856404',
+                        marginBottom: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <i className="bi bi-chat-text" style={{ color: '#ffc107' }}></i>
+                        Observaciones de los cambios realizados
+                      </label>
+                      <textarea
+                        className="form-control"
+                        value={observacionesGlobales}
+                        onChange={(e) => setObservacionesGlobales(e.target.value)}
+                        placeholder="Describa los cambios realizados en los hitos..."
+                        rows={2}
+                        style={{
+                          fontSize: '14px',
+                          fontFamily: atisaStyles.fonts.secondary,
+                          border: `1px solid #ffeaa7`,
+                          borderRadius: '6px',
+                          resize: 'vertical'
+                        }}
+                      />
                     </div>
                   </div>
-                ))}
-              </Accordion.Body>
-            </Accordion.Item>
-          )
-        })}
-      </Accordion>
+                </div>
+              )}
+
+              <div
+                className="table-responsive"
+                style={{
+                  width: '100%',
+                  overflowX: 'auto'
+                }}
+              >
+                <div className="d-flex align-items-center justify-content-between mb-3" style={{ gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Buscar por nombre de hito..."
+                      value={busquedaNombre}
+                      onChange={(e) => setBusquedaNombre(e.target.value)}
+                      style={{
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontSize: '14px',
+                        border: `1px solid ${atisaStyles.colors.light}`,
+                        borderRadius: '6px'
+                      }}
+                    />
+                  </div>
+                </div>
+                <table
+                  className="hitos-table"
+                  style={{
+                    width: '100%',
+                    minWidth: '1200px', // Ancho mínimo para aprovechar el espacio
+                    borderCollapse: 'collapse',
+                    fontFamily: atisaStyles.fonts.secondary
+                  }}
+                >
+                  <thead>
+                    <tr style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '200px' }}>
+                        Hito
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '180px' }}>
+                        Proceso
+                      </th>
+
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '150px' }}>
+                        Fecha Límite
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '120px' }}>
+                        Hora Límite
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingHitos ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="text-center py-4"
+                          style={{
+                            backgroundColor: '#f8f9fa',
+                            fontFamily: atisaStyles.fonts.secondary,
+                            padding: '2rem'
+                          }}
+                        >
+                          <div
+                            className="spinner-border"
+                            role="status"
+                            style={{
+                              color: atisaStyles.colors.primary,
+                              width: '2rem',
+                              height: '2rem'
+                            }}
+                          >
+                            <span className="visually-hidden">Cargando hitos...</span>
+                          </div>
+                          <span
+                            className="ms-2"
+                            style={{
+                              color: atisaStyles.colors.dark,
+                              fontFamily: atisaStyles.fonts.secondary,
+                              fontWeight: '500'
+                            }}
+                          >
+                            Cargando hitos...
+                          </span>
+                        </td>
+                      </tr>
+                    ) : (
+                      getHitosFiltrados().map((hito, index) => {
+                        const hasChanges = hitosEditados[hito.id] !== undefined
+                        const isFinalized = false
+
+                        return (
+                          <tr
+                            key={hito.id}
+                            style={{
+                              backgroundColor: hasChanges ? '#fff3cd' : (index % 2 === 0 ? 'white' : '#f8f9fa'),
+                              transition: 'all 0.2s ease',
+                              borderLeft: hasChanges ? `4px solid ${atisaStyles.colors.warning}` : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = hasChanges ? '#ffeaa7' : atisaStyles.colors.light
+                              e.currentTarget.style.transform = 'translateY(-1px)'
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = hasChanges ? '#fff3cd' : (index % 2 === 0 ? 'white' : '#f8f9fa')
+                              e.currentTarget.style.transform = 'translateY(0)'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
+                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <div
+                                className="hito-info"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    color: atisaStyles.colors.primary,
+                                    fontWeight: '600',
+                                    fontSize: '15px',
+                                    lineHeight: '1.4'
+                                  }}
+                                >
+                                  {getNombreHito(hito.hito_id)}
+                                </span>
+                                {hasChanges && (
+                                  <i className="bi bi-pencil-square" style={{ color: '#ffc107' }}></i>
+                                )}
+
+                              </div>
+                            </td>
+                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <span
+                                style={{
+                                  fontFamily: atisaStyles.fonts.secondary,
+                                  color: atisaStyles.colors.dark,
+                                  fontSize: '14px',
+                                  backgroundColor: atisaStyles.colors.light,
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  display: 'inline-block',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                {getNombreProceso(hito.cliente_proceso_id)}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <input
+                                  type="date"
+                                  className="form-control form-control-sm"
+                                  value={formatDateForInput(getValorHito(hito, 'fecha_limite'))}
+                                  onChange={(e) => handleFechaChange(hito.id, 'fecha_limite', e.target.value)}
+                                  data-hito-id={hito.id}
+                                  data-campo="fecha_limite"
+                                  min={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.start) : undefined}
+                                  max={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.end) : undefined}
+                                  style={{
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    fontSize: '14px',
+                                    border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
+                                    borderRadius: '6px',
+                                    flex: 1
+                                  }}
+                                />
+                              </div>
+                            </td>
+                            <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <input
+                                type="time"
+                                className="form-control form-control-sm"
+                                value={formatTimeForInput(getValorHito(hito, 'hora_limite'))}
+                                onChange={(e) => handleHoraChange(hito.id, e.target.value)}
+
+                                style={{
+                                  fontFamily: atisaStyles.fonts.secondary,
+                                  fontSize: '14px',
+                                  border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
+                                  borderRadius: '6px'
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+
+      {/* Modal de edición de hito */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              color: atisaStyles.colors.primary,
+              fontWeight: 'bold'
+            }}
+          >
+            <i className="bi bi-pencil-square me-2" style={{ color: atisaStyles.colors.primary }}></i>
+            Editar Hito: {selectedHito ? getNombreHito(selectedHito.hito_id) : ''}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="hito-edit-form">
+    <div className="row">
+              <div className="col-md-6">
+                <div className="form-group mb-3">
+                  <label className="form-label" style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: atisaStyles.colors.dark,
+                    marginBottom: '8px'
+                  }}>
+                    Fecha Límite
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={editForm.fecha_limite || ''}
+                    onChange={(e) => {
+                      const newVal = e.target.value || ''
+                      if (!newVal) {
+                        alert('La fecha límite es obligatoria y no se puede dejar vacía')
+                        e.target.value = editForm.fecha_limite || ''
+                        return
+                      }
+                      if (newVal && !isWithinSelectedMonth(newVal)) {
+                        alert('La fecha debe estar dentro del mes asignado (período seleccionado)')
+                        // Restablecer al valor anterior
+                        e.target.value = editForm.fecha_limite || ''
+                        return
+                      }
+                      setEditForm({ ...editForm, fecha_limite: newVal })
+                    }}
+                    min={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.start) : undefined}
+                    max={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.end) : undefined}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      border: `1px solid ${atisaStyles.colors.light}`,
+                      borderRadius: '6px'
+                    }}
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            <div className="row">
+              <div className="col-md-6">
+                <div className="form-group mb-3">
+                  <label className="form-label" style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: atisaStyles.colors.dark,
+                    marginBottom: '8px'
+                  }}>
+                    Hora Límite
+                  </label>
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={editForm.hora_limite || ''}
+                    onChange={(e) => setEditForm({...editForm, hora_limite: e.target.value || null})}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      border: `1px solid ${atisaStyles.colors.light}`,
+                      borderRadius: '6px'
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="form-group mb-3">
+                  <label className="form-label" style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: atisaStyles.colors.dark,
+                    marginBottom: '8px'
+                  }}>
+                    Estado
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={selectedHito?.estado || ''}
+                    disabled
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      border: `1px solid ${atisaStyles.colors.light}`,
+                      borderRadius: '6px',
+                      backgroundColor: '#f8f9fa'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group mb-3">
+              <label className="form-label" style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: atisaStyles.colors.dark,
+                marginBottom: '8px'
+              }}>
+                Observaciones
+              </label>
+              <textarea
+                className="form-control"
+                value={editForm.observaciones}
+                onChange={(e) => setEditForm({...editForm, observaciones: e.target.value})}
+                rows={3}
+                placeholder="Agregue observaciones sobre los cambios realizados..."
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '14px',
+                  border: `1px solid ${atisaStyles.colors.light}`,
+                  borderRadius: '6px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowEditModal(false)}
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              fontSize: '14px',
+              padding: '8px 16px'
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={guardarHito}
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              fontSize: '14px',
+              padding: '8px 16px',
+              backgroundColor: atisaStyles.colors.secondary,
+              borderColor: atisaStyles.colors.secondary
+            }}
+          >
+            <i className="bi bi-check-circle me-2"></i>
+            Guardar Cambios
+          </button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Modal de Historial de Auditoría */}
       <HistorialAuditoriaModal
@@ -1275,7 +1926,31 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
         onHide={() => setShowHistorialAuditoria(false)}
         clienteId={clienteId}
       />
+
+      {/* Notificaciones Toast */}
+      <ToastContainer position="top-end" style={{ zIndex: 9999 }}>
+        <Toast show={showSuccess} onClose={() => setShowSuccess(false)} delay={3000} autohide>
+          <Toast.Header>
+            <i className="bi bi-check-circle text-success me-2"></i>
+            <strong className="me-auto">Éxito</strong>
+          </Toast.Header>
+          <Toast.Body>
+            Los cambios se han guardado correctamente
+          </Toast.Body>
+        </Toast>
+
+        <Toast show={showError} onClose={() => setShowError(false)} delay={5000} autohide>
+          <Toast.Header>
+            <i className="bi bi-exclamation-triangle text-danger me-2"></i>
+            <strong className="me-auto">Error</strong>
+          </Toast.Header>
+          <Toast.Body>
+            {errorMessage || 'Ha ocurrido un error al guardar los cambios'}
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
     </div>
+    </>
   )
 }
 

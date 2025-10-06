@@ -610,7 +610,7 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
                         padding: '16px 12px'
                       }}
                     >
-                      {new Date(hito.fecha_inicio).toLocaleDateString()}
+                      {hito.fecha_limite ? new Date(hito.fecha_limite).toLocaleDateString() : '-'}
                     </td>
                     <td
                       style={{
@@ -619,7 +619,7 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
                         padding: '16px 12px'
                       }}
                     >
-                      {hito.fecha_fin ? new Date(hito.fecha_fin).toLocaleDateString() : '-'}
+                      -
                     </td>
                   </tr>
                 ))

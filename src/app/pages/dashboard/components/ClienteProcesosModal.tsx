@@ -28,6 +28,7 @@ const ClienteProcesosModal: FC<Props> = ({
 }) => {
   const [formData, setFormData] = useState({
     plantillaId: '',
+    fecha_inicio: new Date().toISOString().split('T')[0],
   })
   const [procesos, setProcesos] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
@@ -53,11 +54,12 @@ const ClienteProcesosModal: FC<Props> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCliente || !formData.plantillaId || !procesos.length) return
+    if (!selectedCliente || !formData.plantillaId || !procesos.length || !formData.fecha_inicio) return
 
     const calendarios = procesos.map(procesoId => ({
       cliente_id: selectedCliente.idcliente,
       proceso_id: procesoId,
+      fecha_inicio: formData.fecha_inicio,
     }))
 
     onSave(calendarios)
@@ -267,6 +269,43 @@ const ClienteProcesosModal: FC<Props> = ({
             </div>
           </div>
 
+          <div className='fv-row mb-4'>
+            <label
+              className='required fw-bold fs-6 mb-2'
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                color: atisaStyles.colors.primary,
+                fontSize: '16px'
+              }}
+            >
+              <i className="bi bi-calendar-x me-2"></i>
+              Fecha Límite
+            </label>
+            <input
+              type='date'
+              className='form-control form-control-solid'
+              value={formData.fecha_inicio}
+              onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
+              required
+              style={{
+                border: `2px solid ${atisaStyles.colors.light}`,
+                borderRadius: '8px',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontSize: '14px',
+                height: '48px',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = atisaStyles.colors.accent
+                e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = atisaStyles.colors.light
+                e.target.style.boxShadow = 'none'
+              }}
+            />
+          </div>
+
         </form>
       </Modal.Body>
       <Modal.Footer
@@ -308,7 +347,7 @@ const ClienteProcesosModal: FC<Props> = ({
           type='button'
           className='btn'
           onClick={handleSubmit}
-          disabled={!selectedCliente || !formData.plantillaId}
+          disabled={!selectedCliente || !formData.plantillaId || !formData.fecha_inicio}
           style={{
             backgroundColor: atisaStyles.colors.secondary,
             border: `2px solid ${atisaStyles.colors.secondary}`,
@@ -321,7 +360,7 @@ const ClienteProcesosModal: FC<Props> = ({
             transition: 'all 0.3s ease',
             marginLeft: '12px',
             boxShadow: '0 4px 15px rgba(156, 186, 57, 0.3)',
-            opacity: (!selectedCliente || !formData.plantillaId) ? 0.6 : 1
+            opacity: (!selectedCliente || !formData.plantillaId || !formData.fecha_inicio) ? 0.6 : 1
           }}
           onMouseEnter={(e) => {
             if (!e.currentTarget.disabled) {
