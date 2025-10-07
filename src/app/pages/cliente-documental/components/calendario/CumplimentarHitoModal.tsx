@@ -174,7 +174,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
 
     let fechaActual = new Date();
     let fechaCumplimientoDate = new Date(fechaCumplimiento);
-    if(fechaCumplimientoDate > fechaActual) {
+    if (fechaCumplimientoDate > fechaActual) {
       alert('La fecha de cumplimiento no puede ser mayor a la fecha actual')
       return
     }

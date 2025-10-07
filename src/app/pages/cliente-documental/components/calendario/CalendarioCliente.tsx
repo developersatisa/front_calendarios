@@ -28,7 +28,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
   const [busquedaNombre, setBusquedaNombre] = useState('')
   const [debouncedBusqueda, setDebouncedBusqueda] = useState('')
-  const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencido' | 'hoy' | 'en_plazo' | 'sin_fecha'>('todos')
+  const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencido' | 'hoy' | 'en_plazo' | 'sin_fecha' | 'vencer_hoy'>('todos')
   const [filtroCumplimiento, setFiltroCumplimiento] = useState<'todos' | 'cumplimentado' | 'no_cumplimentado'>('todos')
 
   useEffect(() => {
@@ -394,6 +394,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   // Predicados de filtros rápidos
   const coincideVencimiento = (h: ClienteProcesoHito) => {
     if (filtroVencimiento === 'todos') return true
+    if (filtroVencimiento === 'vencer_hoy') {
+      // Estado nuevo y vence hoy
+      return h.estado === 'Nuevo' && getEstadoVencimiento(h.fecha_limite, h.estado) === 'hoy'
+    }
     const ev = getEstadoVencimiento(h.fecha_limite, h.estado)
     return ev === filtroVencimiento
   }
@@ -569,6 +573,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'todos' ? atisaStyles.colors.secondary : 'white', color: filtroVencimiento === 'todos' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('todos')}>Todos</button>
             <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'vencido' ? '#ef4444' : 'white', color: filtroVencimiento === 'vencido' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('vencido')}>Vencido</button>
             <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'hoy' ? '#f59e0b' : 'white', color: filtroVencimiento === 'hoy' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('hoy')}>Hoy</button>
+            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'vencer_hoy' ? '#dc2626' : 'white', color: filtroVencimiento === 'vencer_hoy' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('vencer_hoy')}>Vencer Hoy</button>
             <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'en_plazo' ? '#10b981' : 'white', color: filtroVencimiento === 'en_plazo' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('en_plazo')}>En plazo</button>
             {/* Botón 'Sin fecha' eliminado a petición */}
 
@@ -859,20 +864,24 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
                               return hitosDelProceso.map((hito, hitoIndex) => {
                                 const isFinalized = hito.estado === 'Finalizado'
+                                const isNuevo = hito.estado === 'Nuevo'
                                 const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
                                 const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
+                                const venceHoy = isNuevo && estadoVenc === 'hoy'
 
                                 // Color de fondo por vencimiento/finalización
                                 const bgRow = isFinalized
                                   ? (finalizadoFuera
-                                      ? '#fff3e0' // Finalizado fuera de plazo (naranja muy claro)
-                                      : '#e6f4ea' // Finalizado en plazo (verde muy claro)
-                                    )
+                                    ? '#fff3e0' // Finalizado fuera de plazo (naranja muy claro)
+                                    : '#e6f4ea' // Finalizado en plazo (verde muy claro)
+                                  )
                                   : (estadoVenc === 'vencido'
-                                      ? '#ffe0e0'
+                                    ? '#ffe0e0'
+                                    : venceHoy
+                                      ? '#fef2f2' // Nuevo que vence hoy (rojo muy claro)
                                       : estadoVenc === 'hoy'
-                                      ? '#fff0c2'
-                                      : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'))
+                                        ? '#fff0c2'
+                                        : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'))
                                 // Sin barra lateral
 
                                 return (
@@ -885,7 +894,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                     onMouseEnter={(e) => {
                                       const hoverColor = isFinalized
                                         ? (finalizadoFuera ? '#ffe6c7' : '#d1f0de')
-                                        : (estadoVenc === 'vencido' ? '#ffcfcf' : (estadoVenc === 'hoy' ? '#ffe49a' : atisaStyles.colors.light))
+                                        : (estadoVenc === 'vencido' ? '#ffcfcf' : (venceHoy ? '#fecaca' : (estadoVenc === 'hoy' ? '#ffe49a' : atisaStyles.colors.light)))
                                       e.currentTarget.style.backgroundColor = hoverColor
                                       e.currentTarget.style.transform = 'translateY(-1px)'
                                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
@@ -919,6 +928,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                             Cumplido en plazo
                                           </span>
                                         )
+                                      ) : venceHoy ? (
+                                        <span style={{ backgroundColor: '#dc2626', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                          Vence hoy
+                                        </span>
                                       ) : (
                                         estadoVenc === 'vencido' ? (
                                           <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
