@@ -76,3 +76,22 @@ export const getClienteProcesoHitoCumplimientosByHito = async (clienteProcesoHit
     (`/cliente-proceso-hito-cumplimientos/cliente-proceso-hito/${clienteProcesoHitoId}` + (params.toString() ? `?${params.toString()}` : ''))
   return response.data.cumplimientos || []
 }
+
+export const getClienteProcesoHitoCumplimientosByCliente = async (clienteId: string,
+  page?: number,
+  limit?: number,
+  sortField?: string,
+  sortDirection?: 'asc' | 'desc'
+) => {
+  const params = new URLSearchParams()
+  if (page && page > 0) params.append('page', String(page))
+  if (limit && limit > 0) params.append('limit', String(limit))
+  if (sortField) params.append('sort_field', sortField)
+  if (sortDirection) params.append('sort_direction', sortDirection)
+  const response = await api.get<ClienteProcesoHitoCumplimientosResponse>
+    (`/cliente-proceso-hito-cumplimientos/cliente/${clienteId}` + (params.toString() ? `?${params.toString()}` : ''))
+  return {
+    cumplimientos: response.data.cumplimientos || [],
+    total: response.data.total || 0
+  }
+}

@@ -18,6 +18,7 @@ import CalendarioCliente from '../pages/cliente-documental/components/calendario
 import EditarCalendarioCliente from '../pages/cliente-documental/components/calendario/EditarCalendarioCliente'
 import GestorDocumental from '../pages/cliente-documental/components/gestor_documental/GestorDocumental'
 import MetricasList from '../pages/dashboard-metricas/MetricasList'
+import HistoricoCumplimientos from '../pages/cliente-documental/components/calendario/HistoricoCumplimientos'
 
 
 
@@ -46,6 +47,7 @@ const PrivateRoutes = () => {
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioClienteWrapper />} />
         <Route path='/editar-calendario/:clienteId' element={<EditarCalendarioClienteWrapper />} />
         <Route path='gestor-documental/:clienteId' element={<GestorDocumentalWrapper />} />
+        <Route path='historico-cumplimientos/:clienteId' element={<HistoricoCumplimientosWrapper />} />
         {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
         {/* Lazy Modules */}
@@ -135,6 +137,13 @@ const GestorDocumentalWrapper: FC = () => {
   const { clienteId } = useParams<{ clienteId: string }>()
   if (!clienteId) return null
   return <GestorDocumental clienteId={clienteId} />
+}
+
+// Componente wrapper para extraer el clienteId de la URL y pasarlo como prop al Histórico de Cumplimientos
+const HistoricoCumplimientosWrapper: FC = () => {
+  const { clienteId } = useParams<{ clienteId: string }>()
+  if (!clienteId) return null
+  return <HistoricoCumplimientos clienteId={clienteId} />
 }
 
 export {PrivateRoutes}
