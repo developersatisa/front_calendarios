@@ -1194,12 +1194,14 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 alignItems: 'center',
                     justifyContent: 'space-between',
                     marginBottom: '1.5rem',
-                    padding: '1rem',
+                    padding: '1.5rem',
                     backgroundColor: atisaStyles.colors.light,
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    minHeight: '80px'
                   }}
                 >
-                  <h3
+                  <div style={{ flex: 1 }}>
+                    <h3
                 style={{
                       fontFamily: atisaStyles.fonts.primary,
                       color: atisaStyles.colors.primary,
@@ -1208,15 +1210,30 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       fontSize: '1.5rem'
                     }}
                   >
-                    {selectedPeriod ? `${getMesName(parseInt(selectedPeriod.split('-')[1]))} ${selectedPeriod.split('-')[0]}` : 'Seleccione un período'}
+                    Vista Calendario
                   </h3>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  {selectedPeriod && (
+                    <p
+                      style={{
+                        margin: '4px 0 0 0',
+                        fontSize: '1rem',
+                        color: atisaStyles.colors.dark,
+                        opacity: 0.8
+                      }}
+                    >
+                      {getMesName(parseInt(selectedPeriod.split('-')[1]))} {selectedPeriod.split('-')[0]}
+                    </p>
+                  )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       className="btn btn-sm btn-outline-primary"
                       onClick={() => setVistaCalendario(false)}
                       style={{
                   fontFamily: atisaStyles.fonts.secondary,
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        padding: '8px 16px',
+                        height: '40px'
                       }}
                     >
                       <i className="bi bi-table me-1"></i>
@@ -1341,10 +1358,10 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                               hitosDelDia.map(hito => (
                                 <div
                                   key={hito.id}
-                                  className={`hito-card ${hito.estado.toLowerCase()}`}
+                                  className="hito-card"
                                   onClick={() => editarHito(hito)}
                 style={{
-                                    backgroundColor: hito.estado === 'Finalizado' ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
+                                    backgroundColor: atisaStyles.colors.accent,
                                     color: 'white',
                                     padding: '10px 12px',
                                     borderRadius: '6px',
@@ -1486,27 +1503,44 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                     marginBottom: '1.5rem',
                     padding: '1.5rem',
                     backgroundColor: atisaStyles.colors.light,
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    minHeight: '80px'
                   }}
                 >
-                  <h3
-                              style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                      color: atisaStyles.colors.primary,
-                                fontWeight: 'bold',
-                      margin: 0,
-                      fontSize: '1.5rem'
-                    }}
-                  >
-                    Hitos del Período
-                  </h3>
-                  <div className="table-actions" style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3
+                      style={{
+                        fontFamily: atisaStyles.fonts.primary,
+                        color: atisaStyles.colors.primary,
+                        fontWeight: 'bold',
+                        margin: 0,
+                        fontSize: '1.5rem'
+                      }}
+                    >
+                      Hitos del Período
+                    </h3>
+                    {selectedPeriod && (
+                      <p
+                        style={{
+                          margin: '4px 0 0 0',
+                          fontSize: '1rem',
+                          color: atisaStyles.colors.dark,
+                          opacity: 0.8
+                        }}
+                      >
+                        {getMesName(parseInt(selectedPeriod.split('-')[1]))} {selectedPeriod.split('-')[0]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="table-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       className="btn btn-sm btn-outline-primary"
                       onClick={() => setVistaCalendario(true)}
                       style={{
                         fontFamily: atisaStyles.fonts.secondary,
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        padding: '8px 16px',
+                        height: '40px'
                       }}
                     >
                       <i className="bi bi-calendar3 me-1"></i>
@@ -1588,24 +1622,25 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                     className="hitos-table"
                     style={{
                       width: '100%',
-                      minWidth: '1200px', // Ancho mínimo para aprovechar el espacio
+                      minWidth: '800px', // Ancho mínimo reducido
                       borderCollapse: 'collapse',
-                      fontFamily: atisaStyles.fonts.secondary
+                      fontFamily: atisaStyles.fonts.secondary,
+                      tableLayout: 'fixed' // Para controlar mejor el ancho de las columnas
                     }}
                   >
                     <thead>
                       <tr style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
-                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '200px' }}>
+                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', width: '40%' }}>
                           Hito
                         </th>
-                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '180px' }}>
+                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', width: '25%' }}>
                           Proceso
                         </th>
 
-                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '150px' }}>
+                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', width: '20%' }}>
                           Fecha Límite
                         </th>
-                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', minWidth: '120px' }}>
+                        <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', width: '15%' }}>
                               Hora Límite
                             </th>
                           </tr>
@@ -1669,7 +1704,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                       e.currentTarget.style.boxShadow = 'none'
                                     }}
                                   >
-                              <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <td style={{ padding: '16px', verticalAlign: 'top', width: '40%' }}>
                                 <div
                                   className="hito-info"
                                   style={{
@@ -1683,8 +1718,11 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         fontFamily: atisaStyles.fonts.secondary,
                                         color: atisaStyles.colors.primary,
                                         fontWeight: '600',
-                                      fontSize: '15px',
-                                      lineHeight: '1.4'
+                                      fontSize: '14px',
+                                      lineHeight: '1.4',
+                                      wordWrap: 'break-word',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
                                       }}
                                     >
                                       {getNombreHito(hito.hito_id)}
@@ -1695,24 +1733,28 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
 
                                 </div>
                                     </td>
-                              <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <td style={{ padding: '16px', verticalAlign: 'top', width: '25%' }}>
                                       <span
                                         style={{
                                     fontFamily: atisaStyles.fonts.secondary,
                                     color: atisaStyles.colors.dark,
-                                    fontSize: '14px',
+                                    fontSize: '12px',
                                     backgroundColor: atisaStyles.colors.light,
-                                          padding: '6px 12px',
+                                          padding: '4px 8px',
                                     borderRadius: '6px',
                                     display: 'inline-block',
-                                    fontWeight: '500'
+                                    fontWeight: '500',
+                                    wordWrap: 'break-word',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%'
                                   }}
                                 >
                                   {getNombreProceso(hito.cliente_proceso_id)}
                                       </span>
                                     </td>
 
-                              <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <td style={{ padding: '16px', verticalAlign: 'top', width: '20%' }}>
                                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <input
                                           type="date"
@@ -1725,15 +1767,15 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                     max={getSelectedMonthBounds() ? formatDateInputFromDate(getSelectedMonthBounds()!.end) : undefined}
                                           style={{
                                             fontFamily: atisaStyles.fonts.secondary,
-                                      fontSize: '14px',
+                                      fontSize: '12px',
                                             border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
                                             borderRadius: '6px',
-                                            flex: 1
+                                            width: '100%'
                                           }}
                                         />
                                       </div>
                                     </td>
-                              <td style={{ padding: '16px', verticalAlign: 'top' }}>
+                              <td style={{ padding: '16px', verticalAlign: 'top', width: '15%' }}>
                                       <input
                                         type="time"
                                         className="form-control form-control-sm"
@@ -1742,9 +1784,10 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
 
                                         style={{
                                           fontFamily: atisaStyles.fonts.secondary,
-                                    fontSize: '14px',
+                                    fontSize: '12px',
                                           border: hasChanges ? `2px solid ${atisaStyles.colors.warning}` : `1px solid ${atisaStyles.colors.light}`,
-                                          borderRadius: '6px'
+                                          borderRadius: '6px',
+                                          width: '100%'
                                         }}
                                       />
                                     </td>

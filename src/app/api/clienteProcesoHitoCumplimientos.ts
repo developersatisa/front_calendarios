@@ -7,6 +7,7 @@ export interface ClienteProcesoHitoCumplimiento {
   hora: string
   observacion?: string
   usuario: string
+  fecha_creacion?: string
 }
 
 export interface ClienteProcesoHitoCumplimientosResponse {
@@ -81,13 +82,22 @@ export const getClienteProcesoHitoCumplimientosByCliente = async (clienteId: str
   page?: number,
   limit?: number,
   sortField?: string,
-  sortDirection?: 'asc' | 'desc'
+  sortDirection?: 'asc' | 'desc',
+  procesoId?: number,
+  hitoId?: number,
+  fechaDesde?: string,
+  fechaHasta?: string
 ) => {
   const params = new URLSearchParams()
   if (page && page > 0) params.append('page', String(page))
   if (limit && limit > 0) params.append('limit', String(limit))
   if (sortField) params.append('sort_field', sortField)
   if (sortDirection) params.append('sort_direction', sortDirection)
+  if (procesoId) params.append('proceso_id', String(procesoId))
+  if (hitoId) params.append('hito_id', String(hitoId))
+  if (fechaDesde) params.append('fecha_desde', fechaDesde)
+  if (fechaHasta) params.append('fecha_hasta', fechaHasta)
+
   const response = await api.get<ClienteProcesoHitoCumplimientosResponse>
     (`/cliente-proceso-hito-cumplimientos/cliente/${clienteId}` + (params.toString() ? `?${params.toString()}` : ''))
   return {

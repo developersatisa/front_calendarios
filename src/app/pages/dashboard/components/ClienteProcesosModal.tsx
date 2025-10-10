@@ -32,7 +32,6 @@ const ClienteProcesosModal: FC<Props> = ({
   })
   const [procesos, setProcesos] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
-  const [showAllMonths, setShowAllMonths] = useState(false)
 
   // Resetear formulario al cerrar el modal
   useEffect(() => {
@@ -303,7 +302,7 @@ const ClienteProcesosModal: FC<Props> = ({
               }}
             >
               <i className="bi bi-calendar-x me-2"></i>
-              Fecha Límite
+              Fecha Inicio
             </label>
             <input
               type='date'

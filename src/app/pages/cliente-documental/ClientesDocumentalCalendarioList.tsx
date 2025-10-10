@@ -119,7 +119,14 @@ const ClientesDocumentalCalendarioList: FC = () => {
           }
         `}
       </style>
-      <div style={{ fontFamily: atisaStyles.fonts.secondary }}>
+      <div
+        className="container-fluid py-5"
+        style={{
+          fontFamily: atisaStyles.fonts.secondary,
+          backgroundColor: '#f8f9fa',
+          minHeight: '100vh'
+        }}
+      >
       <div
         className='text-center mb-8'
         style={{

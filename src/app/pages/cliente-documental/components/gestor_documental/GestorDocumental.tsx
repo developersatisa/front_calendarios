@@ -88,7 +88,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
   }
 
   const handleVolver = () => {
-    navigate(`/cliente-documental/calendario/${clienteId}`)
+    navigate(`/clientes-documental-calendario`)
   }
 
   if (loading) {
@@ -197,9 +197,11 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
 
   return (
     <div
-      className="d-flex flex-column"
+      className="container-fluid py-5"
       style={{
-        fontFamily: atisaStyles.fonts.secondary
+        fontFamily: atisaStyles.fonts.secondary,
+        backgroundColor: '#f8f9fa',
+        minHeight: '100vh'
       }}
     >
       {/* Header con botón de volver */}
@@ -245,7 +247,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
           }}
         >
           <i className="bi bi-arrow-left" style={{ color: 'white' }}></i>
-          Volver al Calendario
+          Volver a Clientes
         </button>
 
         {/* Título principal */}
@@ -276,7 +278,8 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
           border: `1px solid ${atisaStyles.colors.light}`,
-          padding: '32px 24px'
+          padding: '32px 24px',
+          marginBottom: '2rem'
         }}
       >
         {/* Botón para agregar nueva categoría cuando ya existen categorías */}
@@ -456,7 +459,8 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
               borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
               border: `1px solid ${atisaStyles.colors.light}`,
-              padding: '40px 24px'
+              padding: '40px 24px',
+              marginBottom: '2rem'
             }}
           >
             <i

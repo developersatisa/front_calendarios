@@ -470,65 +470,73 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
         style={{
           backgroundColor: atisaStyles.colors.primary,
           color: 'white',
-          padding: '32px 24px',
+          padding: '2rem',
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
-          marginBottom: '16px',
-          textAlign: 'center',
-          maxWidth: '1600px',
-          marginLeft: 'auto',
-          marginRight: 'auto'
+          marginBottom: '2rem',
+          textAlign: 'center'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-          <div style={{ flex: 1 }}></div>
-          <h2
-            style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0,
-              fontSize: '2.5rem',
-              textAlign: 'center',
-              flex: 2
-            }}
-          >
-            <i className="bi bi-calendar3 me-3" style={{ color: 'white' }}></i>
-            Calendario de {cliente?.razsoc || clienteId}
-          </h2>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              className="btn"
-              onClick={() => navigate(`/historico-cumplimientos/${clienteId}`)}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <h2
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
                 color: 'white',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '8px',
-                fontFamily: atisaStyles.fonts.secondary,
-                fontWeight: '600',
-                padding: '12px 20px',
-                fontSize: '14px',
-                transition: 'all 0.3s ease',
+                margin: 0,
+                fontSize: '2rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
-                e.currentTarget.style.transform = 'translateY(-2px)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
-                e.currentTarget.style.transform = 'translateY(0)'
+                justifyContent: 'center',
+                gap: '12px'
               }}
             >
-              <i className="bi bi-clock-history" style={{ color: 'white' }}></i>
-              Ver Cumplimientos
-            </button>
+              <i className="bi bi-calendar3" style={{ color: 'white' }}></i>
+              Calendario de Procesos
+            </h2>
+            <p
+              style={{
+                margin: '8px 0 0 0',
+                fontSize: '1.1rem',
+                opacity: 0.9
+              }}
+            >
+              {cliente?.razsoc || clienteId}
+            </p>
           </div>
+
+          <button
+            className="btn"
+            onClick={() => navigate(`/historico-cumplimientos/${clienteId}`)}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              fontFamily: atisaStyles.fonts.secondary,
+              fontWeight: '600',
+              padding: '12px 20px',
+              fontSize: '14px',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
+              e.currentTarget.style.transform = 'translateY(-2px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+          >
+            <i className="bi bi-clock-history" style={{ color: 'white' }}></i>
+            Ver Histórico
+          </button>
         </div>
       </div>
 
