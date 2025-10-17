@@ -1,0 +1,249 @@
+/* Estilos personalizados para toasts - Identidad Visual Atisa */
+
+/* Importar fuentes de Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Aleo:wght@300;400;700&family=Lato:wght@300;400;700;900&display=swap');
+
+.custom-toast-atisa {
+  font-family: 'Lato', Arial, sans-serif;
+  animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-toast-atisa:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 32px rgba(0, 80, 92, 0.25) !important;
+}
+
+/* Animación de entrada */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animación de salida */
+.custom-toast-atisa.toast-hide {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Efectos de pulso para iconos */
+.custom-toast-atisa .toast-icon {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Estilos para diferentes tipos de toast según identidad Atisa */
+.custom-toast-atisa.toast-success {
+  background: #9CBA39; /* Verde claro Atisa (Pantone 375 C) */
+  border-left: 4px solid #7AB800; /* Verde más oscuro */
+  color: #ffffff;
+}
+
+.custom-toast-atisa.toast-error {
+  background: #FF6D22; /* Naranja Atisa (Pantone 1585 C) */
+  border-left: 4px solid #e55a1a;
+  color: #ffffff;
+}
+
+.custom-toast-atisa.toast-warning {
+  background: #F1E800; /* Amarillo Atisa (Pantone 3945 C) */
+  border-left: 4px solid #d4d000;
+  color: #00505C; /* Verde oscuro para contraste */
+}
+
+.custom-toast-atisa.toast-info {
+  background: #00A1DE; /* Azul Atisa (Pantone 299 C) */
+  border-left: 4px solid #0065BD; /* Azul más oscuro */
+  color: #ffffff;
+}
+
+/* Efecto de brillo sutil con colores Atisa */
+.custom-toast-atisa::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+/* Efecto de sombra animada */
+.custom-toast-atisa::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.custom-toast-atisa:hover::after {
+  left: 100%;
+}
+
+/* Mejoras en el botón de cerrar */
+.custom-toast-atisa .btn-close {
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s ease;
+  font-family: 'Lato', Arial, sans-serif;
+}
+
+.custom-toast-atisa .btn-close:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estilos para el contenedor de toasts */
+.toast-container {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 9999 !important;
+  pointer-events: none;
+}
+
+.toast-container .toast {
+  pointer-events: auto;
+  margin-bottom: 12px;
+}
+
+/* Animación de aparición suave */
+.toast-container .toast.show {
+  animation: toastAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes toastAppear {
+  0% {
+    transform: translateX(100%) scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-10px) scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .custom-toast-atisa {
+    min-width: 280px;
+    max-width: calc(100vw - 40px);
+    margin: 0 10px;
+  }
+
+  .toast-container {
+    right: 10px !important;
+    left: 10px !important;
+    top: 10px !important;
+  }
+}
+
+/* Estilos específicos para tipografías Atisa */
+.custom-toast-atisa .toast-header strong {
+  font-family: 'Aleo', Georgia, serif;
+  font-weight: 700;
+}
+
+.custom-toast-atisa .toast-body {
+  font-family: 'Lato', Arial, sans-serif;
+  font-weight: 400;
+}
+
+/* Efecto de borde sutil con colores Atisa */
+.custom-toast-atisa {
+  position: relative;
+}
+
+.custom-toast-atisa::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 80, 92, 0.1), rgba(156, 186, 57, 0.1));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+}
+
+/* Mejoras en la accesibilidad */
+.custom-toast-atisa:focus-within {
+  outline: 2px solid #00505C;
+  outline-offset: 2px;
+}
+
+/* Animación de pulso para el icono de éxito */
+.custom-toast-atisa.toast-success .toast-icon {
+  animation: successPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes successPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Efecto de desvanecimiento suave */
+.custom-toast-atisa.fade-out {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}

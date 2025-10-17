@@ -1,5 +1,6 @@
 import { FC, useRef, useState, useEffect } from 'react'
 import { Modal, Button, Form, ProgressBar, Alert } from 'react-bootstrap'
+import CustomToast from '../../../../components/ui/CustomToast'
 import { crearDocumento } from '../../../../api/documentalDocumentos'
 import { atisaStyles } from '../../../../styles/atisaStyles'
 
@@ -23,11 +24,21 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
 
   // Estados para manejo de subida de archivos
   const [fileUploadStatuses, setFileUploadStatuses] = useState<FileUploadStatus[]>([])
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showUploadResults, setShowUploadResults] = useState(false)
+
+  // Función auxiliar para mostrar toasts
+  const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setToastMessage(message)
+    setToastType(type)
+    setShowToast(true)
+  }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -130,7 +141,7 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
 
     // Validar que haya al menos un archivo
     if (files.length === 0) {
-      alert('Por favor selecciona al menos un archivo para subir')
+      showToastMessage('Por favor selecciona al menos un archivo para subir', 'warning')
       return
     }
 
@@ -198,7 +209,7 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
 
         if (uploadedFiles === 0) {
           console.warn(message)
-          alert(message)
+          showToastMessage(message, 'warning')
           return
         }
       }
@@ -211,7 +222,7 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
       resetearFormulario()
     } catch (err) {
       console.error('Error al categorizar documentos:', err)
-      alert('Error al categorizar los documentos')
+      showToastMessage('Error al categorizar los documentos', 'error')
     } finally {
       setLoading(false)
     }
@@ -443,6 +454,15 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
           </div>
         </Form>
       </Modal.Body>
+
+      {/* Custom Toast */}
+      <CustomToast
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+        delay={5000}
+      />
     </Modal>
   )
 }

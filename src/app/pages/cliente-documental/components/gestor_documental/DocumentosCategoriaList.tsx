@@ -1,5 +1,6 @@
 import React, { FC, useEffect, useState } from 'react'
 import { Modal, Button, Table, Badge, Spinner, Alert } from 'react-bootstrap'
+import CustomToast from '../../../../components/ui/CustomToast'
 import { DocumentalDocumento, getDocumentosByClienteAndCategoria, descargarDocumento, eliminarDocumento } from '../../../../api/documentalDocumentos'
 import { atisaStyles } from '../../../../styles/atisaStyles'
 
@@ -25,6 +26,16 @@ const DocumentosCategoriaList: FC<Props> = ({
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false)
   const [documentoToDelete, setDocumentoToDelete] = useState<DocumentalDocumento | null>(null)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
+
+  // Función auxiliar para mostrar toasts
+  const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setToastMessage(message)
+    setToastType(type)
+    setShowToast(true)
+  }
 
   useEffect(() => {
     if (show && categoriaId && clienteId) {
@@ -77,7 +88,7 @@ const DocumentosCategoriaList: FC<Props> = ({
     } catch (err) {
       console.error('Error al descargar documento:', err)
       // Aquí podrías mostrar un toast o alert de error
-      alert('Error al descargar el documento. Por favor, inténtalo de nuevo.')
+      showToastMessage('Error al descargar el documento. Por favor, inténtalo de nuevo.', 'error')
     } finally {
       setDownloadingId(null)
     }
@@ -94,7 +105,7 @@ const DocumentosCategoriaList: FC<Props> = ({
       setDocumentoToDelete(null)
     } catch (err) {
       console.error('Error al eliminar documento:', err)
-      alert('Error al eliminar el documento. Por favor, inténtalo de nuevo.')
+      showToastMessage('Error al eliminar el documento. Por favor, inténtalo de nuevo.', 'error')
     } finally {
       setDeletingId(null)
     }
@@ -380,6 +391,15 @@ const DocumentosCategoriaList: FC<Props> = ({
           </Modal.Footer>
         </Modal>
       )}
+
+      {/* Custom Toast */}
+      <CustomToast
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+        delay={5000}
+      />
     </Modal>
   )
 }

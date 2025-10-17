@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react'
+import { FC, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { atisaStyles } from '../../../../styles/atisaStyles'
 import SharedPagination from '../../../../components/pagination/SharedPagination'
@@ -12,6 +12,7 @@ interface CumplimientoHistorico extends ClienteProcesoHitoCumplimiento {
     proceso?: string
     hito?: string
     fecha_limite?: string
+    hora_limite?: string
     proceso_id?: number
     hito_id?: number
 }
@@ -31,10 +32,13 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
     // Estados para filtros
     const [searchTerm, setSearchTerm] = useState('')
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+    const [searching, setSearching] = useState(false)
     const [selectedHito, setSelectedHito] = useState('')
     const [selectedProceso, setSelectedProceso] = useState('')
     const [fechaDesde, setFechaDesde] = useState('')
     const [fechaHasta, setFechaHasta] = useState('')
+    const [tipoFiltroFecha, setTipoFiltroFecha] = useState<'cumplimiento' | 'creacion' | 'limite'>('cumplimiento')
     const [hitos, setHitos] = useState<any[]>([])
     const [procesos, setProcesos] = useState<any[]>([])
     const [showFilters, setShowFilters] = useState(false)
@@ -60,6 +64,23 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
             setLoading(false)
         }
     }
+
+    // Debounce para el término de búsqueda
+    useEffect(() => {
+        if (searchTerm) {
+            setSearching(true)
+        }
+
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm)
+            setSearching(false)
+        }, 300) // 300ms de delay
+
+        return () => {
+            clearTimeout(timer)
+            setSearching(false)
+        }
+    }, [searchTerm])
 
     // Cargar datos iniciales
     useEffect(() => {
@@ -128,40 +149,58 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         setSelectedProceso('')
         setFechaDesde('')
         setFechaHasta('')
+        setTipoFiltroFecha('cumplimiento')
         setCurrentPage(1)
     }
 
-    // Función para aplicar filtros
-    const aplicarFiltros = () => {
-        setCurrentPage(1)
-        cargarCumplimientos(1)
-    }
 
-    // Filtrar cumplimientos localmente
-    const cumplimientosFiltrados = cumplimientos.filter(cumplimiento => {
-        const matchesSearch = !searchTerm ||
-            cumplimiento.proceso?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cumplimiento.hito?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cumplimiento.usuario?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cumplimiento.observacion?.toLowerCase().includes(searchTerm.toLowerCase())
+    // Filtrar cumplimientos usando useMemo para optimizar el rendimiento
+    const cumplimientosFiltrados = useMemo(() => {
+        return cumplimientos.filter(cumplimiento => {
+            const matchesSearch = !debouncedSearchTerm ||
+                cumplimiento.proceso?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                cumplimiento.hito?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                cumplimiento.usuario?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                cumplimiento.observacion?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
 
-        const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
-        const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
+            const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
+            const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
 
-        let matchesFecha = true
-        if (fechaDesde) {
-            const fechaCumplimiento = new Date(cumplimiento.fecha)
-            const fechaDesdeDate = new Date(fechaDesde)
-            matchesFecha = matchesFecha && fechaCumplimiento >= fechaDesdeDate
-        }
-        if (fechaHasta) {
-            const fechaCumplimiento = new Date(cumplimiento.fecha)
-            const fechaHastaDate = new Date(fechaHasta)
-            matchesFecha = matchesFecha && fechaCumplimiento <= fechaHastaDate
-        }
+            let matchesFecha = true
+            if (fechaDesde || fechaHasta) {
+                let fechaAComparar: Date | null = null
 
-        return matchesSearch && matchesHito && matchesProceso && matchesFecha
-    })
+                // Determinar qué fecha usar según el tipo de filtro
+                switch (tipoFiltroFecha) {
+                    case 'cumplimiento':
+                        fechaAComparar = cumplimiento.fecha ? new Date(cumplimiento.fecha) : null
+                        break
+                    case 'creacion':
+                        fechaAComparar = cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion) : null
+                        break
+                    case 'limite':
+                        fechaAComparar = cumplimiento.fecha_limite ? new Date(cumplimiento.fecha_limite) : null
+                        break
+                }
+
+                if (fechaAComparar && !isNaN(fechaAComparar.getTime())) {
+                    if (fechaDesde) {
+                        const fechaDesdeDate = new Date(fechaDesde)
+                        matchesFecha = matchesFecha && fechaAComparar >= fechaDesdeDate
+                    }
+                    if (fechaHasta) {
+                        const fechaHastaDate = new Date(fechaHasta)
+                        matchesFecha = matchesFecha && fechaAComparar <= fechaHastaDate
+                    }
+                } else {
+                    // Si no hay fecha válida para el tipo seleccionado, no mostrar el registro
+                    matchesFecha = false
+                }
+            }
+
+            return matchesSearch && matchesHito && matchesProceso && matchesFecha
+        })
+    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, fechaDesde, fechaHasta, tipoFiltroFecha])
 
     return (
         <div
@@ -327,31 +366,57 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     <i className="bi bi-search me-2"></i>
                                     Buscar por nombre, proceso, hito o usuario
                                 </label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="Escriba para buscar..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.accent
-                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.light
-                                        e.target.style.boxShadow = 'none'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Escriba para buscar..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.secondary,
+                                            fontSize: '14px',
+                                            padding: '12px 16px',
+                                            height: '48px',
+                                            border: `2px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '8px',
+                                            transition: 'all 0.3s ease',
+                                            backgroundColor: 'white',
+                                            paddingRight: searching ? '50px' : '16px'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = atisaStyles.colors.accent
+                                            e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = atisaStyles.colors.light
+                                            e.target.style.boxShadow = 'none'
+                                        }}
+                                    />
+                                    {searching && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                right: '12px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                zIndex: 10
+                                            }}
+                                        >
+                                            <div
+                                                className="spinner-border spinner-border-sm"
+                                                role="status"
+                                                style={{
+                                                    color: atisaStyles.colors.primary,
+                                                    width: '20px',
+                                                    height: '20px'
+                                                }}
+                                            >
+                                                <span className="visually-hidden">Buscando...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Filtro por hito */}
@@ -446,6 +511,49 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 </select>
                             </div>
 
+                            {/* Selector de tipo de fecha */}
+                            <div className="col-md-3">
+                                <label
+                                    style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        fontWeight: '600',
+                                        color: atisaStyles.colors.primary,
+                                        marginBottom: '8px',
+                                        display: 'block'
+                                    }}
+                                >
+                                    <i className="bi bi-calendar-check me-2"></i>
+                                    Filtrar por fecha de
+                                </label>
+                                <select
+                                    className="form-select"
+                                    value={tipoFiltroFecha}
+                                    onChange={(e) => setTipoFiltroFecha(e.target.value as 'cumplimiento' | 'creacion' | 'limite')}
+                                    style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        fontSize: '14px',
+                                        padding: '12px 16px',
+                                        height: '48px',
+                                        border: `2px solid ${atisaStyles.colors.light}`,
+                                        borderRadius: '8px',
+                                        transition: 'all 0.3s ease',
+                                        backgroundColor: 'white'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = atisaStyles.colors.accent
+                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = atisaStyles.colors.light
+                                        e.target.style.boxShadow = 'none'
+                                    }}
+                                >
+                                    <option value="cumplimiento">Cumplimiento</option>
+                                    <option value="creacion">Creación</option>
+                                    <option value="limite">Límite del Hito</option>
+                                </select>
+                            </div>
+
                             {/* Filtro por fecha desde */}
                             <div className="col-md-3">
                                 <label
@@ -526,38 +634,9 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 />
                             </div>
 
-                            {/* Botones de acción */}
+                            {/* Botón de limpiar filtros */}
                             <div className="col-md-6">
                                 <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                                    <button
-                                        className="btn"
-                                        onClick={aplicarFiltros}
-                                        style={{
-                                            backgroundColor: atisaStyles.colors.secondary,
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            fontWeight: '600',
-                                            padding: '12px 24px',
-                                            fontSize: '14px',
-                                            transition: 'all 0.3s ease',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                            e.currentTarget.style.transform = 'translateY(-2px)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                                            e.currentTarget.style.transform = 'translateY(0)'
-                                        }}
-                                    >
-                                        <i className="bi bi-search"></i>
-                                        Aplicar Filtros
-                                    </button>
                                     <button
                                         className="btn"
                                         onClick={limpiarFiltros}
@@ -690,6 +769,18 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         color: 'white'
                                     }}
                                 >
+                                    Hora Límite Hito
+                                </th>
+                                <th
+                                    style={{
+                                        fontFamily: atisaStyles.fonts.primary,
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        padding: '16px 12px',
+                                        border: 'none',
+                                        color: 'white'
+                                    }}
+                                >
                                     Usuario
                                 </th>
                                 <th
@@ -746,7 +837,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             {loading ? (
                                 <tr>
                                     <td
-                                        colSpan={8}
+                                        colSpan={9}
                                         className="text-center py-4"
                                         style={{
                                             backgroundColor: '#f8f9fa',
@@ -780,7 +871,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             ) : cumplimientosFiltrados.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={8}
+                                        colSpan={9}
                                         className="text-center py-4"
                                         style={{
                                             backgroundColor: '#f8f9fa',
@@ -790,7 +881,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         }}
                                     >
                                         <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
-                                        {searchTerm || selectedHito || selectedProceso || fechaDesde || fechaHasta
+                                        {debouncedSearchTerm || selectedHito || selectedProceso || fechaDesde || fechaHasta
                                             ? 'No se encontraron cumplimientos con los filtros aplicados'
                                             : 'No hay cumplimientos registrados para este cliente'
                                         }
@@ -856,6 +947,29 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 title={cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
                                             >
                                                 {cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
+                                            </span>
+                                        </td>
+                                        <td
+                                            style={{
+                                                fontFamily: atisaStyles.fonts.secondary,
+                                                color: atisaStyles.colors.dark,
+                                                padding: '16px 12px'
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    backgroundColor: '#fff3e0',
+                                                    color: '#f57c00',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '500',
+                                                    border: '1px solid #ffcc02',
+                                                    boxShadow: '0 1px 3px rgba(245, 124, 0, 0.1)'
+                                                }}
+                                                title={cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : 'No disponible'}
+                                            >
+                                                {cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : 'No disponible'}
                                             </span>
                                         </td>
                                         <td

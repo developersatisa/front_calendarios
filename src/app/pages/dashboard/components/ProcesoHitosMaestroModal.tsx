@@ -3,7 +3,7 @@ import { Modal } from 'react-bootstrap'
 import { KTSVG } from '../../../../_metronic/helpers'
 import { ProcesoHitos, deleteProcesoHitosMaestro } from '../../../api/procesoHitosMaestro'
 import { Proceso } from '../../../api/procesos'
-import { Hito } from '../../../api/hitos'
+import { Hito, getHitosHabilitados } from '../../../api/hitos'
 import SharedPagination from '../../../components/pagination/SharedPagination'
 import { atisaStyles } from '../../../styles/atisaStyles'
 
@@ -12,7 +12,6 @@ interface Props {
   onHide: () => void
   onSave: (procesoHito: Omit<ProcesoHitos, 'id'>[]) => void
   procesos: Proceso[]
-  hitos: Hito[]
   hitoMaestro: ProcesoHitos | null
   hitosActuales?: ProcesoHitos[] // Añadimos esta prop para recibir los hitos actuales
   selectedProcesoId?: number
@@ -23,15 +22,16 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
   onHide,
   onSave,
   procesos,
-  hitos,
   hitoMaestro,
   hitosActuales = [],
   selectedProcesoId = 0
 }) => {
+  const [hitos, setHitos] = useState<Hito[]>([])
   const [selectedHitos, setSelectedHitos] = useState<number[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingHitos, setIsLoadingHitos] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [selectAll, setSelectAll] = useState(false)
@@ -48,8 +48,25 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
   const currentHitos = filteredHitos.slice(indexOfFirstItem, indexOfLastItem)
   const totalItems = filteredHitos.length
 
+  // Función para cargar hitos habilitados
+  const loadHitosHabilitados = async () => {
+    try {
+      setIsLoadingHitos(true)
+      const hitosHabilitados = await getHitosHabilitados()
+      setHitos(hitosHabilitados)
+    } catch (error) {
+      console.error('Error al cargar hitos habilitados:', error)
+      setError('Error al cargar los hitos habilitados')
+    } finally {
+      setIsLoadingHitos(false)
+    }
+  }
+
   useEffect(() => {
     if (show) {
+      // Cargar hitos habilitados cuando se abre el modal
+      loadHitosHabilitados()
+
       if (selectedProcesoId) {
         const hitosDelProceso = hitosActuales
           .filter(h => h.proceso_id === selectedProcesoId)
@@ -435,198 +452,234 @@ const ProcesoHitosMaestroModal: FC<Props> = ({
           </div>
         </div>
 
-        <div
-          className='table-responsive'
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
-            overflow: 'hidden'
-          }}
-        >
-          <table
-            className='table align-middle table-row-dashed fs-6 gy-5'
+        {isLoadingHitos ? (
+          <div
             style={{
-              fontFamily: atisaStyles.fonts.secondary,
-              margin: 0
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+              border: `1px solid ${atisaStyles.colors.light}`,
+              padding: '40px 20px',
+              textAlign: 'center'
             }}
           >
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: atisaStyles.colors.primary,
-                  color: 'white'
-                }}
-              >
-                <th
+            <div
+              className='spinner-border'
+              role='status'
+              style={{
+                color: atisaStyles.colors.primary,
+                width: '3rem',
+                height: '3rem',
+                marginBottom: '16px'
+              }}
+            >
+              <span className='visually-hidden'>Cargando hitos habilitados...</span>
+            </div>
+            <p
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                color: atisaStyles.colors.primary,
+                fontSize: '16px',
+                margin: 0
+              }}
+            >
+              Cargando hitos habilitados...
+            </p>
+          </div>
+        ) : (
+          <div
+            className='table-responsive'
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+              border: `1px solid ${atisaStyles.colors.light}`,
+              overflow: 'hidden'
+            }}
+          >
+            <table
+              className='table align-middle table-row-dashed fs-6 gy-5'
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                margin: 0
+              }}
+            >
+              <thead>
+                <tr
                   style={{
-                    width: '50px',
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
+                    backgroundColor: atisaStyles.colors.primary,
                     color: 'white'
                   }}
                 >
-                  <div className='form-check form-check-sm form-check-custom form-check-solid'>
-                    <input
-                      className='form-check-input'
-                      type='checkbox'
-                      checked={selectAll}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      style={{
-                        borderColor: 'white',
-                        backgroundColor: selectAll ? atisaStyles.colors.secondary : 'transparent'
-                      }}
-                    />
-                  </div>
-                </th>
-                <th
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
-                >
-                  Hito
-                </th>
-                <th
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
-                >
-                  Descripción
-                </th>
-                <th
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
-                >
-                  Fecha Inicio
-                </th>
-                <th
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
-                >
-                  Fecha Fin
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentHitos.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
+                  <th
                     style={{
-                      textAlign: 'center',
-                      padding: '40px 20px',
-                      fontFamily: atisaStyles.fonts.secondary,
-                      color: atisaStyles.colors.dark,
-                      fontSize: '14px'
+                      width: '50px',
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      padding: '16px 12px',
+                      border: 'none',
+                      color: 'white'
                     }}
                   >
-                    <i className="bi bi-inbox" style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}></i>
-                    {searchTerm ? 'No se encontraron hitos que coincidan con la búsqueda' : 'No hay hitos disponibles'}
-                  </td>
+                    <div className='form-check form-check-sm form-check-custom form-check-solid'>
+                      <input
+                        className='form-check-input'
+                        type='checkbox'
+                        checked={selectAll}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        style={{
+                          borderColor: 'white',
+                          backgroundColor: selectAll ? atisaStyles.colors.secondary : 'transparent'
+                        }}
+                      />
+                    </div>
+                  </th>
+                  <th
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      padding: '16px 12px',
+                      border: 'none',
+                      color: 'white'
+                    }}
+                  >
+                    Hito
+                  </th>
+                  <th
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      padding: '16px 12px',
+                      border: 'none',
+                      color: 'white'
+                    }}
+                  >
+                    Descripción
+                  </th>
+                  <th
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      padding: '16px 12px',
+                      border: 'none',
+                      color: 'white'
+                    }}
+                  >
+                    Fecha Inicio
+                  </th>
+                  <th
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      padding: '16px 12px',
+                      border: 'none',
+                      color: 'white'
+                    }}
+                  >
+                    Fecha Fin
+                  </th>
                 </tr>
-              ) : (
-                currentHitos.map((hito, index) => (
-                  <tr
-                    key={hito.id}
-                    style={{
-                      backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                      e.currentTarget.style.transform = 'translateY(-1px)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    <td style={{ padding: '16px 12px' }}>
-                      <div className='form-check form-check-sm form-check-custom form-check-solid'>
-                        <input
-                          className='form-check-input'
-                          type='checkbox'
-                          checked={selectedHitos.includes(hito.id)}
-                          onChange={(e) => handleSelectHito(hito.id, e.target.checked)}
-                          style={{
-                            borderColor: atisaStyles.colors.primary,
-                            backgroundColor: selectedHitos.includes(hito.id) ? atisaStyles.colors.secondary : 'transparent',
-                            transition: 'all 0.2s ease'
-                          }}
-                        />
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                {currentHitos.length === 0 ? (
+                  <tr>
                     <td
+                      colSpan={5}
                       style={{
-                        fontFamily: atisaStyles.fonts.secondary,
-                        color: atisaStyles.colors.primary,
-                        fontWeight: '600',
-                        padding: '16px 12px'
-                      }}
-                    >
-                      {hito.nombre}
-                    </td>
-                    <td
-                      style={{
+                        textAlign: 'center',
+                        padding: '40px 20px',
                         fontFamily: atisaStyles.fonts.secondary,
                         color: atisaStyles.colors.dark,
-                        padding: '16px 12px'
+                        fontSize: '14px'
                       }}
                     >
-                      {hito.descripcion || '-'}
-                    </td>
-                    <td
-                      style={{
-                        fontFamily: atisaStyles.fonts.secondary,
-                        color: atisaStyles.colors.dark,
-                        padding: '16px 12px'
-                      }}
-                    >
-                      {hito.fecha_limite ? new Date(hito.fecha_limite).toLocaleDateString() : '-'}
-                    </td>
-                    <td
-                      style={{
-                        fontFamily: atisaStyles.fonts.secondary,
-                        color: atisaStyles.colors.dark,
-                        padding: '16px 12px'
-                      }}
-                    >
-                      -
+                      <i className="bi bi-inbox" style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}></i>
+                      {searchTerm ? 'No se encontraron hitos que coincidan con la búsqueda' : 'No hay hitos habilitados disponibles'}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  currentHitos.map((hito, index) => (
+                    <tr
+                      key={hito.id}
+                      style={{
+                        backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      <td style={{ padding: '16px 12px' }}>
+                        <div className='form-check form-check-sm form-check-custom form-check-solid'>
+                          <input
+                            className='form-check-input'
+                            type='checkbox'
+                            checked={selectedHitos.includes(hito.id)}
+                            onChange={(e) => handleSelectHito(hito.id, e.target.checked)}
+                            style={{
+                              borderColor: atisaStyles.colors.primary,
+                              backgroundColor: selectedHitos.includes(hito.id) ? atisaStyles.colors.secondary : 'transparent',
+                              transition: 'all 0.2s ease'
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td
+                        style={{
+                          fontFamily: atisaStyles.fonts.secondary,
+                          color: atisaStyles.colors.primary,
+                          fontWeight: '600',
+                          padding: '16px 12px'
+                        }}
+                      >
+                        {hito.nombre}
+                      </td>
+                      <td
+                        style={{
+                          fontFamily: atisaStyles.fonts.secondary,
+                          color: atisaStyles.colors.dark,
+                          padding: '16px 12px'
+                        }}
+                      >
+                        {hito.descripcion || '-'}
+                      </td>
+                      <td
+                        style={{
+                          fontFamily: atisaStyles.fonts.secondary,
+                          color: atisaStyles.colors.dark,
+                          padding: '16px 12px'
+                        }}
+                      >
+                        {hito.fecha_limite ? new Date(hito.fecha_limite).toLocaleDateString() : '-'}
+                      </td>
+                      <td
+                        style={{
+                          fontFamily: atisaStyles.fonts.secondary,
+                          color: atisaStyles.colors.dark,
+                          padding: '16px 12px'
+                        }}
+                      >
+                        -
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div
           style={{

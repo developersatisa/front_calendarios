@@ -1,7 +1,8 @@
-import {FC, useState, useEffect, useRef} from 'react'
+import {FC, useState, useEffect, useRef, useMemo} from 'react'
 import {createPortal} from 'react-dom'
 import {useNavigate} from 'react-router-dom'
 import {KTCard, KTCardBody} from '../../../_metronic/helpers'
+import CustomToast from '../../components/ui/CustomToast'
 import ProcesoModal from './components/ProcesoModal'
 import ProcesoHitosMaestroModal from './components/ProcesoHitosMaestroModal'
 import {Proceso, getAllProcesos, createProceso, updateProceso, deleteProceso} from '../../api/procesos'
@@ -21,6 +22,8 @@ const ProcesosList: FC = () => {
   const [total, setTotal] = useState(0)
   const limit = 10
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [searching, setSearching] = useState(false)
   const [sortField, setSortField] = useState<string>('id')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [hitos, setHitos] = useState<Hito[]>([])
@@ -30,6 +33,33 @@ const ProcesosList: FC = () => {
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
+
+  // Función auxiliar para mostrar toasts
+  const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setToastMessage(message)
+    setToastType(type)
+    setShowToast(true)
+  }
+
+  // Debounce para el término de búsqueda
+  useEffect(() => {
+    if (searchTerm) {
+      setSearching(true)
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+      setSearching(false)
+    }, 300) // 300ms de delay
+
+    return () => {
+      clearTimeout(timer)
+      setSearching(false)
+    }
+  }, [searchTerm])
 
   useEffect(() => {
     loadAll()
@@ -41,7 +71,7 @@ const ProcesosList: FC = () => {
     } else {
       loadAll()
     }
-  }, [searchTerm])
+  }, [debouncedSearchTerm])
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -178,7 +208,7 @@ const ProcesosList: FC = () => {
         } else if (error?.message) {
           errorMessage = error.message
         }
-        alert(errorMessage)
+        showToastMessage(errorMessage, 'error')
       }
     }
   }
@@ -204,14 +234,17 @@ const ProcesosList: FC = () => {
     }
   }
 
-  const filteredProcesos = procesos.filter((proceso) => {
-    if (!searchTerm) return true
-    const searchLower = searchTerm.toLowerCase()
+  // Filtrar procesos usando useMemo para optimizar el rendimiento
+  const filteredProcesos = useMemo(() => {
+    if (!debouncedSearchTerm) return procesos
 
-    return Object.values(proceso).some(value =>
-      value?.toString().toLowerCase().includes(searchLower)
-    )
-  })
+    const searchLower = debouncedSearchTerm.toLowerCase()
+    return procesos.filter((proceso) => {
+      return Object.values(proceso).some(value =>
+        value?.toString().toLowerCase().includes(searchLower)
+      )
+    })
+  }, [procesos, debouncedSearchTerm])
 
   const groupedProcesoHitos = procesoHitos.reduce((groups, ph) => {
     if (!groups[ph.proceso_id]) {
@@ -261,7 +294,7 @@ const ProcesosList: FC = () => {
             }}>
               Gestión de Procesos
             </h3>
-            <div className='d-flex align-items-center position-relative my-3'>
+            <div className='d-flex align-items-center position-relative my-3' style={{ position: 'relative' }}>
               <i
                 className='bi bi-search position-absolute ms-6'
                 style={{ color: atisaStyles.colors.light }}
@@ -277,9 +310,33 @@ const ProcesosList: FC = () => {
                   border: `2px solid ${atisaStyles.colors.light}`,
                   borderRadius: '8px',
                   fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  paddingRight: searching ? '50px' : '16px'
                 }}
               />
+              {searching && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 10
+                  }}
+                >
+                  <div
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    style={{
+                      color: atisaStyles.colors.primary,
+                      width: '20px',
+                      height: '20px'
+                    }}
+                  >
+                    <span className="visually-hidden">Buscando...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className='card-toolbar'>
@@ -388,7 +445,7 @@ const ProcesosList: FC = () => {
                       margin: 0
                     }}
                   >
-                    {searchTerm ? 'No se encontraron procesos que coincidan con tu búsqueda.' : 'Comienza creando tu primer proceso.'}
+                    {debouncedSearchTerm ? 'No se encontraron procesos que coincidan con tu búsqueda.' : 'Comienza creando tu primer proceso.'}
                   </p>
                 </div>
               ) : (
@@ -765,10 +822,18 @@ const ProcesosList: FC = () => {
           onHide={() => setShowHitosModal(false)}
           onSave={handleSaveHitos}
           procesos={procesos}
-          hitos={hitos}
           hitoMaestro={null}
           hitosActuales={procesoHitos}
           selectedProcesoId={selectedProcesoForHitos?.id || 0}
+        />
+
+        {/* Custom Toast */}
+        <CustomToast
+          show={showToast}
+          onClose={() => setShowToast(false)}
+          message={toastMessage}
+          type={toastType}
+          delay={5000}
         />
       </KTCard>
     </div>

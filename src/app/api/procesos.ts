@@ -6,6 +6,7 @@ export interface Proceso {
   descripcion: string | null
   frecuencia: number
   temporalidad: string
+  habilitado: number
 }
 
 export interface ProcesosResponse {

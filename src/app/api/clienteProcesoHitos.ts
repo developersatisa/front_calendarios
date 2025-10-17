@@ -9,15 +9,7 @@ export interface ClienteProcesoHito {
   fecha_limite: string
   hora_limite: string | null
   tipo: string
-}
-
-export interface ClienteProcesoHitoCumplimiento {
-  id: number
-  cliente_proceso_hito_id: number
-  fecha: string
-  hora: string
-  observacion: string | null
-  usuario: string
+  habilitado: number | boolean
 }
 
 export interface ClienteProcesoHitoUpdate {
@@ -25,6 +17,7 @@ export interface ClienteProcesoHitoUpdate {
   fecha_estado: string | null
   fecha_limite?: string
   hora_limite?: string | null
+  habilitado?: number | boolean
 }
 
 export interface ClienteProcesoHitosResponse {
@@ -63,4 +56,18 @@ export const deleteClienteProcesoHito = async (id: number) => {
 export const getClienteProcesoHitosByProceso = async (idClienteProceso: number) => {
   const response = await api.get<ClienteProcesoHito[]>(`/cliente-proceso-hitos/cliente-proceso/${idClienteProceso}`)
   return response.data
+}
+
+export const getClienteProcesoHitosHabilitadosByProceso = async (idClienteProceso: number) => {
+  const response = await api.get<ClienteProcesoHito[]>(`/cliente-proceso-hitos/cliente-proceso/${idClienteProceso}/habilitados`)
+  return response.data
+}
+
+export const deshabilitarHitosPorHitoDesde = async (hitoId: number, fechaDesde: string) => {
+  const response = await api.put(`/cliente-proceso-hitos/hito/${hitoId}/deshabilitar-desde`, {}, { params: { fecha_desde: fechaDesde } })
+  return response.data
+}
+
+export const deleteProcesoHitosByHito = async (hitoId: number) => {
+  return await api.delete(`/proceso-hitos/hito/${hitoId}`)
 }

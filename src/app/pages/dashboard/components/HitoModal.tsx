@@ -18,11 +18,10 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
     fecha_limite: new Date().toISOString().split('T')[0],
     hora_limite: '00:00',
     obligatorio: 0,
-    tipo: 'Atisa', // Valor por defecto válido ya que es requerido
-    habilitado: 1 // Valor por defecto según la estructura de la base de datos
+    tipo: 'Atisa' // Valor por defecto válido ya que es requerido
   }
 
-  const [formData, setFormData] = useState<Omit<Hito, 'id'>>(initialFormState)
+  const [formData, setFormData] = useState<Omit<Hito, 'id' | 'habilitado'>>(initialFormState)
 
   useEffect(() => {
     if (show && hito) {
@@ -32,8 +31,7 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
         fecha_limite: hito.fecha_limite,
         hora_limite: hito.hora_limite,
         obligatorio: hito.obligatorio,
-        tipo: hito.tipo,
-        habilitado: hito.habilitado
+        tipo: hito.tipo
       })
     } else {
       setFormData(initialFormState)
@@ -47,7 +45,8 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
     const dataToSave = {
       ...formData,
       descripcion: formData.descripcion?.trim() || null,
-      hora_limite: formData.hora_limite || '00:00'
+      hora_limite: formData.hora_limite || '00:00',
+      habilitado: 1 // Siempre habilitado por defecto
     }
 
     onSave(dataToSave)
@@ -335,35 +334,6 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
             </div>
           </div>
 
-          <div className='fv-row mb-4'>
-            <div className='form-check form-switch'>
-              <input
-                className='form-check-input'
-                type='checkbox'
-                checked={formData.habilitado === 1}
-                onChange={(e) => setFormData({ ...formData, habilitado: e.target.checked ? 1 : 0 })}
-                id='habilitado'
-                style={{
-                  width: '48px',
-                  height: '24px'
-                }}
-              />
-              <label
-                className='form-check-label'
-                htmlFor='habilitado'
-                style={{
-                  fontFamily: atisaStyles.fonts.secondary,
-                  color: atisaStyles.colors.dark,
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  marginLeft: '8px'
-                }}
-              >
-                <i className="bi bi-toggle-on me-2"></i>
-                Habilitado
-              </label>
-            </div>
-          </div>
         </Modal.Body>
 
         <Modal.Footer

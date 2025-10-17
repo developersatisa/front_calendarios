@@ -2,9 +2,9 @@ import { FC, useEffect, useMemo, useState } from 'react'
 import { Accordion } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import { Cliente, getClienteById } from '../../../../api/clientes'
-import { ClienteProceso, getClienteProcesosByCliente } from '../../../../api/clienteProcesos'
+import { ClienteProceso, getClienteProcesosByCliente, getClienteProcesosHabilitadosByCliente } from '../../../../api/clienteProcesos'
 import { Proceso, getAllProcesos } from '../../../../api/procesos'
-import { getClienteProcesoHitosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
+import { getClienteProcesoHitosByProceso, getClienteProcesoHitosHabilitadosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { Hito, getAllHitos } from '../../../../api/hitos'
 import { getClienteProcesoHitoCumplimientosByHito, ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 import CumplimentarHitoModal from './CumplimentarHitoModal'
@@ -30,12 +30,15 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
   const [busquedaNombre, setBusquedaNombre] = useState('')
   const [debouncedBusqueda, setDebouncedBusqueda] = useState('')
-  const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencido' | 'hoy' | 'en_plazo' | 'sin_fecha' | 'vencer_hoy'>('todos')
+  const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencido' | 'hoy' | 'en_plazo' | 'sin_fecha' | 'mañana'>('todos')
+  const [filtrosActivos, setFiltrosActivos] = useState<Set<'vencido' | 'hoy' | 'mañana' | 'en_plazo'>>(new Set())
   const [filtroCumplimiento, setFiltroCumplimiento] = useState<'todos' | 'cumplimentado' | 'no_cumplimentado'>('todos')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
-    getClienteProcesosByCliente(clienteId).then(res => setProcesos(res.clienteProcesos || []))
+    getClienteProcesosHabilitadosByCliente(clienteId).then(res => setProcesos(res.clienteProcesos || []))
     getAllProcesos().then(res => setProcesosList(res.procesos || []))
     getAllHitos().then((res) => setHitosMaestro(res.hitos || []))
   }, [clienteId])
@@ -96,9 +99,9 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     const hitosMap: Record<number, ClienteProcesoHito[]> = {}
 
     try {
-      // Cargar hitos para todos los procesos en paralelo
+      // Cargar hitos habilitados para todos los procesos en paralelo
       const hitosPromises = procesosACarga.map(proceso =>
-        getClienteProcesoHitosByProceso(proceso.id)
+        getClienteProcesoHitosHabilitadosByProceso(proceso.id)
           .then(hitosData => ({ procesoId: proceso.id, hitos: hitosData }))
           .catch(() => ({ procesoId: proceso.id, hitos: [] }))
       )
@@ -371,6 +374,20 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     }
   }
 
+  // Determinar si un hito vence mañana
+  const venceMañana = (fechaLimite?: string | null) => {
+    if (!fechaLimite) return false
+    try {
+      const hoy = new Date()
+      const mañanaUTC = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate() + 1))
+      const [y, m, d] = fechaLimite.split('-').map(Number)
+      const fecha = new Date(Date.UTC(y, m - 1, d))
+      return fecha.getTime() === mañanaUTC.getTime()
+    } catch {
+      return false
+    }
+  }
+
   // ¿Vence hoy en <= N horas? Ignora horas vacías o "00:00"
   const esUrgenteEnHoras = (fechaLimite?: string | null, horaLimite?: string | null, horas: number = 2) => {
     if (!fechaLimite || !horaLimite || horaLimite.startsWith('00:00')) return false
@@ -393,20 +410,84 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       return false
     }
   }
+  // Funciones para manejar filtros múltiples
+  const toggleFiltroVencimiento = (filtro: 'vencido' | 'hoy' | 'mañana' | 'en_plazo') => {
+    const nuevosFiltros = new Set(filtrosActivos)
+
+    if (nuevosFiltros.has(filtro)) {
+      // Si el filtro ya está activo, lo removemos
+      nuevosFiltros.delete(filtro)
+    } else {
+      // Si el filtro no está activo, lo agregamos
+      nuevosFiltros.add(filtro)
+    }
+
+    setFiltrosActivos(nuevosFiltros)
+
+    // Si no hay filtros activos, volver a "todos"
+    if (nuevosFiltros.size === 0) {
+      setFiltroVencimiento('todos')
+    } else {
+      // Si hay filtros activos, cambiar a un estado que no sea "todos"
+      setFiltroVencimiento('vencido') // Cualquier valor que no sea 'todos'
+    }
+  }
+
+  const activarTodos = () => {
+    setFiltrosActivos(new Set())
+    setFiltroVencimiento('todos')
+  }
+
+  // Función para limpiar filtros de fecha
+  const limpiarFiltrosFecha = () => {
+    setFechaDesde('')
+    setFechaHasta('')
+  }
+
   // Predicados de filtros rápidos
   const coincideVencimiento = (h: ClienteProcesoHito) => {
-    if (filtroVencimiento === 'todos') return true
-    if (filtroVencimiento === 'vencer_hoy') {
-      // Estado nuevo y vence hoy
-      return h.estado === 'Nuevo' && getEstadoVencimiento(h.fecha_limite, h.estado) === 'hoy'
-    }
-    const ev = getEstadoVencimiento(h.fecha_limite, h.estado)
-    return ev === filtroVencimiento
+    // Si no hay filtros activos, mostrar todos
+    if (filtrosActivos.size === 0) return true
+
+    // Verificar si el hito coincide con alguno de los filtros activos
+    return Array.from(filtrosActivos).some(filtro => {
+      if (filtro === 'mañana') {
+        return h.estado === 'Nuevo' && venceMañana(h.fecha_limite)
+      }
+      const ev = getEstadoVencimiento(h.fecha_limite, h.estado)
+      return ev === filtro
+    })
   }
   const coincideCumplimiento = (h: ClienteProcesoHito) => {
     if (filtroCumplimiento === 'todos') return true
     const tieneCumplimientos = (cumplimientosPorHito[h.id] && cumplimientosPorHito[h.id].length > 0)
     return filtroCumplimiento === 'cumplimentado' ? tieneCumplimientos : !tieneCumplimientos
+  }
+
+  // Función para filtrar por fechas límite
+  const coincideFechaLimite = (h: ClienteProcesoHito) => {
+    if (!fechaDesde && !fechaHasta) return true
+    if (!h.fecha_limite) return false
+
+    try {
+      const fechaLimite = new Date(h.fecha_limite)
+      if (isNaN(fechaLimite.getTime())) return false
+
+      if (fechaDesde) {
+        const desde = new Date(fechaDesde)
+        if (fechaLimite < desde) return false
+      }
+
+      if (fechaHasta) {
+        const hasta = new Date(fechaHasta)
+        hasta.setHours(23, 59, 59, 999) // Incluir todo el día
+        if (fechaLimite > hasta) return false
+      }
+
+      return true
+    } catch {
+      return false
+    }
   }
 
   // Determinar si fue finalizado fuera de plazo (último cumplimiento > fecha límite + hora límite)
@@ -618,11 +699,99 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       >
         <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
           <div className="d-flex flex-wrap gap-2">
-            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'todos' ? atisaStyles.colors.secondary : 'white', color: filtroVencimiento === 'todos' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('todos')}>Todos</button>
-            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'vencido' ? '#ef4444' : 'white', color: filtroVencimiento === 'vencido' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('vencido')}>Vencido</button>
-            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'hoy' ? '#f59e0b' : 'white', color: filtroVencimiento === 'hoy' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('hoy')}>Hoy</button>
-            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'vencer_hoy' ? '#dc2626' : 'white', color: filtroVencimiento === 'vencer_hoy' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('vencer_hoy')}>Vencer Hoy</button>
-            <button className="btn btn-sm" style={{ backgroundColor: filtroVencimiento === 'en_plazo' ? '#10b981' : 'white', color: filtroVencimiento === 'en_plazo' ? 'white' : atisaStyles.colors.primary, border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroVencimiento('en_plazo')}>En plazo</button>
+            <button
+              className="btn btn-sm"
+              style={{
+                backgroundColor: filtrosActivos.size === 0 ? atisaStyles.colors.secondary : 'white',
+                color: filtrosActivos.size === 0 ? 'white' : atisaStyles.colors.primary,
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontWeight: 600,
+                position: 'relative'
+              }}
+              onClick={activarTodos}
+            >
+              Todos
+              {filtrosActivos.size > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: atisaStyles.fonts.secondary
+                  }}
+                >
+                  {filtrosActivos.size}
+                </span>
+              )}
+            </button>
+            <button
+              className="btn btn-sm"
+              style={{
+                backgroundColor: filtrosActivos.has('vencido') ? '#ef4444' : 'white',
+                color: filtrosActivos.has('vencido') ? 'white' : atisaStyles.colors.primary,
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontWeight: 600
+              }}
+              onClick={() => toggleFiltroVencimiento('vencido')}
+            >
+              Vencido
+            </button>
+            <button
+              className="btn btn-sm"
+              style={{
+                backgroundColor: filtrosActivos.has('hoy') ? '#f59e0b' : 'white',
+                color: filtrosActivos.has('hoy') ? 'white' : atisaStyles.colors.primary,
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontWeight: 600
+              }}
+              onClick={() => toggleFiltroVencimiento('hoy')}
+            >
+              Hoy
+            </button>
+            <button
+              className="btn btn-sm"
+              style={{
+                backgroundColor: filtrosActivos.has('mañana') ? '#8b5cf6' : 'white',
+                color: filtrosActivos.has('mañana') ? 'white' : atisaStyles.colors.primary,
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontWeight: 600
+              }}
+              onClick={() => toggleFiltroVencimiento('mañana')}
+            >
+              Mañana
+            </button>
+            <button
+              className="btn btn-sm"
+              style={{
+                backgroundColor: filtrosActivos.has('en_plazo') ? '#10b981' : 'white',
+                color: filtrosActivos.has('en_plazo') ? 'white' : atisaStyles.colors.primary,
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontWeight: 600
+              }}
+              onClick={() => toggleFiltroVencimiento('en_plazo')}
+            >
+              En plazo
+            </button>
             {/* Botón 'Sin fecha' eliminado a petición */}
 
             <div className="vr mx-2" style={{ height: 24 }}></div>
@@ -635,6 +804,144 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           <div style={{ minWidth: 260 }}>
             <input type="text" className="form-control form-control-sm" placeholder="Buscar por nombre de hito..." value={busquedaNombre} onChange={(e) => setBusquedaNombre(e.target.value)} style={{ fontFamily: atisaStyles.fonts.secondary, fontSize: '14px', border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '6px' }} />
           </div>
+        </div>
+
+        {/* Fila separada para filtros de fecha */}
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '12px 16px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: `1px solid ${atisaStyles.colors.light}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              fontWeight: '600',
+              color: atisaStyles.colors.primary,
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="bi bi-calendar-date"></i>
+            Filtros de Fecha Límite:
+          </div>
+
+          <div className="d-flex align-items-center gap-2">
+            <label
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '500',
+                color: atisaStyles.colors.dark,
+                fontSize: '13px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Desde:
+            </label>
+            <input
+              type="date"
+              className="form-control form-control-sm"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                fontSize: '13px',
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '6px',
+                width: '140px'
+              }}
+            />
+          </div>
+
+          <div className="d-flex align-items-center gap-2">
+            <label
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '500',
+                color: atisaStyles.colors.dark,
+                fontSize: '13px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Hasta:
+            </label>
+            <input
+              type="date"
+              className="form-control form-control-sm"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                fontSize: '13px',
+                border: `1px solid ${atisaStyles.colors.light}`,
+                borderRadius: '6px',
+                width: '140px'
+              }}
+            />
+          </div>
+
+          {(fechaDesde || fechaHasta) && (
+            <button
+              className="btn btn-sm"
+              onClick={limpiarFiltrosFecha}
+              style={{
+                backgroundColor: 'transparent',
+                color: '#dc3545',
+                border: '1px solid #dc3545',
+                borderRadius: '6px',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                padding: '6px 12px',
+                fontSize: '12px',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#dc3545'
+                e.currentTarget.style.color = 'white'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = '#dc3545'
+              }}
+              title="Limpiar filtros de fecha"
+            >
+              <i className="bi bi-x"></i>
+              Limpiar
+            </button>
+          )}
+
+          {(fechaDesde || fechaHasta) && (
+            <div
+              style={{
+                marginLeft: 'auto',
+                padding: '4px 8px',
+                backgroundColor: atisaStyles.colors.light,
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: atisaStyles.colors.dark,
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '500'
+              }}
+            >
+              <i className="bi bi-info-circle me-1"></i>
+              <strong>Filtro activo:</strong>
+              {fechaDesde && ` Desde ${fechaDesde}`}
+              {fechaDesde && fechaHasta && ' y'}
+              {fechaHasta && ` hasta ${fechaHasta}`}
+            </div>
+          )}
         </div>
       </div>
       <Accordion
@@ -876,7 +1183,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                           ) : (
                             periodo.items.map((proceso) => {
                               const hitosDelProceso = (hitosPorProceso[proceso.id] || [])
-                                .filter((h) => coincideVencimiento(h) && coincideCumplimiento(h))
+                                .filter((h) => coincideVencimiento(h) && coincideCumplimiento(h) && coincideFechaLimite(h))
                                 .filter((h) => {
                                   if (!debouncedBusqueda) return true
                                   const nombre = getNombreHito(h.hito_id)

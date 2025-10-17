@@ -1,4 +1,4 @@
-import {FC, useState, useEffect} from 'react'
+import {FC, useState, useEffect, useMemo} from 'react'
 import {KTCard, KTCardBody} from '../../../_metronic/helpers'
 import {Cliente, getAllClientes} from '../../api/clientes'
 import SharedPagination from '../../components/pagination/SharedPagination'
@@ -9,8 +9,10 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const navigate = useNavigate()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
+  const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const limit = 10
@@ -23,12 +25,29 @@ const ClientesDocumentalCalendarioList: FC = () => {
     loadAllClientes()
   }, [])
 
+  // Debounce para el término de búsqueda
+  useEffect(() => {
+    if (searchTerm) {
+      setSearching(true)
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+      setSearching(false)
+    }, 300) // 300ms de delay
+
+    return () => {
+      clearTimeout(timer)
+      setSearching(false)
+    }
+  }, [searchTerm])
+
   // Cargar la página actual
   useEffect(() => {
-    if (!searchTerm) {
+    if (!debouncedSearchTerm) {
       loadClientes()
     }
-  }, [page, sortField, sortDirection])
+  }, [page, sortField, sortDirection, debouncedSearchTerm])
 
   const loadAllClientes = async () => {
     try {
@@ -78,27 +97,37 @@ const ClientesDocumentalCalendarioList: FC = () => {
     )
   }
 
+  // Filtrar clientes usando useMemo para optimizar el rendimiento
+  const filteredClientes = useMemo(() => {
+    if (!debouncedSearchTerm) {
+      return allClientes
+    }
+
+    const searchLower = debouncedSearchTerm.toLowerCase()
+    return allClientes.filter((cliente) => {
+      return (
+        cliente.idcliente.toLowerCase().includes(searchLower) ||
+        (cliente.razsoc?.toLowerCase().includes(searchLower) || false) ||
+        (cliente.cif?.toLowerCase().includes(searchLower) || false) ||
+        (cliente.localidad?.toLowerCase().includes(searchLower) || false)
+      )
+    })
+  }, [allClientes, debouncedSearchTerm])
+
+  // Actualizar clientes mostrados cuando cambie el filtro
+  useEffect(() => {
+    if (debouncedSearchTerm) {
+      setClientes(filteredClientes)
+      setTotal(filteredClientes.length)
+      setPage(1) // Reset a la primera página cuando se busca
+    } else {
+      loadClientes()
+    }
+  }, [filteredClientes, debouncedSearchTerm])
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setSearchTerm(value)
-
-    if (value) {
-      // Filtrar de todos los clientes
-      const filtered = allClientes.filter((cliente) => {
-        const searchLower = value.toLowerCase()
-        return (
-          cliente.idcliente.toLowerCase().includes(searchLower) ||
-          (cliente.razsoc?.toLowerCase().includes(searchLower) || false) ||
-          (cliente.cif?.toLowerCase().includes(searchLower) || false) ||
-          (cliente.localidad?.toLowerCase().includes(searchLower) || false)
-        )
-      })
-      setClientes(filtered)
-      setTotal(filtered.length)
-    } else {
-      // Si no hay término de búsqueda, volver a la paginación normal
-      loadClientes()
-    }
   }
 
   const handleCalendarClick = (clienteId: string) => {
@@ -173,7 +202,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
           border: `1px solid ${atisaStyles.colors.light}`
         }}
       >
-        <div className='input-group'>
+        <div className='input-group' style={{ position: 'relative' }}>
           <input
             type='text'
             className='form-control'
@@ -188,7 +217,8 @@ const ClientesDocumentalCalendarioList: FC = () => {
               border: `2px solid ${atisaStyles.colors.light}`,
               borderRadius: '8px 0 0 8px',
               transition: 'all 0.3s ease',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
+              paddingRight: searching ? '50px' : '16px'
             }}
             onFocus={(e) => {
               e.target.style.borderColor = atisaStyles.colors.accent
@@ -199,6 +229,29 @@ const ClientesDocumentalCalendarioList: FC = () => {
               e.target.style.boxShadow = 'none'
             }}
           />
+          {searching && (
+            <div
+              style={{
+                position: 'absolute',
+                right: '60px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 10
+              }}
+            >
+              <div
+                className="spinner-border spinner-border-sm"
+                role="status"
+                style={{
+                  color: atisaStyles.colors.primary,
+                  width: '20px',
+                  height: '20px'
+                }}
+              >
+                <span className="visually-hidden">Buscando...</span>
+              </div>
+            </div>
+          )}
           <button
             className='btn btn-primary'
             type='button'

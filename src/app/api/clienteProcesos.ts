@@ -9,6 +9,7 @@ export interface ClienteProceso {
   mes: number | null
   anio: number | null
   anterior_id: number | null
+  habilitado: number
 }
 
 export interface ClienteProcesosResponse {
@@ -47,6 +48,11 @@ export const deleteClienteProceso = async (id: number) => {
 
 export const getClienteProcesosByCliente = async (idcliente: string) => {
   const response = await api.get<ClienteProcesosResponse>(`/cliente-procesos/cliente/${idcliente}`);
+  return response.data;
+}
+
+export const getClienteProcesosHabilitadosByCliente = async (idcliente: string) => {
+  const response = await api.get<ClienteProcesosResponse>(`/cliente-procesos/cliente/${idcliente}/habilitados`);
   return response.data;
 }
 

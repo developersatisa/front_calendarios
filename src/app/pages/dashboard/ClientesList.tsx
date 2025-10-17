@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState, useRef } from 'react'
+import React, { FC, useEffect, useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { KTCard, KTCardBody } from '../../../_metronic/helpers'
@@ -19,6 +19,8 @@ const ClientesList: FC = () => {
   const [page, setPage] = useState<number>(1)
   const [total, setTotal] = useState<number>(0)
   const [searchTerm, setSearchTerm] = useState<string>('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('')
+  const [searching, setSearching] = useState(false)
   const [sortField, setSortField] = useState<string>('idcliente')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showModal, setShowModal] = useState(false)
@@ -35,6 +37,23 @@ const ClientesList: FC = () => {
     loadProcesos()
   }, [])
 
+  // Debounce para el término de búsqueda
+  useEffect(() => {
+    if (searchTerm) {
+      setSearching(true)
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+      setSearching(false)
+    }, 300) // 300ms de delay
+
+    return () => {
+      clearTimeout(timer)
+      setSearching(false)
+    }
+  }, [searchTerm])
+
   useEffect(() => {
     loadClientes()
   }, [page, sortField, sortDirection])
@@ -45,7 +64,7 @@ const ClientesList: FC = () => {
     } else {
       loadClientes()
     }
-  }, [searchTerm])
+  }, [debouncedSearchTerm])
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -157,14 +176,17 @@ const ClientesList: FC = () => {
     }
   }
 
-  const filteredClientes = clientes.filter((cliente) => {
-    if (!searchTerm) return true
-    const searchLower = searchTerm.toLowerCase()
+  // Filtrar clientes usando useMemo para optimizar el rendimiento
+  const filteredClientes = useMemo(() => {
+    if (!debouncedSearchTerm) return clientes
 
-    return Object.values(cliente).some((value) =>
-      value?.toString().toLowerCase().includes(searchLower)
-    )
-  })
+    const searchLower = debouncedSearchTerm.toLowerCase()
+    return clientes.filter((cliente) => {
+      return Object.values(cliente).some((value) =>
+        value?.toString().toLowerCase().includes(searchLower)
+      )
+    })
+  }, [clientes, debouncedSearchTerm])
 
   const handleOpenModal = (cliente: Cliente) => {
     setSelectedCliente(cliente)
@@ -218,7 +240,7 @@ const ClientesList: FC = () => {
             }}>
               Gestión de Clientes
             </h3>
-            <div className='d-flex align-items-center position-relative my-3'>
+            <div className='d-flex align-items-center position-relative my-3' style={{ position: 'relative' }}>
               <i
                 className='bi bi-search position-absolute ms-6'
                 style={{ color: atisaStyles.colors.light }}
@@ -234,9 +256,33 @@ const ClientesList: FC = () => {
                   border: `2px solid ${atisaStyles.colors.light}`,
                   borderRadius: '8px',
                   fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  paddingRight: searching ? '50px' : '16px'
                 }}
               />
+              {searching && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 10
+                  }}
+                >
+                  <div
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    style={{
+                      color: atisaStyles.colors.primary,
+                      width: '20px',
+                      height: '20px'
+                    }}
+                  >
+                    <span className="visually-hidden">Buscando...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className='card-toolbar'>
@@ -328,7 +374,7 @@ const ClientesList: FC = () => {
                       margin: 0
                     }}
                   >
-                    {searchTerm ? 'No se encontraron clientes que coincidan con tu búsqueda.' : 'No hay clientes registrados en el sistema.'}
+                    {debouncedSearchTerm ? 'No se encontraron clientes que coincidan con tu búsqueda.' : 'No hay clientes registrados en el sistema.'}
                   </p>
                 </div>
               ) : (

@@ -46,3 +46,8 @@ export const deleteHito = async (id: number) => {
   const response = await api.delete(`/hitos/${id}`)
   return response.data
 }
+
+export const getHitosHabilitados = async () => {
+  const response = await api.get<Hito[]>('/hitos/habilitados')
+  return response.data
+}

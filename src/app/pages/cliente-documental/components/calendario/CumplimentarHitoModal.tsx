@@ -1,9 +1,11 @@
 import { FC, useRef, useState, useEffect } from 'react'
 import { Modal, Button, Form, Accordion, ProgressBar, Alert } from 'react-bootstrap'
+import CustomToast from '../../../../components/ui/CustomToast'
 import { updateClienteProcesoHito, getClienteProcesoHitoById } from '../../../../api/clienteProcesoHitos'
 import { subirDocumento } from '../../../../api/documentos'
 import { createClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 import { atisaStyles } from '../../../../styles/atisaStyles'
+import { useAuth } from '../../../../modules/auth/core/Auth'
 
 interface Props {
   show: boolean
@@ -22,9 +24,13 @@ interface FileUploadStatus {
 }
 
 const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, nombreDocumento, onUploadSuccess, estado }) => {
+  const { currentUser, auth } = useAuth()
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [incluirDocumento, setIncluirDocumento] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
   const [fechaCumplimiento, setFechaCumplimiento] = useState(() => {
     const today = new Date()
     return today.toISOString().split('T')[0]
@@ -42,6 +48,35 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
   const [fileUploadStatuses, setFileUploadStatuses] = useState<FileUploadStatus[]>([])
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showUploadResults, setShowUploadResults] = useState(false)
+
+  // Función auxiliar para mostrar toasts
+  const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setToastMessage(message)
+    setToastType(type)
+    setShowToast(true)
+  }
+
+  // Función para obtener el username del usuario actual
+  const getCurrentUsername = (): string => {
+    // Primero intentar obtener del currentUser
+    if (currentUser?.username) {
+      return currentUser.username
+    }
+
+    // Si no hay currentUser, intentar extraer del token JWT
+    if (auth?.api_token) {
+      try {
+        // Decodificar el JWT (solo la parte del payload)
+        const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+        return payload.username || payload.sub || 'usuario'
+      } catch (error) {
+        console.warn('Error decodificando token JWT:', error)
+      }
+    }
+
+    // Fallback por defecto
+    return 'usuario'
+  }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isFinalized = estado === 'Finalizado'
@@ -175,7 +210,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     let fechaActual = new Date();
     let fechaCumplimientoDate = new Date(fechaCumplimiento);
     if (fechaCumplimientoDate > fechaActual) {
-      alert('La fecha de cumplimiento no puede ser mayor a la fecha actual')
+      showToastMessage('La fecha de cumplimiento no puede ser mayor a la fecha actual', 'warning')
       return
     }
 
@@ -192,20 +227,20 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
       const minutosCumplimiento = horaCumplimientoH * 60 + horaCumplimientoM;
 
       if (minutosCumplimiento > minutosActuales) {
-        alert('La hora de cumplimiento no puede ser superior a la hora actual cuando es la fecha actual.')
+        showToastMessage('La hora de cumplimiento no puede ser superior a la hora actual cuando es la fecha actual.', 'warning')
         return
       }
     }
 
     // Validar que si se va a incluir documento, haya al menos un archivo
     if (incluirDocumento && files.length === 0) {
-      alert('Por favor selecciona al menos un archivo para subir')
+      showToastMessage('Por favor selecciona al menos un archivo para subir', 'warning')
       return
     }
 
     // Validar que si se edita la fecha de cumplimiento, las observaciones sean obligatorias
     if (fechaEditable && (!observacion || observacion.trim() === '')) {
-      alert('Las observaciones son obligatorias cuando se edita la fecha de cumplimiento')
+      showToastMessage('Las observaciones son obligatorias cuando se edita la fecha de cumplimiento', 'warning')
       return
     }
 
@@ -283,7 +318,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
         fecha: fechaCumplimiento,
         hora: horaCumplimiento,
         observacion: observacion || undefined,
-        usuario: "alejandro.quiros@atisa.es"
+        usuario: getCurrentUsername()
       })
 
       onUploadSuccess()
@@ -293,7 +328,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
       resetearFormulario()
     } catch (err) {
       console.error('Error al cumplimentar el hito:', err)
-      alert('Error al cumplimentar el hito')
+      showToastMessage('Error al cumplimentar el hito', 'error')
     } finally {
       setLoading(false)
     }
@@ -865,6 +900,15 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
           </Form>
         )}
       </Modal.Body>
+
+      {/* Custom Toast */}
+      <CustomToast
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+        delay={5000}
+      />
     </Modal>
   )
 }

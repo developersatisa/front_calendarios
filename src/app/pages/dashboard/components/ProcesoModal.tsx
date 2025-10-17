@@ -17,6 +17,7 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
     descripcion: null,
     frecuencia: 1,
     temporalidad: 'mes',
+    habilitado: 1,
   })
 
   useEffect(() => {
@@ -24,8 +25,9 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
       setFormData({
         nombre: proceso.nombre,
         descripcion: proceso.descripcion,
-        frecuencia: 1,
+        frecuencia: proceso.frecuencia,
         temporalidad: proceso.temporalidad,
+        habilitado: proceso.habilitado,
       })
     } else {
       setFormData({
@@ -33,6 +35,7 @@ const ProcesoModal: FC<Props> = ({show, onHide, onSave, proceso}) => {
         descripcion: null,
         frecuencia: 1,
         temporalidad: 'mes',
+        habilitado: 1,
       })
     }
   }, [proceso, show])

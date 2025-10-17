@@ -1,16 +1,45 @@
 // Estilos corporativos Atisa - Reutilizables en todas las vistas
 export const atisaStyles = {
   colors: {
-    primary: '#00505C',      // Verde oscuro
-    secondary: '#9CBA39',    // Verde claro
-    accent: '#00A1DE',       // Azul
-    light: '#80E0D3',        // Verde claro secundario
-    dark: '#007C92',         // Verde oscuro secundario
-    warning: '#FFC107',      // Amarillo de advertencia
+    primary: '#00505C',      // Verde oscuro (Pantone 3165 C)
+    secondary: '#9CBA39',    // Verde claro (Pantone 375 C)
+    accent: '#00A1DE',       // Azul (Pantone 299 C)
+    light: '#80E0D3',        // Verde claro secundario (Pantone 3245 C)
+    dark: '#007C92',         // Verde oscuro secundario (Pantone 3145 C)
+    warning: '#F1E800',      // Amarillo (Pantone 3945 C)
+    error: '#FF6D22',        // Naranja (Pantone 1585 C)
+    info: '#00A1DE',         // Azul (Pantone 299 C)
+    success: '#9CBA39',      // Verde claro (Pantone 375 C)
   },
   fonts: {
     primary: 'Aleo, Georgia, serif',
     secondary: 'Lato, Arial, sans-serif',
+  },
+  toast: {
+    success: {
+      background: '#9CBA39',
+      borderLeft: '#7AB800',
+      textColor: '#ffffff',
+      iconColor: '#00505C',
+    },
+    error: {
+      background: '#FF6D22',
+      borderLeft: '#e55a1a',
+      textColor: '#ffffff',
+      iconColor: '#ffffff',
+    },
+    warning: {
+      background: '#F1E800',
+      borderLeft: '#d4d000',
+      textColor: '#00505C',
+      iconColor: '#00505C',
+    },
+    info: {
+      background: '#00A1DE',
+      borderLeft: '#0065BD',
+      textColor: '#ffffff',
+      iconColor: '#ffffff',
+    },
   }
 }
 
