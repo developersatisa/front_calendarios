@@ -14,6 +14,7 @@ import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableH
 const PlantillasList: FC = () => {
   const navigate = useNavigate()
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
+  const [allPlantillas, setAllPlantillas] = useState<Plantilla[]>([]) // Todas las plantillas para búsqueda
   const [plantillaEditando, setPlantillaEditando] = useState<Plantilla | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -52,24 +53,32 @@ const PlantillasList: FC = () => {
 
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
+      // No establecer searching en false aquí, se establecerá cuando termine loadAllPlantillas
     }, 300) // 300ms de delay
 
     return () => {
       clearTimeout(timer)
-      setSearching(false)
+      if (!searchTerm) {
+        setSearching(false)
+      }
     }
   }, [searchTerm])
 
+  // Cargar plantillas paginadas cuando NO hay búsqueda
   useEffect(() => {
-    loadAll()
-  }, [page, sortField, sortDirection])
-
-  useEffect(() => {
-    if (page !== 1) {
-      setPage(1)
-    } else {
+    if (!debouncedSearchTerm.trim()) {
       loadAll()
+    }
+  }, [page, sortField, sortDirection, debouncedSearchTerm])
+
+  // Cargar todas las plantillas cuando hay búsqueda
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      setPage(1) // Resetear a la primera página cuando hay búsqueda
+      loadAllPlantillas()
+    } else {
+      // Limpiar todas las plantillas cuando no hay búsqueda
+      setAllPlantillas([])
     }
   }, [debouncedSearchTerm])
 
@@ -181,6 +190,36 @@ const PlantillasList: FC = () => {
     }
   }
 
+  const loadAllPlantillas = async () => {
+    try {
+      setLoading(true)
+      setSearching(true)
+      // Cargar todas las plantillas sin paginación para búsqueda
+      const plantillasData = await getAllPlantillas()
+      setAllPlantillas(plantillasData.plantillas || [])
+      // NO cargar datos adicionales durante la búsqueda para mejorar el rendimiento
+      // Solo cargar si realmente no están disponibles
+      if (procesos.length === 0 || plantillaProcesos.length === 0) {
+        const [procesosData, plantillaProcesosData] = await Promise.all([
+          getAllProcesos(),
+          getAllPlantillaProcesos()
+        ])
+        setProcesos(procesosData.procesos || [])
+        setPlantillaProcesos(plantillaProcesosData.plantillaProcesos || [])
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        setAllPlantillas([])
+      } else {
+        setError('Error al cargar las plantillas')
+        console.error('Error:', error)
+      }
+    } finally {
+      setLoading(false)
+      setSearching(false)
+    }
+  }
+
   const handleSavePlantilla = async (plantillaData: Omit<Plantilla, 'id'>) => {
     try {
       if (plantillaEditando) {
@@ -226,16 +265,53 @@ const PlantillasList: FC = () => {
   }
 
   // Filtrar plantillas usando useMemo para optimizar el rendimiento
-  const filteredPlantillas = useMemo(() => {
-    if (!debouncedSearchTerm) return plantillas
+  // Función auxiliar para normalizar texto (sin tildes, sin mayúsculas)
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return ''
+    return String(text)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+  }
 
-    const searchLower = debouncedSearchTerm.toLowerCase()
-    return plantillas.filter((plantilla) => {
-      return Object.values(plantilla).some(value =>
-        value?.toString().toLowerCase().includes(searchLower)
-      )
+  // Filtrar plantillas usando useMemo para optimizar el rendimiento
+  const filteredPlantillas = useMemo(() => {
+    // Si hay búsqueda, usar allPlantillas; si no, usar plantillas paginadas
+    const plantillasToFilter = debouncedSearchTerm.trim() ? allPlantillas : plantillas
+
+    if (!debouncedSearchTerm || !debouncedSearchTerm.trim()) return plantillasToFilter
+
+    // Normalizar el término de búsqueda (asegurarse de que se convierta a string y luego normalizar)
+    const searchTermStr = String(debouncedSearchTerm).trim()
+    if (!searchTermStr) return plantillasToFilter
+
+    const searchNormalized = normalizeText(searchTermStr)
+
+    return plantillasToFilter.filter((plantilla) => {
+      return Object.values(plantilla).some(value => {
+        if (value === null || value === undefined) return false
+        const valueNormalized = normalizeText(value.toString())
+        return valueNormalized.includes(searchNormalized)
+      })
     })
-  }, [plantillas, debouncedSearchTerm])
+  }, [plantillas, allPlantillas, debouncedSearchTerm])
+
+  // Aplicar paginación a los resultados filtrados
+  const paginatedPlantillas = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return filteredPlantillas
+    }
+    // Cuando hay búsqueda, aplicar paginación a los resultados filtrados
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredPlantillas.slice(startIndex, endIndex)
+  }, [filteredPlantillas, page, limit, debouncedSearchTerm])
+
+  // Calcular el total para la paginación
+  const totalForPagination = useMemo(() => {
+    return debouncedSearchTerm.trim() ? filteredPlantillas.length : total
+  }, [filteredPlantillas.length, total, debouncedSearchTerm])
 
   const groupedPlantillaProcesos = plantillaProcesos.reduce((groups, pp) => {
     if (!groups[pp.plantilla_id]) {
@@ -262,69 +338,16 @@ const PlantillasList: FC = () => {
         <div
           className='card-header border-0 pt-6'
           style={{
-            backgroundColor: atisaStyles.colors.primary,
+            background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
             color: 'white',
             borderRadius: '8px 8px 0 0',
             margin: 0,
             padding: '24px 16px'
           }}
         >
-          <div className='card-title'>
-            <h3 style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0
-            }}>
-              Gestión de Plantillas
-            </h3>
-            <div className='d-flex align-items-center position-relative my-3' style={{ position: 'relative' }}>
-              <i
-                className='bi bi-search position-absolute ms-6'
-                style={{ color: atisaStyles.colors.light }}
-              ></i>
-              <input
-                type='text'
-                className='form-control form-control-solid w-250px ps-14'
-                placeholder='Buscar plantilla...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  backgroundColor: 'white',
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  paddingRight: searching ? '50px' : '16px'
-                }}
-              />
-              {searching && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 10
-                  }}
-                >
-                  <div
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    style={{
-                      color: atisaStyles.colors.primary,
-                      width: '20px',
-                      height: '20px'
-                    }}
-                  >
-                    <span className="visually-hidden">Buscando...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className='card-toolbar'>
-            <div className='d-flex justify-content-end gap-2'>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            {/* Izquierda: Botón Volver + Buscador */}
+            <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
               <button
                 type='button'
                 className='btn'
@@ -340,8 +363,70 @@ const PlantillasList: FC = () => {
                 }}
               >
                 <i className="bi bi-arrow-left me-2"></i>
-                Volver
+                Volver a Dashboard
               </button>
+              <div className='d-flex align-items-center position-relative' style={{ position: 'relative' }}>
+                <i
+                  className='bi bi-search position-absolute ms-6'
+                  style={{ color: atisaStyles.colors.light, zIndex: 1 }}
+                ></i>
+                <input
+                  type='text'
+                  className='form-control form-control-solid w-250px ps-14'
+                  placeholder='Buscar plantilla...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    backgroundColor: 'white',
+                    border: `2px solid ${atisaStyles.colors.light}`,
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '14px',
+                    paddingRight: searching ? '50px' : '16px'
+                  }}
+                />
+                {searching && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{
+                        color: atisaStyles.colors.primary,
+                        width: '20px',
+                        height: '20px'
+                      }}
+                    >
+                      <span className="visually-hidden">Buscando...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Centro: Título */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <h3 style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                fontSize: '2rem'
+              }}>
+                Gestión de Plantillas
+              </h3>
+            </div>
+
+            {/* Derecha: Botón Nuevo */}
+            <div className='d-flex gap-2' style={{ justifyContent: 'flex-end' }}>
               <button
                 type='button'
                 className='btn'
@@ -536,7 +621,7 @@ const PlantillasList: FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredPlantillas.map((plantilla, index) => (
+                      {paginatedPlantillas.map((plantilla, index) => (
                         <tr
                           key={plantilla.id}
                           style={{
@@ -668,7 +753,7 @@ const PlantillasList: FC = () => {
               {filteredPlantillas.length > 0 && (
                 <SharedPagination
                   currentPage={page}
-                  totalItems={total}
+                  totalItems={totalForPagination}
                   pageSize={limit}
                   onPageChange={setPage}
                 />

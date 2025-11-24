@@ -12,6 +12,7 @@ import { atisaStyles } from '../../styles/atisaStyles'
 const HitosList: FC = () => {
   const navigate = useNavigate()
   const [hitos, setHitos] = useState<Hito[]>([])
+  const [allHitos, setAllHitos] = useState<Hito[]>([]) // Todos los hitos para búsqueda
   const [hitoEditando, setHitoEditando] = useState<Hito | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -50,24 +51,32 @@ const HitosList: FC = () => {
 
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
+      // No establecer searching en false aquí, se establecerá cuando termine loadAllHitos
     }, 300) // 300ms de delay
 
     return () => {
       clearTimeout(timer)
-      setSearching(false)
+      if (!searchTerm) {
+        setSearching(false)
+      }
     }
   }, [searchTerm])
 
+  // Cargar hitos paginados cuando NO hay búsqueda
   useEffect(() => {
+    if (!debouncedSearchTerm.trim()) {
     loadHitos()
-  }, [page, sortField, sortDirection])
+    }
+  }, [page, sortField, sortDirection, debouncedSearchTerm])
 
+  // Cargar todos los hitos cuando hay búsqueda
   useEffect(() => {
-    if (page !== 1) {
-      setPage(1)
+    if (debouncedSearchTerm.trim()) {
+      setPage(1) // Resetear a la primera página cuando hay búsqueda
+      loadAllHitos()
     } else {
-      loadHitos()
+      // Limpiar todos los hitos cuando no hay búsqueda
+      setAllHitos([])
     }
   }, [debouncedSearchTerm])
 
@@ -169,6 +178,26 @@ const HitosList: FC = () => {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadAllHitos = async () => {
+    try {
+      setLoading(true)
+      setSearching(true)
+      // Cargar todos los hitos sin paginación para búsqueda
+      const data = await getAllHitos()
+      setAllHitos(data.hitos || [])
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        setAllHitos([])
+      } else {
+        setError('Error al cargar los hitos')
+        console.error('Error:', error)
+      }
+    } finally {
+      setLoading(false)
+      setSearching(false)
     }
   }
 
@@ -366,17 +395,53 @@ const HitosList: FC = () => {
     }
   }
 
+  // Función auxiliar para normalizar texto (sin tildes, sin mayúsculas)
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return ''
+    return String(text)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+  }
+
   // Filtrar hitos usando useMemo para optimizar el rendimiento
   const filteredHitos = useMemo(() => {
-    if (!debouncedSearchTerm) return hitos
+    // Si hay búsqueda, usar allHitos; si no, usar hitos paginados
+    const hitosToFilter = debouncedSearchTerm.trim() ? allHitos : hitos
 
-    const searchLower = debouncedSearchTerm.toLowerCase()
-    return hitos.filter((hito) => {
-      return Object.values(hito).some(value =>
-        value?.toString().toLowerCase().includes(searchLower)
-      )
+    if (!debouncedSearchTerm || !debouncedSearchTerm.trim()) return hitosToFilter
+
+    // Normalizar el término de búsqueda (asegurarse de que se convierta a string y luego normalizar)
+    const searchTermStr = String(debouncedSearchTerm).trim()
+    if (!searchTermStr) return hitosToFilter
+
+    const searchNormalized = normalizeText(searchTermStr)
+
+    return hitosToFilter.filter((hito) => {
+      return Object.values(hito).some(value => {
+        if (value === null || value === undefined) return false
+        const valueNormalized = normalizeText(value.toString())
+        return valueNormalized.includes(searchNormalized)
+      })
     })
-  }, [hitos, debouncedSearchTerm])
+  }, [hitos, allHitos, debouncedSearchTerm])
+
+  // Aplicar paginación a los resultados filtrados
+  const paginatedHitos = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return filteredHitos
+    }
+    // Cuando hay búsqueda, aplicar paginación a los resultados filtrados
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredHitos.slice(startIndex, endIndex)
+  }, [filteredHitos, page, limit, debouncedSearchTerm])
+
+  // Calcular el total para la paginación
+  const totalForPagination = useMemo(() => {
+    return debouncedSearchTerm.trim() ? filteredHitos.length : total
+  }, [filteredHitos.length, total, debouncedSearchTerm])
 
   return (
     <div style={{
@@ -389,665 +454,674 @@ const HitosList: FC = () => {
       width: '100%'
     }}>
       <KTCard>
-        <div
-          className='card-header border-0 pt-6'
-          style={{
-            backgroundColor: atisaStyles.colors.primary,
-            color: 'white',
-            borderRadius: '8px 8px 0 0',
-            margin: 0,
-            padding: '24px 16px'
-          }}
-        >
-          <div className='card-title'>
-            <h3 style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0
-            }}>
-              Gestión de Hitos
-            </h3>
-            <div className='d-flex align-items-center position-relative my-3' style={{ position: 'relative' }}>
-              <i
-                className='bi bi-search position-absolute ms-6'
-                style={{ color: atisaStyles.colors.light }}
-              ></i>
-              <input
-                type='text'
-                className='form-control form-control-solid w-250px ps-14'
-                placeholder='Buscar hito...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  backgroundColor: 'white',
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  paddingRight: searching ? '50px' : '16px'
-                }}
-              />
-              {searching && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 10
-                  }}
-                >
-                  <div
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    style={{
-                      color: atisaStyles.colors.primary,
-                      width: '20px',
-                      height: '20px'
-                    }}
-                  >
-                    <span className="visually-hidden">Buscando...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className='card-toolbar'>
-            <div className='d-flex justify-content-end gap-2'>
-              <button
-                type='button'
-                className='btn'
-                onClick={() => navigate('/dashboard')}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: `2px solid white`,
-                  color: 'white',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white'
-                  e.currentTarget.style.color = atisaStyles.colors.primary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = 'white'
-                }}
-              >
-                <i className="bi bi-arrow-left me-2"></i>
-                Volver
-              </button>
-              <button
-                type='button'
-                className='btn'
-                onClick={() => {
-                  setHitoEditando(null)
-                  setShowModal(true)
-                }}
-                style={{
-                  backgroundColor: atisaStyles.colors.secondary,
-                  border: `2px solid ${atisaStyles.colors.secondary}`,
-                  color: 'white',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                  e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                  e.currentTarget.style.borderColor = atisaStyles.colors.secondary
-                }}
-              >
-                <i className="bi bi-plus-circle me-2"></i>
-                Nuevo Hito
-              </button>
-            </div>
-          </div>
-        </div>
-        <KTCardBody className='p-0'>
-          {loading ? (
-            <div className='d-flex justify-content-center py-5'>
-              <div
-                className='spinner-border'
-                role='status'
-                style={{
-                  color: atisaStyles.colors.primary,
-                  width: '3rem',
-                  height: '3rem'
-                }}
-              >
-                <span className='visually-hidden'>Cargando...</span>
-              </div>
-            </div>
-          ) : error ? (
-            <div
-              className='alert alert-danger'
+      <div
+        className='card-header border-0 pt-6'
+        style={{
+            background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
+          color: 'white',
+          borderRadius: '8px 8px 0 0',
+          margin: 0,
+          padding: '24px 16px'
+        }}
+      >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            {/* Izquierda: Botón Volver + Buscador */}
+            <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
+            <button
+              type='button'
+              className='btn'
+              onClick={() => navigate('/dashboard')}
               style={{
-                backgroundColor: '#f8d7da',
-                border: `1px solid #f5c6cb`,
-                color: '#721c24',
+                backgroundColor: 'transparent',
+                border: `2px solid white`,
+                color: 'white',
                 fontFamily: atisaStyles.fonts.secondary,
-                borderRadius: '8px'
+                fontWeight: '600',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'white'
+                e.currentTarget.style.color = atisaStyles.colors.primary
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = 'white'
               }}
             >
-              {error}
-            </div>
-          ) : (
-            <>
-              {filteredHitos.length === 0 ? (
-                <div
-                  className='text-center py-5'
+              <i className="bi bi-arrow-left me-2"></i>
+              Volver a Dashboard
+            </button>
+              <div className='d-flex align-items-center position-relative' style={{ position: 'relative' }}>
+                <i
+                  className='bi bi-search position-absolute ms-6'
+                  style={{ color: atisaStyles.colors.light, zIndex: 1 }}
+                ></i>
+                <input
+                  type='text'
+                  className='form-control form-control-solid w-250px ps-14'
+                  placeholder='Buscar hito...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    backgroundColor: atisaStyles.colors.light,
-                    borderRadius: '0',
-                    border: `2px dashed ${atisaStyles.colors.primary}`,
-                    padding: '40px 20px',
+                    backgroundColor: 'white',
+                    border: `2px solid ${atisaStyles.colors.light}`,
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '14px',
+                    paddingRight: searching ? '50px' : '16px'
+                  }}
+                />
+                {searching && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{
+                        color: atisaStyles.colors.primary,
+                        width: '20px',
+                        height: '20px'
+                      }}
+                    >
+                      <span className="visually-hidden">Buscando...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Centro: Título */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <h3 style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                fontSize: '2rem'
+              }}>
+                Gestión de Hitos
+              </h3>
+            </div>
+
+            {/* Derecha: Botón Nuevo */}
+            <div className='d-flex gap-2' style={{ justifyContent: 'flex-end' }}>
+            <button
+              type='button'
+              className='btn'
+              onClick={() => {
+                setHitoEditando(null)
+                setShowModal(true)
+              }}
+              style={{
+                backgroundColor: atisaStyles.colors.secondary,
+                border: `2px solid ${atisaStyles.colors.secondary}`,
+                color: 'white',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                e.currentTarget.style.borderColor = atisaStyles.colors.accent
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                e.currentTarget.style.borderColor = atisaStyles.colors.secondary
+              }}
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Nuevo Hito
+            </button>
+          </div>
+        </div>
+      </div>
+      <KTCardBody className='p-0'>
+        {loading ? (
+          <div className='d-flex justify-content-center py-5'>
+            <div
+              className='spinner-border'
+              role='status'
+              style={{
+                color: atisaStyles.colors.primary,
+                width: '3rem',
+                height: '3rem'
+              }}
+            >
+              <span className='visually-hidden'>Cargando...</span>
+            </div>
+          </div>
+        ) : error ? (
+          <div
+            className='alert alert-danger'
+            style={{
+              backgroundColor: '#f8d7da',
+              border: `1px solid #f5c6cb`,
+              color: '#721c24',
+              fontFamily: atisaStyles.fonts.secondary,
+              borderRadius: '8px'
+            }}
+          >
+            {error}
+          </div>
+        ) : (
+          <>
+            {filteredHitos.length === 0 ? (
+              <div
+                className='text-center py-5'
+                style={{
+                  backgroundColor: atisaStyles.colors.light,
+                  borderRadius: '0',
+                  border: `2px dashed ${atisaStyles.colors.primary}`,
+                  padding: '40px 20px',
+                  margin: 0,
+                  width: '100%'
+                }}
+              >
+                <i
+                  className='bi bi-calendar-check'
+                  style={{
+                    fontSize: '48px',
+                    color: atisaStyles.colors.primary,
+                    marginBottom: '16px'
+                  }}
+                ></i>
+                <h4
+                  style={{
+                    fontFamily: atisaStyles.fonts.primary,
+                    color: atisaStyles.colors.primary,
+                    marginBottom: '8px'
+                  }}
+                >
+                  No hay hitos disponibles
+                </h4>
+                <p
+                  style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    color: atisaStyles.colors.dark,
+                    margin: 0
+                  }}
+                >
+                    {debouncedSearchTerm ? 'No se encontraron hitos que coincidan con tu búsqueda.' : 'Comienza creando tu primer hito.'}
+                </p>
+              </div>
+            ) : (
+              <div className='table-responsive' style={{ margin: 0 }}>
+                <table
+                  className='table align-middle table-row-dashed fs-6 gy-0'
+                  style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    borderCollapse: 'separate',
+                    borderSpacing: '0',
                     margin: 0,
                     width: '100%'
                   }}
                 >
-                  <i
-                    className='bi bi-calendar-check'
+                <thead>
+                  <tr
+                    className='text-start fw-bold fs-7 text-uppercase gs-0'
                     style={{
-                      fontSize: '48px',
-                      color: atisaStyles.colors.primary,
-                      marginBottom: '16px'
-                    }}
-                  ></i>
-                  <h4
-                    style={{
-                      fontFamily: atisaStyles.fonts.primary,
-                      color: atisaStyles.colors.primary,
-                      marginBottom: '8px'
+                      backgroundColor: atisaStyles.colors.light,
+                      color: atisaStyles.colors.primary
                     }}
                   >
-                    No hay hitos disponibles
-                  </h4>
-                  <p
-                    style={{
-                      fontFamily: atisaStyles.fonts.secondary,
-                      color: atisaStyles.colors.dark,
-                      margin: 0
-                    }}
-                  >
-                    {debouncedSearchTerm ? 'No se encontraron hitos que coincidan con tu búsqueda.' : 'Comienza creando tu primer hito.'}
-                  </p>
-                </div>
-              ) : (
-                <div className='table-responsive' style={{ margin: 0 }}>
-                  <table
-                    className='table align-middle table-row-dashed fs-6 gy-0'
-                    style={{
-                      fontFamily: atisaStyles.fonts.secondary,
-                      borderCollapse: 'separate',
-                      borderSpacing: '0',
-                      margin: 0,
-                      width: '100%'
-                    }}
-                  >
-                    <thead>
-                      <tr
-                        className='text-start fw-bold fs-7 text-uppercase gs-0'
-                        style={{
-                          backgroundColor: atisaStyles.colors.light,
-                          color: atisaStyles.colors.primary
-                        }}
-                      >
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('id')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          ID {getSortIcon('id')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('nombre')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Nombre {getSortIcon('nombre')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('descripcion')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Descripción {getSortIcon('descripcion')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('fecha_limite')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Fecha Límite {getSortIcon('fecha_limite')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('hora_limite')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Hora Límite {getSortIcon('hora_limite')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('obligatorio')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Obligatorio {getSortIcon('obligatorio')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('tipo')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Tipo {getSortIcon('tipo')}
-                        </th>
-                        <th
-                          className='cursor-pointer user-select-none'
-                          onClick={() => handleSort('habilitado')}
-                          style={{
-                            transition: 'all 0.2s',
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.color = 'white'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                          }}
-                        >
-                          Habilitado {getSortIcon('habilitado')}
-                        </th>
-                        <th
-                          className='text-start'
-                          style={{
-                            padding: '16px 8px',
-                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            backgroundColor: atisaStyles.colors.light,
-                            color: atisaStyles.colors.primary,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}
-                        >
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredHitos.map((hito, index) => (
-                        <tr
-                          key={hito.id}
-                          style={{
-                            backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                            fontFamily: atisaStyles.fonts.secondary,
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.transform = 'translateY(-1px)'
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
-                            e.currentTarget.style.transform = 'translateY(0)'
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
-                        >
-                          <td style={{
-                            padding: '12px 8px',
-                            color: atisaStyles.colors.primary,
-                            fontWeight: '600',
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
-                            {hito.id}
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            color: atisaStyles.colors.dark,
-                            fontWeight: '600',
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
-                            {hito.nombre}
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            color: atisaStyles.colors.dark,
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none',
-                            maxWidth: '200px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {hito.descripcion || '-'}
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            color: atisaStyles.colors.dark,
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
-                            {hito.fecha_limite ? new Date(hito.fecha_limite).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            color: atisaStyles.colors.dark,
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('id')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      ID {getSortIcon('id')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('nombre')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Nombre {getSortIcon('nombre')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('descripcion')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Descripción {getSortIcon('descripcion')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('fecha_limite')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Fecha Límite {getSortIcon('fecha_limite')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('hora_limite')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Hora Límite {getSortIcon('hora_limite')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('obligatorio')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Obligatorio {getSortIcon('obligatorio')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('tipo')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Tipo {getSortIcon('tipo')}
+                    </th>
+                    <th
+                      className='cursor-pointer user-select-none'
+                      onClick={() => handleSort('habilitado')}
+                      style={{
+                        transition: 'all 0.2s',
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                        e.currentTarget.style.color = 'white'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      Habilitado {getSortIcon('habilitado')}
+                    </th>
+                    <th
+                      className='text-start'
+                      style={{
+                        padding: '16px 8px',
+                        borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                        fontFamily: atisaStyles.fonts.primary,
+                        fontWeight: 'bold',
+                        backgroundColor: atisaStyles.colors.light,
+                        color: atisaStyles.colors.primary,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}
+                    >
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                      {paginatedHitos.map((hito, index) => (
+                    <tr
+                      key={hito.id}
+                      style={{
+                        backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
+                        fontFamily: atisaStyles.fonts.secondary,
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      <td style={{
+                        padding: '12px 8px',
+                        color: atisaStyles.colors.primary,
+                        fontWeight: '600',
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        {hito.id}
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        color: atisaStyles.colors.dark,
+                        fontWeight: '600',
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        {hito.nombre}
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        color: atisaStyles.colors.dark,
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none',
+                        maxWidth: '200px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {hito.descripcion || '-'}
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        color: atisaStyles.colors.dark,
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        {hito.fecha_limite ? new Date(hito.fecha_limite).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        color: atisaStyles.colors.dark,
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
                             {hito.hora_limite ? hito.hora_limite.slice(0, 5) : '-'}
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
-                            <span
-                              className='badge'
-                              style={{
-                                backgroundColor: hito.obligatorio ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
-                                color: 'white',
-                                fontFamily: atisaStyles.fonts.secondary,
-                                fontWeight: '600',
-                                padding: '6px 12px',
-                                borderRadius: '20px',
-                                fontSize: '12px'
-                              }}
-                            >
-                              {hito.obligatorio ? 'Sí' : 'No'}
-                            </span>
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            color: atisaStyles.colors.dark,
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
-                            {hito.tipo}
-                          </td>
-                          <td style={{
-                            padding: '12px 8px',
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none'
-                          }}>
-                            <span
-                              className='badge'
-                              style={{
-                                backgroundColor: hito.habilitado === 1 ? atisaStyles.colors.secondary : '#6c757d',
-                                color: 'white',
-                                fontFamily: atisaStyles.fonts.secondary,
-                                fontWeight: '600',
-                                padding: '6px 12px',
-                                borderRadius: '20px',
-                                fontSize: '12px'
-                              }}
-                            >
-                              {hito.habilitado === 1 ? 'Sí' : 'No'}
-                            </span>
-                          </td>
-                          <td className='text-start' style={{
-                            padding: '12px 8px',
-                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                            borderLeft: 'none',
-                            borderRight: 'none',
-                            position: 'relative'
-                          }}>
-                            <div className='dropdown-container' style={{
-                              position: 'relative',
-                              display: 'inline-block',
-                              width: '100%'
-                            }}>
-                              <button
-                                ref={(el) => (buttonRefs.current[hito.id] = el)}
-                                className='btn'
-                                type='button'
-                                onClick={(e) => handleActionsClick(hito.id, e)}
-                                style={{
-                                  backgroundColor: atisaStyles.colors.primary,
-                                  border: `2px solid ${atisaStyles.colors.primary}`,
-                                  color: 'white',
-                                  fontFamily: atisaStyles.fonts.secondary,
-                                  fontWeight: '600',
-                                  borderRadius: '8px',
-                                  padding: '6px 12px',
-                                  fontSize: '12px',
-                                  transition: 'all 0.3s ease',
-                                  cursor: 'pointer'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                  e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                  e.currentTarget.style.borderColor = atisaStyles.colors.primary
-                                }}
-                              >
-                                Acciones
-                                <i className={`bi ${activeDropdown === hito.id ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
-                              </button>
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        <span
+                          className='badge'
+                          style={{
+                            backgroundColor: hito.obligatorio ? atisaStyles.colors.secondary : atisaStyles.colors.accent,
+                            color: 'white',
+                            fontFamily: atisaStyles.fonts.secondary,
+                            fontWeight: '600',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px'
+                          }}
+                        >
+                          {hito.obligatorio ? 'Sí' : 'No'}
+                        </span>
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        color: atisaStyles.colors.dark,
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        {hito.tipo}
+                      </td>
+                      <td style={{
+                        padding: '12px 8px',
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none'
+                      }}>
+                        <span
+                          className='badge'
+                          style={{
+                            backgroundColor: hito.habilitado === 1 ? atisaStyles.colors.secondary : '#6c757d',
+                            color: 'white',
+                            fontFamily: atisaStyles.fonts.secondary,
+                            fontWeight: '600',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px'
+                          }}
+                        >
+                          {hito.habilitado === 1 ? 'Sí' : 'No'}
+                        </span>
+                      </td>
+                      <td className='text-start' style={{
+                        padding: '12px 8px',
+                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                        borderLeft: 'none',
+                        borderRight: 'none',
+                        position: 'relative'
+                      }}>
+                        <div className='dropdown-container' style={{
+                          position: 'relative',
+                          display: 'inline-block',
+                          width: '100%'
+                        }}>
+                          <button
+                            ref={(el) => (buttonRefs.current[hito.id] = el)}
+                            className='btn'
+                            type='button'
+                            onClick={(e) => handleActionsClick(hito.id, e)}
+                            style={{
+                              backgroundColor: atisaStyles.colors.primary,
+                              border: `2px solid ${atisaStyles.colors.primary}`,
+                              color: 'white',
+                              fontFamily: atisaStyles.fonts.secondary,
+                              fontWeight: '600',
+                              borderRadius: '8px',
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              transition: 'all 0.3s ease',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                              e.currentTarget.style.borderColor = atisaStyles.colors.accent
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                              e.currentTarget.style.borderColor = atisaStyles.colors.primary
+                            }}
+                          >
+                            Acciones
+                            <i className={`bi ${activeDropdown === hito.id ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
+                          </button>
 
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                </table>
+              </div>
+            )}
 
-              {filteredHitos.length > 0 && (
-                <SharedPagination
-                  currentPage={page}
-                  totalItems={total}
-                  pageSize={limit}
-                  onPageChange={setPage}
-                />
-              )}
-            </>
-          )}
-        </KTCardBody>
+            {filteredHitos.length > 0 && (
+              <SharedPagination
+                currentPage={page}
+                  totalItems={totalForPagination}
+                pageSize={limit}
+                onPageChange={setPage}
+              />
+            )}
+          </>
+        )}
+      </KTCardBody>
 
-        {/* Dropdown con portal */}
-        {activeDropdown !== null && dropdownPosition && createPortal(
+      {/* Dropdown con portal */}
+      {activeDropdown !== null && dropdownPosition && createPortal(
+        <div
+          className="dropdown-portal"
+          style={{
+            position: 'absolute',
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            backgroundColor: 'white',
+            border: `2px solid ${atisaStyles.colors.light}`,
+            borderRadius: '8px',
+            boxShadow: '0 8px 25px rgba(0, 80, 92, 0.3)',
+            zIndex: 99999,
+            minWidth: '160px',
+            maxWidth: '200px'
+          }}
+        >
           <div
-            className="dropdown-portal"
             style={{
-              position: 'absolute',
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              backgroundColor: 'white',
-              border: `2px solid ${atisaStyles.colors.light}`,
-              borderRadius: '8px',
-              boxShadow: '0 8px 25px rgba(0, 80, 92, 0.3)',
-              zIndex: 99999,
-              minWidth: '160px',
-              maxWidth: '200px'
+              padding: '8px 0',
+              fontFamily: atisaStyles.fonts.secondary
             }}
           >
-            <div
+            <button
+              onClick={() => {
+                const hito = hitos.find(h => h.id === activeDropdown)
+                if (hito) {
+                  setHitoEditando(hito)
+                  setShowModal(true)
+                }
+                setActiveDropdown(null)
+                setDropdownPosition(null)
+              }}
               style={{
-                padding: '8px 0',
-                fontFamily: atisaStyles.fonts.secondary
+                width: '100%',
+                textAlign: 'left',
+                padding: '12px 16px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: atisaStyles.colors.primary,
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '0'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                e.currentTarget.style.color = atisaStyles.colors.accent
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = atisaStyles.colors.primary
               }}
             >
-              <button
-                onClick={() => {
-                  const hito = hitos.find(h => h.id === activeDropdown)
-                  if (hito) {
-                    setHitoEditando(hito)
-                    setShowModal(true)
-                  }
-                  setActiveDropdown(null)
-                  setDropdownPosition(null)
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px 16px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: atisaStyles.colors.primary,
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: '0'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                  e.currentTarget.style.color = atisaStyles.colors.accent
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = atisaStyles.colors.primary
-                }}
-              >
-                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
-                Editar
+              <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+              Editar
               </button>
 
               <div style={{
@@ -1106,59 +1180,59 @@ const HitosList: FC = () => {
                    style={{ fontSize: '16px', color: 'white' }}
                  ></i>
                  {hitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'Deshabilitar' : 'Habilitar'}
-               </button>
+            </button>
 
-              <div style={{
-                height: '1px',
-                backgroundColor: atisaStyles.colors.light,
-                margin: '4px 0'
-              }}></div>
+            <div style={{
+              height: '1px',
+              backgroundColor: atisaStyles.colors.light,
+              margin: '4px 0'
+            }}></div>
 
-              <button
-                onClick={() => {
-                  handleEliminar(activeDropdown)
-                  setActiveDropdown(null)
-                  setDropdownPosition(null)
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px 16px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: '#dc3545',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: '0'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8d7da'
-                  e.currentTarget.style.color = '#721c24'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = '#dc3545'
-                }}
-              >
-                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'white' }}></i>
-                Eliminar
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
+            <button
+              onClick={() => {
+                handleEliminar(activeDropdown)
+                setActiveDropdown(null)
+                setDropdownPosition(null)
+              }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '12px 16px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: '#dc3545',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '0'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f8d7da'
+                e.currentTarget.style.color = '#721c24'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = '#dc3545'
+              }}
+            >
+              <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+              Eliminar
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
 
-        <HitoModal
-          show={showModal}
-          onHide={() => setShowModal(false)}
-          onSave={handleSaveHito}
-          hito={hitoEditando}
-        />
+      <HitoModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        onSave={handleSaveHito}
+        hito={hitoEditando}
+      />
 
         {/* Modal para deshabilitar hito */}
         {showDeshabilitarModal && hitoADeshabilitar && (
@@ -1248,58 +1322,213 @@ const HitosList: FC = () => {
 
         {/* Modal de confirmación para deshabilitar */}
         {showConfirmarDeshabilitar && hitoADeshabilitar && (
-          <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            style={{
+              background: 'rgba(0, 80, 92, 0.5)',
+              zIndex: 10000,
+              backdropFilter: 'blur(2px)'
+            }}
+          >
             <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header" style={{ backgroundColor: '#f59e0b', color: 'white' }}>
-                  <h5 className="modal-title" style={{ color: 'white' }}>
-                    <i className="bi bi-exclamation-triangle me-2"></i>
+              <div
+                className="modal-content"
+                style={{
+                  borderRadius: '16px',
+                  border: `2px solid ${atisaStyles.colors.light}`,
+                  boxShadow: '0 12px 40px rgba(0, 80, 92, 0.4)',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  overflow: 'hidden'
+                }}
+              >
+                <div
+                  className="modal-header"
+                  style={{
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    borderRadius: '14px 14px 0 0',
+                    border: 'none',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <h5
+                    className="modal-title"
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      margin: 0,
+                      fontSize: '1.3rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                  >
+                    <i className="bi bi-exclamation-triangle-fill" style={{ color: 'white', fontSize: '1.5rem' }}></i>
                     Confirmar Deshabilitación
                   </h5>
                   <button
                     type="button"
                     className="btn-close btn-close-white"
                     onClick={cancelarDeshabilitar}
+                    style={{
+                      filter: 'invert(1)',
+                      opacity: 0.8,
+                      transition: 'opacity 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0.8'
+                    }}
                   ></button>
                 </div>
-                <div className="modal-body">
-                  <div className="text-center">
-                    <i
-                      className="bi bi-exclamation-triangle-fill"
+                <div
+                  className="modal-body"
+                  style={{
+                    padding: '28px 24px',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '16px',
+                      marginBottom: '20px'
+                    }}
+                  >
+                    <div
                       style={{
-                        fontSize: '48px',
-                        color: '#f59e0b',
-                        marginBottom: '16px'
+                        backgroundColor: '#fff3cd',
+                        borderRadius: '50%',
+                        width: '48px',
+                        height: '48px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
                       }}
-                    ></i>
-                    <h4 style={{ color: atisaStyles.colors.primary, marginBottom: '16px' }}>
-                      ¿Está seguro de deshabilitar este hito?
-                    </h4>
-                    <p style={{ color: atisaStyles.colors.dark, marginBottom: '8px' }}>
-                      <strong>Hito:</strong> {hitoADeshabilitar.nombre}
-                    </p>
-                    <p style={{ color: atisaStyles.colors.dark, marginBottom: '16px' }}>
-                      <strong>Fecha desde:</strong> {fechaDesdeDeshabilitar}
-                    </p>
-                    <div className="alert alert-danger" style={{ marginBottom: '0' }}>
-                      <i className="bi bi-info-circle me-2"></i>
-                      <strong>Esta acción No se puede deshacer</strong>
+                    >
+                      <i className="bi bi-exclamation-triangle-fill" style={{ color: '#f59e0b', fontSize: '24px' }}></i>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4
+                        style={{
+                          color: atisaStyles.colors.primary,
+                          marginBottom: '16px',
+                          fontFamily: atisaStyles.fonts.primary,
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem'
+                        }}
+                      >
+                        ¿Está seguro de deshabilitar este hito?
+                      </h4>
+                      <div
+                        style={{
+                          backgroundColor: '#f8f9fa',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          border: `1px solid ${atisaStyles.colors.light}`
+                        }}
+                      >
+                        <p style={{ color: atisaStyles.colors.dark, marginBottom: '8px', fontFamily: atisaStyles.fonts.secondary }}>
+                          <strong>Hito:</strong> {hitoADeshabilitar.nombre}
+                        </p>
+                        <p style={{ color: atisaStyles.colors.dark, marginBottom: '0', fontFamily: atisaStyles.fonts.secondary }}>
+                          <strong>Fecha desde:</strong> {fechaDesdeDeshabilitar}
+                        </p>
+                      </div>
+                      <div
+                        className="alert"
+                        style={{
+                          backgroundColor: '#f8d7da',
+                          border: '1px solid #f5c6cb',
+                          color: '#721c24',
+                          borderRadius: '8px',
+                          marginBottom: '0',
+                          fontFamily: atisaStyles.fonts.secondary
+                        }}
+                      >
+                        <i className="bi bi-info-circle me-2"></i>
+                        <strong>Esta acción No se puede deshacer</strong>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div
+                  className="modal-footer"
+                  style={{
+                    border: 'none',
+                    padding: '20px 24px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '0 0 14px 14px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '12px'
+                  }}
+                >
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn"
                     onClick={cancelarDeshabilitar}
+                    style={{
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(108, 117, 125, 0.2)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#5a6268'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6c757d'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(108, 117, 125, 0.2)'
+                    }}
                   >
                     <i className="bi bi-x-circle me-2"></i>
                     Cancelar
                   </button>
                   <button
                     type="button"
-                    className="btn btn-danger"
+                    className="btn"
                     onClick={confirmarDeshabilitar}
+                    style={{
+                      backgroundColor: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#d97706'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f59e0b'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)'
+                    }}
                   >
                     <i className="bi bi-check-circle me-2"></i>
                     Confirmar Deshabilitación
@@ -1317,7 +1546,7 @@ const HitosList: FC = () => {
           message={toastMessage}
           type={toastType}
           delay={5000}
-        />
+      />
       </KTCard>
     </div>
   )

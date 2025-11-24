@@ -20,11 +20,6 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const [sortField, setSortField] = useState<string>('idcliente')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
-  // Cargar todos los clientes al inicio
-  useEffect(() => {
-    loadAllClientes()
-  }, [])
-
   // Debounce para el término de búsqueda
   useEffect(() => {
     if (searchTerm) {
@@ -33,28 +28,48 @@ const ClientesDocumentalCalendarioList: FC = () => {
 
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
+      // No establecer searching en false aquí, se establecerá cuando termine loadAllClientes
     }, 300) // 300ms de delay
 
     return () => {
       clearTimeout(timer)
-      setSearching(false)
+      if (!searchTerm) {
+        setSearching(false)
+      }
     }
   }, [searchTerm])
 
-  // Cargar la página actual
+  // Cargar clientes paginados cuando NO hay búsqueda
   useEffect(() => {
-    if (!debouncedSearchTerm) {
+    if (!debouncedSearchTerm.trim()) {
       loadClientes()
     }
   }, [page, sortField, sortDirection, debouncedSearchTerm])
 
+  // Cargar todos los clientes cuando hay búsqueda
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      setPage(1) // Resetear a la primera página cuando hay búsqueda
+      loadAllClientes()
+    } else {
+      // Limpiar todos los clientes cuando no hay búsqueda
+      setAllClientes([])
+    }
+  }, [debouncedSearchTerm])
+
   const loadAllClientes = async () => {
     try {
-      const response = await getAllClientes() // Sin parámetros para obtener todos
+      setLoading(true)
+      setSearching(true)
+      // Cargar todos los clientes sin paginación para búsqueda
+      const response = await getAllClientes()
       setAllClientes(response.clientes || [])
     } catch (error) {
+      setError('Error al cargar los clientes')
       console.error('Error al cargar todos los clientes:', error)
+    } finally {
+      setLoading(false)
+      setSearching(false)
     }
   }
 
@@ -97,33 +112,57 @@ const ClientesDocumentalCalendarioList: FC = () => {
     )
   }
 
+  // Función auxiliar para normalizar texto (sin tildes, sin mayúsculas)
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return ''
+    return String(text)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+  }
+
   // Filtrar clientes usando useMemo para optimizar el rendimiento
   const filteredClientes = useMemo(() => {
-    if (!debouncedSearchTerm) {
-      return allClientes
-    }
+    // Si hay búsqueda, usar allClientes; si no, usar clientes paginados
+    const clientesToFilter = debouncedSearchTerm.trim() ? allClientes : clientes
 
-    const searchLower = debouncedSearchTerm.toLowerCase()
-    return allClientes.filter((cliente) => {
-      return (
-        cliente.idcliente.toLowerCase().includes(searchLower) ||
-        (cliente.razsoc?.toLowerCase().includes(searchLower) || false) ||
-        (cliente.cif?.toLowerCase().includes(searchLower) || false) ||
-        (cliente.localidad?.toLowerCase().includes(searchLower) || false)
-      )
+    if (!debouncedSearchTerm || !debouncedSearchTerm.trim()) return clientesToFilter
+
+    // Normalizar el término de búsqueda (asegurarse de que se convierta a string y luego normalizar)
+    const searchTermStr = String(debouncedSearchTerm).trim()
+    if (!searchTermStr) return clientesToFilter
+
+    const searchNormalized = normalizeText(searchTermStr)
+
+    return clientesToFilter.filter((cliente) => {
+      const idclienteNormalized = normalizeText(String(cliente.idcliente || ''))
+      const razsocNormalized = normalizeText(cliente.razsoc || '')
+      const cifNormalized = normalizeText(cliente.cif || '')
+      const localidadNormalized = normalizeText(cliente.localidad || '')
+
+      return idclienteNormalized.includes(searchNormalized) ||
+        razsocNormalized.includes(searchNormalized) ||
+        cifNormalized.includes(searchNormalized) ||
+        localidadNormalized.includes(searchNormalized)
     })
-  }, [allClientes, debouncedSearchTerm])
+  }, [clientes, allClientes, debouncedSearchTerm])
 
-  // Actualizar clientes mostrados cuando cambie el filtro
-  useEffect(() => {
-    if (debouncedSearchTerm) {
-      setClientes(filteredClientes)
-      setTotal(filteredClientes.length)
-      setPage(1) // Reset a la primera página cuando se busca
-    } else {
-      loadClientes()
+  // Aplicar paginación a los resultados filtrados
+  const paginatedClientes = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return filteredClientes
     }
-  }, [filteredClientes, debouncedSearchTerm])
+    // Cuando hay búsqueda, aplicar paginación a los resultados filtrados
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredClientes.slice(startIndex, endIndex)
+  }, [filteredClientes, page, limit, debouncedSearchTerm])
+
+  // Calcular el total para la paginación
+  const totalForPagination = useMemo(() => {
+    return debouncedSearchTerm.trim() ? filteredClientes.length : total
+  }, [filteredClientes.length, total, debouncedSearchTerm])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -159,7 +198,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
       <div
         className='text-center mb-8'
         style={{
-          backgroundColor: atisaStyles.colors.primary,
+          background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
           color: 'white',
           padding: '32px 24px',
           borderRadius: '12px',
@@ -173,7 +212,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
             fontWeight: 'bold',
             color: 'white',
             margin: 0,
-            fontSize: '2.5rem'
+            fontSize: '2rem'
           }}
         >
           <i className="bi bi-building me-3" style={{ color: 'white' }}></i>
@@ -363,7 +402,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
             </tr>
           </thead>
           <tbody>
-            {clientes.map((cliente, index) => (
+            {paginatedClientes.map((cliente, index) => (
               <tr
                 key={cliente.idcliente}
                 style={{
@@ -537,11 +576,11 @@ const ClientesDocumentalCalendarioList: FC = () => {
       </div>
 
       {/* Mostrar paginación siempre que haya datos */}
-      {!loading && !error && clientes.length > 0 && (
+      {!loading && !error && filteredClientes.length > 0 && (
         <div className='d-flex justify-content-end mt-5'>
           <SharedPagination
             currentPage={page}
-            totalItems={total}
+            totalItems={totalForPagination}
             pageSize={limit}
             onPageChange={setPage}
           />

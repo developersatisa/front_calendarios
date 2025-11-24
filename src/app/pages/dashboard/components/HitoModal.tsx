@@ -191,6 +191,7 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
             >
               <option value='Atisa'>Atisa</option>
               <option value='Cliente'>Cliente</option>
+              <option value="Terceros">Terceros</option>
             </select>
           </div>
 

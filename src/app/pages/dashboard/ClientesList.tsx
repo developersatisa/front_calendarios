@@ -8,12 +8,13 @@ import SharedPagination from '../../components/pagination/SharedPagination'
 import ClienteProcesosModal from './components/ClienteProcesosModal'
 import { GenerarCalendarioParams } from '../../api/clienteProcesos'
 import { getAllProcesos, Proceso } from '../../api/procesos'
-import { generarCalendarioClienteProceso } from '../../api/clienteProcesos'
+import { generarCalendarioClienteProceso, getClienteProcesosByCliente } from '../../api/clienteProcesos'
 import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getActionsButtonStyles} from '../../styles/atisaStyles'
 
 const ClientesList: FC = () => {
   const navigate = useNavigate()
   const [clientes, setClientes] = useState<Cliente[]>([])
+  const [allClientes, setAllClientes] = useState<Cliente[]>([]) // Todos los clientes para búsqueda
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState<number>(1)
@@ -30,6 +31,7 @@ const ClientesList: FC = () => {
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
+  const [clientesConProcesos, setClientesConProcesos] = useState<Set<string>>(new Set())
   const limit = 10
 
   useEffect(() => {
@@ -45,24 +47,32 @@ const ClientesList: FC = () => {
 
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
+      // No establecer searching en false aquí, se establecerá cuando termine loadAllClientes
     }, 300) // 300ms de delay
 
     return () => {
       clearTimeout(timer)
-      setSearching(false)
+      if (!searchTerm) {
+        setSearching(false)
+      }
     }
   }, [searchTerm])
 
+  // Cargar clientes paginados cuando NO hay búsqueda
   useEffect(() => {
-    loadClientes()
-  }, [page, sortField, sortDirection])
-
-  useEffect(() => {
-    if (page !== 1) {
-      setPage(1)
-    } else {
+    if (!debouncedSearchTerm.trim()) {
       loadClientes()
+    }
+  }, [page, sortField, sortDirection, debouncedSearchTerm])
+
+  // Cargar todos los clientes cuando hay búsqueda
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      setPage(1) // Resetear a la primera página cuando hay búsqueda
+      loadAllClientes()
+    } else {
+      // Limpiar todos los clientes cuando no hay búsqueda
+      setAllClientes([])
     }
   }, [debouncedSearchTerm])
 
@@ -159,11 +169,79 @@ const ClientesList: FC = () => {
       const data = await getAllClientes(page, limit, sortField, sortDirection)
       setClientes(data.clientes || [])
       setTotal(data.total)
+
+      // Verificar qué clientes tienen procesos asignados
+      if (data.clientes && data.clientes.length > 0) {
+        await verificarProcesosDeClientes(data.clientes)
+      }
     } catch (error) {
       setError('Error al cargar los clientes')
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const verificarProcesosDeClientes = async (clientesList: Cliente[]) => {
+    try {
+      const procesosPromises = clientesList.map(async (cliente) => {
+        try {
+          const response = await getClienteProcesosByCliente(cliente.idcliente)
+          return {
+            clienteId: cliente.idcliente,
+            tieneProcesos: (response.clienteProcesos || []).length > 0
+          }
+        } catch (error) {
+          console.error(`Error al verificar procesos del cliente ${cliente.idcliente}:`, error)
+          return {
+            clienteId: cliente.idcliente,
+            tieneProcesos: false
+          }
+        }
+      })
+
+      const resultados = await Promise.all(procesosPromises)
+      const nuevosClientesConProcesos = new Set<string>()
+
+      resultados.forEach((resultado) => {
+        if (resultado.tieneProcesos) {
+          nuevosClientesConProcesos.add(resultado.clienteId)
+        }
+      })
+
+      setClientesConProcesos(prev => {
+        const actualizado = new Set(prev)
+        resultados.forEach((resultado) => {
+          if (resultado.tieneProcesos) {
+            actualizado.add(resultado.clienteId)
+          } else {
+            actualizado.delete(resultado.clienteId)
+          }
+        })
+        return actualizado
+      })
+    } catch (error) {
+      console.error('Error al verificar procesos de clientes:', error)
+    }
+  }
+
+  const loadAllClientes = async () => {
+    try {
+      setLoading(true)
+      setSearching(true)
+      // Cargar todos los clientes sin paginación para búsqueda
+      const data = await getAllClientes()
+      setAllClientes(data.clientes || [])
+
+      // NO verificar procesos durante la búsqueda para mejorar el rendimiento
+      // Solo usaremos los datos que ya tenemos en clientesConProcesos
+      // La verificación se hará cuando se carguen los clientes paginados normalmente
+    } catch (error) {
+      setError('Error al cargar los clientes')
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+      setSearching(false)
     }
   }
 
@@ -176,17 +254,62 @@ const ClientesList: FC = () => {
     }
   }
 
-  // Filtrar clientes usando useMemo para optimizar el rendimiento
-  const filteredClientes = useMemo(() => {
-    if (!debouncedSearchTerm) return clientes
+  // Función auxiliar para normalizar texto (sin tildes, sin mayúsculas)
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return ''
+    return String(text)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+  }
 
-    const searchLower = debouncedSearchTerm.toLowerCase()
-    return clientes.filter((cliente) => {
-      return Object.values(cliente).some((value) =>
-        value?.toString().toLowerCase().includes(searchLower)
-      )
+  // Filtrar clientes usando useMemo para optimizar el rendimiento (solo por razón social)
+  const filteredClientes = useMemo(() => {
+    // Si hay búsqueda, usar allClientes; si no, usar clientes paginados
+    const clientesToFilter = debouncedSearchTerm.trim() ? allClientes : clientes
+
+    if (!debouncedSearchTerm || !debouncedSearchTerm.trim()) return clientesToFilter
+
+    // Normalizar el término de búsqueda (asegurarse de que se convierta a string y luego normalizar)
+    const searchTermStr = String(debouncedSearchTerm).trim()
+    if (!searchTermStr) return clientesToFilter
+
+    const searchNormalized = normalizeText(searchTermStr)
+
+    return clientesToFilter.filter((cliente) => {
+      // Buscar únicamente en el campo razón social (razsoc)
+      if (!cliente.razsoc) return false
+      const razsocNormalized = normalizeText(cliente.razsoc)
+      return razsocNormalized.includes(searchNormalized)
     })
-  }, [clientes, debouncedSearchTerm])
+  }, [clientes, allClientes, debouncedSearchTerm])
+
+  // Aplicar paginación a los resultados filtrados
+  const paginatedClientes = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return filteredClientes
+    }
+    // Cuando hay búsqueda, aplicar paginación a los resultados filtrados
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredClientes.slice(startIndex, endIndex)
+  }, [filteredClientes, page, limit, debouncedSearchTerm])
+
+  // Verificar procesos para los clientes visibles en la página actual (solo cuando hay búsqueda)
+  useEffect(() => {
+    if (debouncedSearchTerm.trim() && paginatedClientes.length > 0) {
+      // Verificar procesos solo para los clientes visibles en la página actual
+      // Esto asegura que los botones "Editar Calendario" aparezcan correctamente durante la búsqueda
+      verificarProcesosDeClientes(paginatedClientes)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginatedClientes, debouncedSearchTerm])
+
+  // Calcular el total para la paginación
+  const totalForPagination = useMemo(() => {
+    return debouncedSearchTerm.trim() ? filteredClientes.length : total
+  }, [filteredClientes.length, total, debouncedSearchTerm])
 
   const handleOpenModal = (cliente: Cliente) => {
     setSelectedCliente(cliente)
@@ -203,6 +326,16 @@ const ClientesList: FC = () => {
       for (const calendario of calendarios) {
         await generarCalendarioClienteProceso(calendario)
       }
+
+      // Actualizar el estado para mostrar los botones inmediatamente
+      if (selectedCliente && calendarios.length > 0) {
+        setClientesConProcesos(prev => {
+          const nuevo = new Set(prev)
+          nuevo.add(selectedCliente.idcliente)
+          return nuevo
+        })
+      }
+
       handleCloseModal()
       loadClientes() // Recargar la lista después de guardar
     } catch (error) {
@@ -224,69 +357,16 @@ const ClientesList: FC = () => {
         <div
           className='card-header border-0 pt-6'
           style={{
-            backgroundColor: atisaStyles.colors.primary,
+            background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
             color: 'white',
             borderRadius: '8px 8px 0 0',
             margin: 0,
             padding: '24px 16px'
           }}
         >
-          <div className='card-title'>
-            <h3 style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0
-            }}>
-              Gestión de Clientes
-            </h3>
-            <div className='d-flex align-items-center position-relative my-3' style={{ position: 'relative' }}>
-              <i
-                className='bi bi-search position-absolute ms-6'
-                style={{ color: atisaStyles.colors.light }}
-              ></i>
-              <input
-                type='text'
-                className='form-control form-control-solid w-250px ps-14'
-                placeholder='Buscar cliente...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  backgroundColor: 'white',
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  paddingRight: searching ? '50px' : '16px'
-                }}
-              />
-              {searching && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 10
-                  }}
-                >
-                  <div
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    style={{
-                      color: atisaStyles.colors.primary,
-                      width: '20px',
-                      height: '20px'
-                    }}
-                  >
-                    <span className="visually-hidden">Buscando...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className='card-toolbar'>
-            <div className='d-flex justify-content-end'>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            {/* Izquierda: Botón Volver + Buscador */}
+            <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
               <button
                 type='button'
                 className='btn'
@@ -302,9 +382,70 @@ const ClientesList: FC = () => {
                 }}
               >
                 <i className="bi bi-arrow-left me-2"></i>
-                Volver
+                Volver a Dashboard
               </button>
+              <div className='d-flex align-items-center position-relative' style={{ position: 'relative' }}>
+                <i
+                  className='bi bi-search position-absolute ms-6'
+                  style={{ color: atisaStyles.colors.light, zIndex: 1 }}
+                ></i>
+                <input
+                  type='text'
+                  className='form-control form-control-solid w-250px ps-14'
+                  placeholder='Buscar por razón social...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    backgroundColor: 'white',
+                    border: `2px solid ${atisaStyles.colors.light}`,
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '14px',
+                    paddingRight: searching ? '50px' : '16px'
+                  }}
+                />
+                {searching && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{
+                        color: atisaStyles.colors.primary,
+                        width: '20px',
+                        height: '20px'
+                      }}
+                    >
+                      <span className="visually-hidden">Buscando...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Centro: Título */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <h3 style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                fontSize: '2rem'
+              }}>
+                Gestión de Clientes
+              </h3>
+            </div>
+
+            {/* Derecha: Espacio vacío para balance */}
+            <div></div>
           </div>
         </div>
         <KTCardBody className='p-0'>
@@ -374,7 +515,7 @@ const ClientesList: FC = () => {
                       margin: 0
                     }}
                   >
-                    {debouncedSearchTerm ? 'No se encontraron clientes que coincidan con tu búsqueda.' : 'No hay clientes registrados en el sistema.'}
+                    {debouncedSearchTerm ? 'No se encontraron clientes con esa razón social.' : 'No hay clientes registrados en el sistema.'}
                   </p>
                 </div>
               ) : (
@@ -555,7 +696,7 @@ const ClientesList: FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredClientes.map((cliente, index) => (
+                      {paginatedClientes.map((cliente, index) => (
                         <tr
                           key={cliente.idcliente}
                           style={{
@@ -663,58 +804,34 @@ const ClientesList: FC = () => {
                                 <i className='bi bi-plus-circle me-2'></i>
                                 Generar Calendario
                               </button>
-                              <button
-                                className='btn btn-sm'
-                                onClick={() => navigate(`/cliente-calendario/${cliente.idcliente}`)}
-                                style={{
-                                  backgroundColor: atisaStyles.colors.accent,
-                                  border: `2px solid ${atisaStyles.colors.accent}`,
-                                  color: 'white',
-                                  fontFamily: atisaStyles.fonts.secondary,
-                                  fontWeight: '600',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  fontSize: '11px',
-                                  transition: 'all 0.3s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                  e.currentTarget.style.borderColor = atisaStyles.colors.primary
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                  e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                                }}
-                              >
-                                <i className='bi bi-eye me-2'></i>
-                                Ver Calendario
-                              </button>
-                              <button
-                                className='btn btn-sm'
-                                onClick={() => navigate(`/editar-calendario/${cliente.idcliente}`)}
-                                style={{
-                                  backgroundColor: atisaStyles.colors.primary,
-                                  border: `2px solid ${atisaStyles.colors.primary}`,
-                                  color: 'white',
-                                  fontFamily: atisaStyles.fonts.secondary,
-                                  fontWeight: '600',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  fontSize: '11px',
-                                  transition: 'all 0.3s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                                  e.currentTarget.style.borderColor = atisaStyles.colors.secondary
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                  e.currentTarget.style.borderColor = atisaStyles.colors.primary
-                                }}
-                              >
-                                <i className='bi bi-pencil-square me-2'></i>
-                                Editar Calendario
-                              </button>
+                              {clientesConProcesos.has(cliente.idcliente) && (
+                                <button
+                                  className='btn btn-sm'
+                                  onClick={() => navigate(`/editar-calendario/${cliente.idcliente}`)}
+                                  style={{
+                                    backgroundColor: atisaStyles.colors.primary,
+                                    border: `2px solid ${atisaStyles.colors.primary}`,
+                                    color: 'white',
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    fontWeight: '600',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '11px',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                                    e.currentTarget.style.borderColor = atisaStyles.colors.secondary
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                                    e.currentTarget.style.borderColor = atisaStyles.colors.primary
+                                  }}
+                                >
+                                  <i className='bi bi-pencil-square me-2'></i>
+                                  Editar Calendario
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -727,7 +844,7 @@ const ClientesList: FC = () => {
               {filteredClientes.length > 0 && (
                 <SharedPagination
                   currentPage={page}
-                  totalItems={total}
+                  totalItems={totalForPagination}
                   pageSize={limit}
                   onPageChange={setPage}
                 />

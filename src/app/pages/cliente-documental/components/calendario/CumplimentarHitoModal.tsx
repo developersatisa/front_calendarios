@@ -2,7 +2,7 @@ import { FC, useRef, useState, useEffect } from 'react'
 import { Modal, Button, Form, Accordion, ProgressBar, Alert } from 'react-bootstrap'
 import CustomToast from '../../../../components/ui/CustomToast'
 import { updateClienteProcesoHito, getClienteProcesoHitoById } from '../../../../api/clienteProcesoHitos'
-import { subirDocumento } from '../../../../api/documentos'
+import { subirDocumentoCumplimiento } from '../../../../api/documentosCumplimiento'
 import { createClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 import { atisaStyles } from '../../../../styles/atisaStyles'
 import { useAuth } from '../../../../modules/auth/core/Auth'
@@ -246,11 +246,26 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
 
     setLoading(true)
     try {
+      // Primero actualizar el estado del hito
+      await updateClienteProcesoHito(idClienteProcesoHito, {
+        estado: 'Finalizado',
+        fecha_estado: new Date().toISOString()
+      })
+
+      // Crear el cumplimiento primero para obtener el cumplimiento_id
+      const cumplimientoCreado = await createClienteProcesoHitoCumplimiento({
+        cliente_proceso_hito_id: idClienteProcesoHito,
+        fecha: fechaCumplimiento,
+        hora: horaCumplimiento,
+        observacion: observacion || undefined,
+        usuario: getCurrentUsername()
+      })
+
       // Si se incluyen documentos, subirlos uno por uno con manejo de errores individual
       let uploadedFiles = 0
       let failedFiles = 0
 
-      if (incluirDocumento && files.length > 0) {
+      if (incluirDocumento && files.length > 0 && cumplimientoCreado.id) {
         setShowUploadResults(true)
 
         for (let i = 0; i < files.length; i++) {
@@ -265,7 +280,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
           )
 
           try {
-            await subirDocumento(idClienteProcesoHito, fileName, file)
+            await subirDocumentoCumplimiento(cumplimientoCreado.id, fileName, file)
             uploadedFiles++
 
             // Marcar como exitoso
@@ -307,19 +322,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
           }
         }
       }
-
-      await updateClienteProcesoHito(idClienteProcesoHito, {
-        estado: 'Finalizado',
-        fecha_estado: new Date().toISOString()
-      })
-
-      await createClienteProcesoHitoCumplimiento({
-        cliente_proceso_hito_id: idClienteProcesoHito,
-        fecha: fechaCumplimiento,
-        hora: horaCumplimiento,
-        observacion: observacion || undefined,
-        usuario: getCurrentUsername()
-      })
 
       onUploadSuccess()
       onHide()
@@ -402,32 +404,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
           padding: '24px'
         }}
       >
-        {isFinalized ? (
-          <div
-            className="alert"
-            style={{
-              backgroundColor: '#d1ecf1',
-              border: `1px solid #bee5eb`,
-              color: '#0c5460',
-              borderRadius: '8px',
-              fontFamily: atisaStyles.fonts.secondary
-            }}
-          >
-            <h6
-              className="alert-heading"
-              style={{
-                fontFamily: atisaStyles.fonts.primary,
-                color: atisaStyles.colors.primary,
-                fontWeight: 'bold'
-              }}
-            >
-              <i className="bi bi-info-circle me-2"></i>
-              Proceso Finalizado
-            </h6>
-            <p className="mb-0">Este hito ya está finalizado. No es posible realizar cambios adicionales.</p>
-          </div>
-        ) : (
-          <Form onSubmit={handleSubmit}>
+        <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-4">
               <Form.Label
                 className="fw-bold"
@@ -898,7 +875,6 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
               )}
             </Button>
           </Form>
-        )}
       </Modal.Body>
 
       {/* Custom Toast */}

@@ -319,77 +319,212 @@ const DocumentosCategoriaList: FC<Props> = ({
       </Modal.Footer>
 
       {showDeleteConfirm && documentoToDelete && (
-        <Modal show={showDeleteConfirm} onHide={handleDeleteCancel} centered>
-          <Modal.Header
-            style={{
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px 12px 0 0',
-              padding: '20px 24px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <Modal.Title
-              style={{
-                fontFamily: atisaStyles.fonts.primary,
-                fontWeight: 'bold',
-                color: 'white',
-                fontSize: '1.5rem',
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}
-            >
-              <i className="bi bi-trash-fill me-2" style={{ color: 'white' }}></i>
-              Confirmar eliminación
-            </Modal.Title>
+        <div
+          className="modal fade show d-block"
+          tabIndex={-1}
+          style={{
+            background: 'rgba(0, 80, 92, 0.5)',
+            zIndex: 10000,
+            backdropFilter: 'blur(2px)'
+          }}
+        >
+          <div className="modal-dialog modal-dialog-centered">
             <div
-              className='btn btn-icon btn-sm'
-              onClick={handleDeleteCancel}
+              className="modal-content"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-                borderRadius: '8px',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-                e.currentTarget.style.transform = 'scale(1.1)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-                e.currentTarget.style.transform = 'scale(1)'
+                borderRadius: '16px',
+                border: `2px solid ${atisaStyles.colors.light}`,
+                boxShadow: '0 12px 40px rgba(0, 80, 92, 0.4)',
+                fontFamily: atisaStyles.fonts.secondary,
+                overflow: 'hidden'
               }}
             >
-              <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+              <div
+                className="modal-header"
+                style={{
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  borderRadius: '14px 14px 0 0',
+                  border: 'none',
+                  padding: '20px 24px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <h5
+                  className="modal-title"
+                  style={{
+                    fontFamily: atisaStyles.fonts.primary,
+                    fontWeight: 'bold',
+                    margin: 0,
+                    fontSize: '1.3rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}
+                >
+                  <i className="bi bi-trash-fill" style={{ color: 'white', fontSize: '1.5rem' }}></i>
+                  Confirmar eliminación
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={handleDeleteCancel}
+                  style={{
+                    filter: 'invert(1)',
+                    opacity: 0.8,
+                    transition: 'opacity 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '0.8'
+                  }}
+                ></button>
+              </div>
+              <div
+                className="modal-body"
+                style={{
+                  padding: '28px 24px',
+                  backgroundColor: 'white'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    marginBottom: '20px'
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: '#f8d7da',
+                      borderRadius: '50%',
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <i className="bi bi-exclamation-triangle-fill" style={{ color: '#dc3545', fontSize: '24px' }}></i>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p
+                      style={{
+                        fontFamily: atisaStyles.fonts.secondary,
+                        color: atisaStyles.colors.dark,
+                        margin: 0,
+                        lineHeight: '1.8',
+                        fontSize: '15px'
+                      }}
+                    >
+                      ¿Estás seguro de que quieres eliminar el documento <strong>"{documentoToDelete.original_file_name}"</strong>?
+                      <br />
+                      <br />
+                      <strong style={{ color: '#dc3545' }}>
+                        Esta acción no se puede deshacer.
+                      </strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                className="modal-footer"
+                style={{
+                  border: 'none',
+                  padding: '20px 24px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '0 0 14px 14px',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px'
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleDeleteCancel}
+                  style={{
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontWeight: '600',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 8px rgba(108, 117, 125, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#5a6268'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#6c757d'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(108, 117, 125, 0.2)'
+                  }}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleDeleteConfirm}
+                  disabled={deletingId === documentoToDelete.id}
+                  style={{
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontWeight: '600',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 8px rgba(220, 53, 69, 0.3)',
+                    opacity: deletingId === documentoToDelete.id ? 0.6 : 1,
+                    cursor: deletingId === documentoToDelete.id ? 'not-allowed' : 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (deletingId !== documentoToDelete.id) {
+                      e.currentTarget.style.backgroundColor = '#c82333'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.4)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (deletingId !== documentoToDelete.id) {
+                      e.currentTarget.style.backgroundColor = '#dc3545'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 53, 69, 0.3)'
+                    }
+                  }}
+                >
+                  {deletingId === documentoToDelete.id ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Eliminando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-trash me-2"></i>
+                      Eliminar
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </Modal.Header>
-          <Modal.Body>
-            ¿Estás seguro de que quieres eliminar el documento "{documentoToDelete.original_file_name}"?
-            Esta acción no se puede deshacer.
-          </Modal.Body>
-          <Modal.Footer className="bg-light">
-            <Button variant="outline-secondary" onClick={handleDeleteCancel}>
-              Cancelar
-            </Button>
-            <Button variant="danger" onClick={handleDeleteConfirm} disabled={deletingId === documentoToDelete.id}>
-              {deletingId === documentoToDelete.id ? (
-                <Spinner animation="border" size="sm" />
-              ) : (
-                "Eliminar"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+          </div>
+        </div>
       )}
 
       {/* Custom Toast */}

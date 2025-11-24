@@ -14,6 +14,7 @@ import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableH
 const ProcesosList: FC = () => {
   const navigate = useNavigate()
   const [procesos, setProcesos] = useState<Proceso[]>([])
+  const [allProcesos, setAllProcesos] = useState<Proceso[]>([]) // Todos los procesos para búsqueda
   const [procesoEditando, setProcesoEditando] = useState<Proceso | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -52,24 +53,32 @@ const ProcesosList: FC = () => {
 
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
+      // No establecer searching en false aquí, se establecerá cuando termine loadAllProcesos
     }, 300) // 300ms de delay
 
     return () => {
       clearTimeout(timer)
-      setSearching(false)
+      if (!searchTerm) {
+        setSearching(false)
+      }
     }
   }, [searchTerm])
 
+  // Cargar procesos paginados cuando NO hay búsqueda
   useEffect(() => {
-    loadAll()
-  }, [page, sortField, sortDirection])
-
-  useEffect(() => {
-    if (page !== 1) {
-      setPage(1)
-    } else {
+    if (!debouncedSearchTerm.trim()) {
       loadAll()
+    }
+  }, [page, sortField, sortDirection, debouncedSearchTerm])
+
+  // Cargar todos los procesos cuando hay búsqueda
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      setPage(1) // Resetear a la primera página cuando hay búsqueda
+      loadAllProcesos()
+    } else {
+      // Limpiar todos los procesos cuando no hay búsqueda
+      setAllProcesos([])
     }
   }, [debouncedSearchTerm])
 
@@ -180,6 +189,36 @@ const ProcesosList: FC = () => {
     }
   }
 
+  const loadAllProcesos = async () => {
+    try {
+      setLoading(true)
+      setSearching(true)
+      // Cargar todos los procesos sin paginación para búsqueda
+      const procesosData = await getAllProcesos()
+      setAllProcesos(procesosData.procesos || [])
+      // NO cargar datos adicionales durante la búsqueda para mejorar el rendimiento
+      // Solo cargar si realmente no están disponibles
+      if (hitos.length === 0 || procesoHitos.length === 0) {
+        const [hitosData, procesoHitosData] = await Promise.all([
+          getAllHitos(),
+          getAllProcesoHitosMaestro()
+        ])
+        setHitos(hitosData.hitos || [])
+        setProcesoHitos(procesoHitosData.ProcesoHitos || [])
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        setAllProcesos([])
+      } else {
+        setError('Error al cargar los procesos')
+        console.error('Error:', error)
+      }
+    } finally {
+      setLoading(false)
+      setSearching(false)
+    }
+  }
+
   const handleSaveProceso = async (procesoData: Omit<Proceso, 'id'>) => {
     try {
       if (procesoEditando) {
@@ -234,17 +273,53 @@ const ProcesosList: FC = () => {
     }
   }
 
+  // Función auxiliar para normalizar texto (sin tildes, sin mayúsculas)
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return ''
+    return String(text)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+  }
+
   // Filtrar procesos usando useMemo para optimizar el rendimiento
   const filteredProcesos = useMemo(() => {
-    if (!debouncedSearchTerm) return procesos
+    // Si hay búsqueda, usar allProcesos; si no, usar procesos paginados
+    const procesosToFilter = debouncedSearchTerm.trim() ? allProcesos : procesos
 
-    const searchLower = debouncedSearchTerm.toLowerCase()
-    return procesos.filter((proceso) => {
-      return Object.values(proceso).some(value =>
-        value?.toString().toLowerCase().includes(searchLower)
-      )
+    if (!debouncedSearchTerm || !debouncedSearchTerm.trim()) return procesosToFilter
+
+    // Normalizar el término de búsqueda (asegurarse de que se convierta a string y luego normalizar)
+    const searchTermStr = String(debouncedSearchTerm).trim()
+    if (!searchTermStr) return procesosToFilter
+
+    const searchNormalized = normalizeText(searchTermStr)
+
+    return procesosToFilter.filter((proceso) => {
+      return Object.values(proceso).some(value => {
+        if (value === null || value === undefined) return false
+        const valueNormalized = normalizeText(value.toString())
+        return valueNormalized.includes(searchNormalized)
+      })
     })
-  }, [procesos, debouncedSearchTerm])
+  }, [procesos, allProcesos, debouncedSearchTerm])
+
+  // Aplicar paginación a los resultados filtrados
+  const paginatedProcesos = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return filteredProcesos
+    }
+    // Cuando hay búsqueda, aplicar paginación a los resultados filtrados
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredProcesos.slice(startIndex, endIndex)
+  }, [filteredProcesos, page, limit, debouncedSearchTerm])
+
+  // Calcular el total para la paginación
+  const totalForPagination = useMemo(() => {
+    return debouncedSearchTerm.trim() ? filteredProcesos.length : total
+  }, [filteredProcesos.length, total, debouncedSearchTerm])
 
   const groupedProcesoHitos = procesoHitos.reduce((groups, ph) => {
     if (!groups[ph.proceso_id]) {
@@ -278,69 +353,16 @@ const ProcesosList: FC = () => {
         <div
           className='card-header border-0 pt-6'
           style={{
-            backgroundColor: atisaStyles.colors.primary,
+            background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
             color: 'white',
             borderRadius: '8px 8px 0 0',
             margin: 0,
             padding: '24px 16px'
           }}
         >
-          <div className='card-title'>
-            <h3 style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0
-            }}>
-              Gestión de Procesos
-            </h3>
-            <div className='d-flex align-items-center position-relative my-3' style={{ position: 'relative' }}>
-              <i
-                className='bi bi-search position-absolute ms-6'
-                style={{ color: atisaStyles.colors.light }}
-              ></i>
-              <input
-                type='text'
-                className='form-control form-control-solid w-250px ps-14'
-                placeholder='Buscar proceso...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  backgroundColor: 'white',
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  paddingRight: searching ? '50px' : '16px'
-                }}
-              />
-              {searching && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 10
-                  }}
-                >
-                  <div
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    style={{
-                      color: atisaStyles.colors.primary,
-                      width: '20px',
-                      height: '20px'
-                    }}
-                  >
-                    <span className="visually-hidden">Buscando...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className='card-toolbar'>
-            <div className='d-flex justify-content-end gap-2'>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            {/* Izquierda: Botón Volver + Buscador */}
+            <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
               <button
                 type='button'
                 className='btn'
@@ -356,8 +378,70 @@ const ProcesosList: FC = () => {
                 }}
               >
                 <i className="bi bi-arrow-left me-2"></i>
-                Volver
+                Volver a Dashboard
               </button>
+              <div className='d-flex align-items-center position-relative' style={{ position: 'relative' }}>
+                <i
+                  className='bi bi-search position-absolute ms-6'
+                  style={{ color: atisaStyles.colors.light, zIndex: 1 }}
+                ></i>
+                <input
+                  type='text'
+                  className='form-control form-control-solid w-250px ps-14'
+                  placeholder='Buscar proceso...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    backgroundColor: 'white',
+                    border: `2px solid ${atisaStyles.colors.light}`,
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '14px',
+                    paddingRight: searching ? '50px' : '16px'
+                  }}
+                />
+                {searching && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{
+                        color: atisaStyles.colors.primary,
+                        width: '20px',
+                        height: '20px'
+                      }}
+                    >
+                      <span className="visually-hidden">Buscando...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Centro: Título */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <h3 style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                fontSize: '2rem'
+              }}>
+                Gestión de Procesos
+              </h3>
+            </div>
+
+            {/* Derecha: Botón Nuevo */}
+            <div className='d-flex gap-2' style={{ justifyContent: 'flex-end' }}>
               <button
                 type='button'
                 className='btn'
@@ -565,7 +649,7 @@ const ProcesosList: FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProcesos.map((proceso, index) => (
+                      {paginatedProcesos.map((proceso, index) => (
                         <tr
                           key={proceso.id}
                           style={{
@@ -695,7 +779,7 @@ const ProcesosList: FC = () => {
               {filteredProcesos.length > 0 && (
                 <SharedPagination
                   currentPage={page}
-                  totalItems={total}
+                  totalItems={totalForPagination}
                   pageSize={limit}
                   onPageChange={setPage}
                 />
