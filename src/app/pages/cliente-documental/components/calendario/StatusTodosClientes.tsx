@@ -577,7 +577,7 @@ const StatusTodosClientes: FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                         <button
                             className="btn"
-                            onClick={() => navigate(`/clientes`)}
+                            onClick={() => navigate(`/clientes-documental-calendario`)}
                             style={getSecondaryButtonStyles()}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.backgroundColor = 'white'
@@ -589,7 +589,7 @@ const StatusTodosClientes: FC = () => {
                             }}
                         >
                             <i className="bi bi-arrow-left" style={{ color: 'inherit' }}></i>
-                            Volver a Gestión de Clientes
+                            Volver a Gestor Documental / Clientes
                         </button>
                     </div>
 
