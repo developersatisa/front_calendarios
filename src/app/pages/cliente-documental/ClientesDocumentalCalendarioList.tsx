@@ -196,7 +196,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
         }}
       >
       <div
-        className='text-center mb-8'
+        className='mb-8'
         style={{
           background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
           color: 'white',
@@ -206,29 +206,73 @@ const ClientesDocumentalCalendarioList: FC = () => {
           marginBottom: '24px'
         }}
       >
-        <h1
-          style={{
-            fontFamily: atisaStyles.fonts.primary,
-            fontWeight: 'bold',
-            color: 'white',
-            margin: 0,
-            fontSize: '2rem'
-          }}
-        >
-          <i className="bi bi-building me-3" style={{ color: 'white' }}></i>
-          Gestor Documental/Calendario
-        </h1>
-        <h4
-          style={{
-            fontFamily: atisaStyles.fonts.secondary,
-            color: atisaStyles.colors.light,
-            margin: '8px 0 0 0',
-            fontSize: '1.2rem',
-            fontWeight: '500'
-          }}
-        >
-          Directorio de empresas
-        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+          {/* Columna izquierda: Espacio vacío */}
+          <div></div>
+
+          {/* Columna centro: Título */}
+          <div style={{ textAlign: 'center' }}>
+            <h1
+              style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                fontSize: '2rem'
+              }}
+            >
+              <i className="bi bi-building me-3" style={{ color: 'white' }}></i>
+              Gestor Documental/Calendario
+            </h1>
+            <h4
+              style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                color: atisaStyles.colors.light,
+                margin: '8px 0 0 0',
+                fontSize: '1.2rem',
+                fontWeight: '500'
+              }}
+            >
+              Directorio de empresas
+            </h4>
+          </div>
+
+          {/* Columna derecha: Botón Ver Status Global */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type='button'
+              className='btn'
+              onClick={() => navigate('/status-todos-clientes')}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                padding: '10px 20px',
+                fontSize: '14px',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              <i className="bi bi-info-circle" style={{ color: 'white' }}></i>
+              Ver Status Global
+            </button>
+          </div>
+        </div>
       </div>
 
       <div

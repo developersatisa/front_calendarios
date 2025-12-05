@@ -20,6 +20,7 @@ import GestorDocumental from '../pages/cliente-documental/components/gestor_docu
 import MetricasList from '../pages/dashboard-metricas/MetricasList'
 import HistoricoCumplimientos from '../pages/cliente-documental/components/calendario/HistoricoCumplimientos'
 import StatusCliente from '../pages/cliente-documental/components/calendario/StatusCliente'
+import StatusTodosClientes from '../pages/cliente-documental/components/calendario/StatusTodosClientes'
 
 
 
@@ -50,6 +51,7 @@ const PrivateRoutes = () => {
         <Route path='gestor-documental/:clienteId' element={<GestorDocumentalWrapper />} />
         <Route path='historico-cumplimientos/:clienteId' element={<HistoricoCumplimientosWrapper />} />
         <Route path='status-cliente/:clienteId' element={<StatusClienteWrapper />} />
+        <Route path='status-todos-clientes' element={<StatusTodosClientes />} />
         {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
         {/* Lazy Modules */}
