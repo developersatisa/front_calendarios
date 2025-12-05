@@ -2,33 +2,30 @@ import { FC, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { atisaStyles, getSecondaryButtonStyles } from '../../../../styles/atisaStyles'
 import SharedPagination from '../../../../components/pagination/SharedPagination'
-import { getClienteProcesoHitoCumplimientosByCliente, ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
 import { Cliente, getClienteById } from '../../../../api/clientes'
-import { getAllHitos, Hito } from '../../../../api/hitos'
-import { getAllProcesos, Proceso } from '../../../../api/procesos'
-import { descargarDocumentosCumplimiento } from '../../../../api/documentosCumplimiento'
-import { getClienteProcesoHitoById, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { getClienteProcesosByCliente } from '../../../../api/clienteProcesos'
+import { getClienteProcesoHitosHabilitadosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
+import { getAllHitos } from '../../../../api/hitos'
+import { getAllProcesos } from '../../../../api/procesos'
+import { getClienteProcesoHitoCumplimientosByHito, ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
+import api from '../../../../api/axiosConfig'
 
-// Extendemos la interfaz para incluir los campos adicionales que devuelve el endpoint
-interface CumplimientoHistorico extends ClienteProcesoHitoCumplimiento {
-    proceso?: string
-    hito?: string
-    fecha_limite?: string
-    hora_limite?: string
-    proceso_id?: number
-    hito_id?: number
+// Extendemos la interfaz para incluir los campos adicionales
+interface HitoConInfo extends ClienteProcesoHito {
+    proceso_nombre?: string
+    hito_nombre?: string
 }
 
 interface Props {
     clienteId: string
 }
 
-const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
+const StatusCliente: FC<Props> = ({ clienteId }) => {
     const navigate = useNavigate()
     const [cliente, setCliente] = useState<Cliente | null>(null)
-    const [cumplimientos, setCumplimientos] = useState<CumplimientoHistorico[]>([])
+    const [hitos, setHitos] = useState<HitoConInfo[]>([])
     const [loading, setLoading] = useState(false)
+    const [exporting, setExporting] = useState(false)
     const [total, setTotal] = useState(0)
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(10)
@@ -39,68 +36,108 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     const [searching, setSearching] = useState(false)
     const [selectedHito, setSelectedHito] = useState('')
     const [selectedProceso, setSelectedProceso] = useState('')
-    const [fechaDesde, setFechaDesde] = useState('')
+    const [selectedEstados, setSelectedEstados] = useState<Set<'cumplido_en_plazo' | 'cumplido_fuera_plazo' | 'vence_hoy' | 'pendiente_fuera_plazo' | 'pendiente_en_plazo'>>(new Set())
+    const [selectedTipos, setSelectedTipos] = useState<Set<string>>(new Set())
+    // Obtener fecha de hoy en formato YYYY-MM-DD para el input type="date"
+    const getTodayDate = () => {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const day = String(today.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+    const [fechaDesde, setFechaDesde] = useState(getTodayDate())
     const [fechaHasta, setFechaHasta] = useState('')
-    const [tipoFiltroFecha, setTipoFiltroFecha] = useState<'cumplimiento' | 'creacion' | 'limite'>('cumplimiento')
-    const [hitos, setHitos] = useState<Hito[]>([])
-    const [procesos, setProcesos] = useState<Proceso[]>([])
+    const [hitosMaestro, setHitosMaestro] = useState<any[]>([])
+    const [procesosList, setProcesosList] = useState<any[]>([])
     const [showFilters, setShowFilters] = useState(false)
-    const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
-    const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion'>('fecha_creacion')
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+    const [sortField, setSortField] = useState<'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo'>('fecha_limite')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+    const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
 
-    // Función para cargar cumplimientos
-    const cargarCumplimientos = async (page: number = 1) => {
+    // Función para normalizar texto
+    const normalizeText = (text: string | null | undefined): string => {
+        if (!text) return ''
+        return String(text)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+    }
+
+    // Función para cargar todos los hitos del cliente
+    const cargarHitos = async () => {
         setLoading(true)
         try {
-            const response = await getClienteProcesoHitoCumplimientosByCliente(
-                clienteId,
-                page,
-                itemsPerPage,
-                'fecha',
-                'desc'
-            )
-            const cumplimientosData = response.cumplimientos || []
-            setCumplimientos(cumplimientosData)
-            setTotal(response.total || 0)
+            // Obtener todos los procesos del cliente
+            const procesos = await getClienteProcesosByCliente(clienteId)
+
+            // Obtener todos los hitos habilitados de todos los procesos
+            const hitosPromises = procesos.clienteProcesos?.map(async (proceso) => {
+                try {
+                    const hitosData = await getClienteProcesoHitosHabilitadosByProceso(proceso.id)
+                    const procesoNombre = procesosList.find(p => p.id === proceso.proceso_id)?.nombre || 'Sin nombre'
+                    return hitosData.map(hito => ({
+                        ...hito,
+                        proceso_nombre: procesoNombre,
+                        hito_nombre: hitosMaestro.find(h => h.id === hito.hito_id)?.nombre || 'Sin nombre'
+                    }))
+                } catch (error) {
+                    console.warn(`Error cargando hitos para proceso ${proceso.id}:`, error)
+                    return []
+                }
+            }) || []
+
+            const todosLosHitos = (await Promise.all(hitosPromises)).flat()
+            setHitos(todosLosHitos)
+            setTotal(todosLosHitos.length)
+
+            // Cargar cumplimientos de forma asíncrona
+            if (todosLosHitos.length > 0) {
+                const cumplimientosPromises = todosLosHitos.map(hito =>
+                    getClienteProcesoHitoCumplimientosByHito(hito.id, 0, 1, 'id', 'desc')
+                        .then(cumplimientos => ({ hitoId: hito.id, cumplimientos: cumplimientos || [] }))
+                        .catch((error) => {
+                            console.warn(`Error cargando cumplimientos para hito ${hito.id}:`, error)
+                            return { hitoId: hito.id, cumplimientos: [] }
+                        })
+                )
+
+                const resultadosCumplimientos = await Promise.all(cumplimientosPromises)
+                const cumplimientosMap: Record<number, ClienteProcesoHitoCumplimiento[]> = {}
+                resultadosCumplimientos.forEach(({ hitoId, cumplimientos }) => {
+                    cumplimientosMap[hitoId] = cumplimientos || []
+                })
+                setCumplimientosPorHito(cumplimientosMap)
+            } else {
+                setCumplimientosPorHito({})
+            }
         } catch (error) {
-            console.error('Error cargando cumplimientos:', error)
-            setCumplimientos([])
+            console.error('Error cargando hitos:', error)
+            setHitos([])
             setTotal(0)
+            setCumplimientosPorHito({})
         } finally {
             setLoading(false)
         }
     }
 
-    // Función para descargar documentos de un cumplimiento
-    const handleDescargarDocumentos = async (cumplimientoId: number) => {
-        try {
-            setDownloadingCumplimientoId(cumplimientoId)
-            const blob = await descargarDocumentosCumplimiento(cumplimientoId)
-
-            // Crear URL del blob
-            const url = window.URL.createObjectURL(blob)
-
-            // Crear enlace temporal para descarga
-            const link = document.createElement('a')
-            link.href = url
-            link.download = `documentos-cumplimiento-${cumplimientoId}.zip`
-            link.style.display = 'none'
-
-            // Agregar al DOM, hacer clic y limpiar
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-
-            // Liberar la URL del blob
-            window.URL.revokeObjectURL(url)
-        } catch (error) {
-            console.error('Error al descargar documentos:', error)
-            alert('Error al descargar los documentos. Por favor, inténtalo de nuevo.')
-        } finally {
-            setDownloadingCumplimientoId(null)
+    // Cargar hitos maestro y procesos
+    useEffect(() => {
+        const cargarDatos = async () => {
+            try {
+                const [hitosRes, procesosRes] = await Promise.all([
+                    getAllHitos(),
+                    getAllProcesos()
+                ])
+                setHitosMaestro(hitosRes.hitos || [])
+                setProcesosList(procesosRes.procesos || [])
+            } catch (error) {
+                console.error('Error cargando datos:', error)
+            }
         }
-    }
+        cargarDatos()
+    }, [])
 
     // Debounce para el término de búsqueda
     useEffect(() => {
@@ -111,7 +148,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         const timer = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm)
             setSearching(false)
-        }, 300) // 300ms de delay
+        }, 300)
 
         return () => {
             clearTimeout(timer)
@@ -123,135 +160,14 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     useEffect(() => {
         if (clienteId) {
             getClienteById(clienteId).then(setCliente)
-            cargarCumplimientos(currentPage)
-        }
-    }, [clienteId, currentPage])
-
-    // Cargar hitos y procesos del cliente solo cuando cambia el clienteId
-    useEffect(() => {
-        if (clienteId) {
-            cargarHitosYProcesosDelCliente()
-        }
-    }, [clienteId])
-
-    // Cargar hitos y procesos únicos del cliente basados en sus cumplimientos
-    const cargarHitosYProcesosDelCliente = async () => {
-        try {
-            // Cargar todos los cumplimientos del cliente (sin paginación para obtener todos)
-            const response = await getClienteProcesoHitoCumplimientosByCliente(
-                clienteId,
-                1,
-                10000, // Límite alto para obtener todos
-                'fecha',
-                'desc'
-            )
-
-            const cumplimientosData = (response.cumplimientos || []) as CumplimientoHistorico[]
-
-            if (cumplimientosData.length === 0) {
-                setHitos([])
-                setProcesos([])
-                return
+            if (hitosMaestro.length > 0 && procesosList.length > 0) {
+                cargarHitos()
             }
-
-            // Primero intentar usar los campos directos si existen
-            const hitoIds = new Set<number>()
-            const procesoIds = new Set<number>()
-
-            cumplimientosData.forEach(cumplimiento => {
-                const cumpl = cumplimiento as any
-                if (cumpl.hito_id) {
-                    hitoIds.add(cumpl.hito_id)
-                }
-                if (cumpl.proceso_id) {
-                    procesoIds.add(cumpl.proceso_id)
-                }
-            })
-
-            // Si no encontramos los campos directos, obtenerlos desde cliente_proceso_hito
-            if (hitoIds.size === 0 || procesoIds.size === 0) {
-                // Extraer cliente_proceso_hito_id únicos
-                const clienteProcesoHitoIds = new Set<number>()
-                cumplimientosData.forEach(cumplimiento => {
-                    if (cumplimiento.cliente_proceso_hito_id) {
-                        clienteProcesoHitoIds.add(cumplimiento.cliente_proceso_hito_id)
-                    }
-                })
-
-                if (clienteProcesoHitoIds.size === 0) {
-                    setHitos([])
-                    setProcesos([])
-                    return
-                }
-
-                // Obtener todos los cliente_proceso_hito en paralelo
-                const clienteProcesoHitosPromises = Array.from(clienteProcesoHitoIds).map(id =>
-                    getClienteProcesoHitoById(id)
-                        .then(hito => ({ id, hito }))
-                        .catch(error => {
-                            console.warn(`Error obteniendo cliente_proceso_hito ${id}:`, error)
-                            return null
-                        })
-                )
-
-                const clienteProcesoHitosResults = await Promise.all(clienteProcesoHitosPromises)
-                const clienteProcesoHitos = clienteProcesoHitosResults.filter((r): r is { id: number, hito: ClienteProcesoHito } => r !== null)
-
-                if (clienteProcesoHitos.length === 0) {
-                    setHitos([])
-                    setProcesos([])
-                    return
-                }
-
-                // Extraer hito_id únicos desde cliente_proceso_hito
-                const clienteProcesoIds = new Set<number>()
-
-                clienteProcesoHitos.forEach(({ hito }) => {
-                    if (hito.hito_id) {
-                        hitoIds.add(hito.hito_id)
-                    }
-                    if (hito.cliente_proceso_id) {
-                        clienteProcesoIds.add(hito.cliente_proceso_id)
-                    }
-                })
-
-                // Obtener procesos del cliente para mapear cliente_proceso_id a proceso_id
-                const procesosCliente = await getClienteProcesosByCliente(clienteId)
-                const procesoIdMap = new Map<number, number>()
-                procesosCliente.clienteProcesos?.forEach(cp => {
-                    procesoIdMap.set(cp.id, cp.proceso_id)
-                })
-
-                // Mapear cliente_proceso_id a proceso_id
-                clienteProcesoIds.forEach(clienteProcesoId => {
-                    const procesoId = procesoIdMap.get(clienteProcesoId)
-                    if (procesoId) {
-                        procesoIds.add(procesoId)
-                    }
-                })
-            }
-
-            // Cargar todos los hitos y procesos maestros
-            const [hitosResponse, procesosResponse] = await Promise.all([
-                getAllHitos(),
-                getAllProcesos()
-            ])
-
-            // Filtrar solo los hitos y procesos que tiene el cliente
-            const hitosFiltrados = (hitosResponse.hitos || []).filter((hito: Hito) => hitoIds.has(hito.id))
-            const procesosFiltrados = (procesosResponse.procesos || []).filter((proceso: Proceso) => procesoIds.has(proceso.id))
-
-            setHitos(hitosFiltrados)
-            setProcesos(procesosFiltrados)
-        } catch (error) {
-            console.error('Error cargando hitos y procesos del cliente:', error)
-            // En caso de error, cargar listas vacías
-            setHitos([])
-            setProcesos([])
         }
-    }
+    }, [clienteId, hitosMaestro.length, procesosList.length])
 
     const formatDate = (date: string) => {
+        if (!date) return '-'
         const d = new Date(date)
         return d.toLocaleDateString('es-ES', {
             day: '2-digit',
@@ -260,21 +176,76 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         })
     }
 
-
-    const formatTime = (time: string) => {
+    const formatTime = (time: string | null) => {
         if (!time) return '-'
-
-        // Si ya está en formato HH:MM, devolverlo tal como está
         if (time.match(/^\d{2}:\d{2}$/)) {
             return time
         }
-
-        // Si viene en formato HH:MM:SS, quitar los segundos
         if (time.match(/^\d{2}:\d{2}:\d{2}$/)) {
             return time.substring(0, 5)
         }
-
         return time
+    }
+
+    // Determinar estado temporal del hito respecto a hoy (UTC)
+    const getEstadoVencimiento = (fechaLimite?: string | null, estado?: string) => {
+        if (!fechaLimite) return 'sin_fecha'
+        if (estado === 'Finalizado') return 'finalizado'
+        try {
+            const hoy = new Date()
+            const hoyUTC = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()))
+            const [y, m, d] = fechaLimite.split('-').map(Number)
+            const fecha = new Date(Date.UTC(y, m - 1, d))
+            if (fecha.getTime() < hoyUTC.getTime()) return 'vencido'
+            if (fecha.getTime() === hoyUTC.getTime()) return 'hoy'
+            return 'en_plazo'
+        } catch {
+            return 'en_plazo'
+        }
+    }
+
+    // Determinar si un hito vence mañana
+    const venceMañana = (fechaLimite?: string | null) => {
+        if (!fechaLimite) return false
+        try {
+            const hoy = new Date()
+            const mañanaUTC = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate() + 1))
+            const [y, m, d] = fechaLimite.split('-').map(Number)
+            const fecha = new Date(Date.UTC(y, m - 1, d))
+            return fecha.getTime() === mañanaUTC.getTime()
+        } catch {
+            return false
+        }
+    }
+
+    // Obtener fecha del último cumplimiento
+    const getUltimoCumplimientoDate = (hitoId: number): Date | null => {
+        const lista = cumplimientosPorHito[hitoId]
+        if (!lista || lista.length === 0) return null
+        const c = lista[0]
+        if (!c.fecha) return null
+        const horaStr = c.hora ? (c.hora.includes(':') ? c.hora : `${c.hora}:00`) : '00:00'
+        const dt = new Date(`${c.fecha}T${horaStr.length === 5 ? horaStr + ':00' : horaStr}`)
+        return isNaN(dt.getTime()) ? null : dt
+    }
+
+    // Obtener fecha límite con hora
+    const getFechaLimiteDate = (fechaLimite?: string | null, horaLimite?: string | null): Date | null => {
+        if (!fechaLimite) return null
+        const horaStr = horaLimite && !horaLimite.startsWith('00:00')
+            ? (horaLimite.includes(':') ? horaLimite : `${horaLimite}:00`)
+            : '23:59:59'
+        const dt = new Date(`${fechaLimite}T${horaStr.length === 5 ? horaStr + ':00' : horaStr}`)
+        return isNaN(dt.getTime()) ? null : dt
+    }
+
+    // Determinar si fue finalizado fuera de plazo
+    const isFinalizadoFueraDePlazo = (h: ClienteProcesoHito): boolean => {
+        if (h.estado !== 'Finalizado') return false
+        const ult = getUltimoCumplimientoDate(h.id)
+        const limite = getFechaLimiteDate(h.fecha_limite, h.hora_limite)
+        if (!ult || !limite) return false
+        return ult.getTime() > limite.getTime()
     }
 
     const handlePageChange = (page: number) => {
@@ -286,14 +257,115 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         setSearchTerm('')
         setSelectedHito('')
         setSelectedProceso('')
-        setFechaDesde('')
+        setSelectedEstados(new Set())
+        setSelectedTipos(new Set())
+        setFechaDesde(getTodayDate())
         setFechaHasta('')
-        setTipoFiltroFecha('cumplimiento')
         setCurrentPage(1)
     }
 
+    // Función para exportar a Excel
+    const exportarExcel = async () => {
+        setExporting(true)
+        try {
+            // Construir parámetros de query
+            const params = new URLSearchParams()
+
+            if (selectedHito) {
+                params.append('hito_id', selectedHito)
+            }
+
+            if (selectedProceso) {
+                params.append('proceso_nombre', selectedProceso)
+            }
+
+            if (fechaDesde) {
+                params.append('fecha_desde', fechaDesde)
+            }
+
+            if (fechaHasta) {
+                params.append('fecha_hasta', fechaHasta)
+            }
+
+            if (selectedEstados.size > 0) {
+                params.append('estados', Array.from(selectedEstados).join(','))
+            }
+
+            if (selectedTipos.size > 0) {
+                params.append('tipos', Array.from(selectedTipos).join(','))
+            }
+
+            if (debouncedSearchTerm) {
+                params.append('search_term', debouncedSearchTerm)
+            }
+
+            // Construir URL completa
+            const url = `/status-cliente/${clienteId}/exportar-excel${params.toString() ? `?${params.toString()}` : ''}`
+
+            // Hacer la petición para descargar el archivo
+            const response = await api.get(url, {
+                responseType: 'blob'
+            })
+
+            // Crear un blob con el archivo
+            const blob = new Blob([response.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            })
+
+            // Crear un enlace temporal para descargar
+            const urlBlob = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = urlBlob
+
+            // Obtener el nombre del archivo del header Content-Disposition o usar uno por defecto
+            const contentDisposition = response.headers['content-disposition']
+            let filename = `status_hitos_cliente_${clienteId}_${getTodayDate()}.xlsx`
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i)
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1]
+                }
+            }
+
+            link.setAttribute('download', filename)
+            document.body.appendChild(link)
+            link.click()
+
+            // Limpiar
+            link.remove()
+            window.URL.revokeObjectURL(urlBlob)
+        } catch (error) {
+            console.error('Error al exportar Excel:', error)
+            alert('Error al exportar el archivo Excel. Por favor, intente nuevamente.')
+        } finally {
+            setExporting(false)
+        }
+    }
+
+    // Función para toggle de estados
+    const toggleEstado = (estado: 'cumplido_en_plazo' | 'cumplido_fuera_plazo' | 'vence_hoy' | 'pendiente_fuera_plazo' | 'pendiente_en_plazo') => {
+        const nuevosEstados = new Set(selectedEstados)
+        if (nuevosEstados.has(estado)) {
+            nuevosEstados.delete(estado)
+        } else {
+            nuevosEstados.add(estado)
+        }
+        setSelectedEstados(nuevosEstados)
+    }
+
+    // Función para toggle de tipos
+    const toggleTipo = (tipo: string) => {
+        const nuevosTipos = new Set(selectedTipos)
+        if (nuevosTipos.has(tipo)) {
+            nuevosTipos.delete(tipo)
+        } else {
+            nuevosTipos.add(tipo)
+        }
+        setSelectedTipos(nuevosTipos)
+    }
+
     // Función para manejar el ordenamiento
-    const handleSort = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion') => {
+    const handleSort = (field: 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo') => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
         } else {
@@ -303,7 +375,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     }
 
     // Función para obtener el icono de ordenamiento
-    const getSortIcon = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion') => {
+    const getSortIcon = (field: 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo') => {
         if (sortField !== field) {
             return (
                 <i
@@ -329,32 +401,28 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         )
     }
 
-    // Función para ordenar los cumplimientos
-    const sortCumplimientos = (cumplimientos: CumplimientoHistorico[]): CumplimientoHistorico[] => {
-        const sorted = [...cumplimientos].sort((a, b) => {
+    // Función para ordenar los hitos
+    const sortHitos = (hitos: HitoConInfo[]): HitoConInfo[] => {
+        const sorted = [...hitos].sort((a, b) => {
             let comparison = 0
 
             switch (sortField) {
-                case 'fecha_cumplimiento':
-                    const fechaA = a.fecha ? new Date(a.fecha).getTime() : 0
-                    const fechaB = b.fecha ? new Date(b.fecha).getTime() : 0
-                    comparison = fechaA - fechaB
-                    // Si las fechas son iguales, ordenar por hora
-                    if (comparison === 0) {
-                        const horaA = a.hora ? (a.hora.includes(':') ? a.hora : `${a.hora}:00`) : '00:00:00'
-                        const horaB = b.hora ? (b.hora.includes(':') ? b.hora : `${b.hora}:00`) : '00:00:00'
-                        const [hA, mA] = horaA.split(':').map(Number)
-                        const [hB, mB] = horaB.split(':').map(Number)
-                        comparison = (hA * 60 + mA) - (hB * 60 + mB)
-                    }
+                case 'proceso':
+                    const procesoA = a.proceso_nombre || ''
+                    const procesoB = b.proceso_nombre || ''
+                    comparison = procesoA.localeCompare(procesoB, 'es', { sensitivity: 'base' })
                     break
 
-                case 'hora_cumplimiento':
-                    const horaCumplA = a.hora ? (a.hora.includes(':') ? a.hora : `${a.hora}:00`) : '00:00:00'
-                    const horaCumplB = b.hora ? (b.hora.includes(':') ? b.hora : `${b.hora}:00`) : '00:00:00'
-                    const [hCA, mCA] = horaCumplA.split(':').map(Number)
-                    const [hCB, mCB] = horaCumplB.split(':').map(Number)
-                    comparison = (hCA * 60 + mCA) - (hCB * 60 + mCB)
+                case 'hito':
+                    const hitoA = a.hito_nombre || ''
+                    const hitoB = b.hito_nombre || ''
+                    comparison = hitoA.localeCompare(hitoB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'estado':
+                    const estadoA = a.estado || ''
+                    const estadoB = b.estado || ''
+                    comparison = estadoA.localeCompare(estadoB, 'es', { sensitivity: 'base' })
                     break
 
                 case 'fecha_limite':
@@ -371,34 +439,16 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                     comparison = (hLA * 60 + mLA) - (hLB * 60 + mLB)
                     break
 
-                case 'usuario':
-                    const usuarioA = a.usuario || ''
-                    const usuarioB = b.usuario || ''
-                    comparison = usuarioA.localeCompare(usuarioB, 'es', { sensitivity: 'base' })
+                case 'fecha_estado':
+                    const fechaEstA = a.fecha_estado ? new Date(a.fecha_estado).getTime() : 0
+                    const fechaEstB = b.fecha_estado ? new Date(b.fecha_estado).getTime() : 0
+                    comparison = fechaEstA - fechaEstB
                     break
 
-                case 'proceso':
-                    const procesoA = a.proceso || ''
-                    const procesoB = b.proceso || ''
-                    comparison = procesoA.localeCompare(procesoB, 'es', { sensitivity: 'base' })
-                    break
-
-                case 'hito':
-                    const hitoA = a.hito || ''
-                    const hitoB = b.hito || ''
-                    comparison = hitoA.localeCompare(hitoB, 'es', { sensitivity: 'base' })
-                    break
-
-                case 'observacion':
-                    const obsA = a.observacion || ''
-                    const obsB = b.observacion || ''
-                    comparison = obsA.localeCompare(obsB, 'es', { sensitivity: 'base' })
-                    break
-
-                case 'fecha_creacion':
-                    const fechaCreA = a.fecha_creacion ? new Date(a.fecha_creacion).getTime() : 0
-                    const fechaCreB = b.fecha_creacion ? new Date(b.fecha_creacion).getTime() : 0
-                    comparison = fechaCreA - fechaCreB
+                case 'tipo':
+                    const tipoA = a.tipo || ''
+                    const tipoB = b.tipo || ''
+                    comparison = tipoA.localeCompare(tipoB, 'es', { sensitivity: 'base' })
                     break
 
                 default:
@@ -411,57 +461,118 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         return sorted
     }
 
-
-    // Filtrar cumplimientos usando useMemo para optimizar el rendimiento
-    const cumplimientosFiltrados = useMemo(() => {
-        const filtrados = cumplimientos.filter(cumplimiento => {
+    // Filtrar hitos usando useMemo
+    const hitosFiltrados = useMemo(() => {
+        const filtrados = hitos.filter(hito => {
+            const searchNormalized = normalizeText(debouncedSearchTerm)
             const matchesSearch = !debouncedSearchTerm ||
-                cumplimiento.proceso?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                cumplimiento.hito?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                cumplimiento.usuario?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                cumplimiento.observacion?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+                normalizeText(hito.proceso_nombre).includes(searchNormalized) ||
+                normalizeText(hito.hito_nombre).includes(searchNormalized) ||
+                normalizeText(hito.estado).includes(searchNormalized) ||
+                normalizeText(hito.tipo).includes(searchNormalized)
 
-            const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
-            const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
+            const matchesHito = !selectedHito || hito.hito_id?.toString() === selectedHito
+            const matchesProceso = !selectedProceso || hito.proceso_nombre === selectedProceso
+
+            // Filtro de estado basado en la lógica de estados (múltiple selección)
+            let matchesEstado = true
+            if (selectedEstados.size > 0) {
+                const isFinalized = hito.estado === 'Finalizado'
+                const isNuevo = hito.estado === 'Nuevo'
+                const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
+                const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
+                const venceHoy = isNuevo && estadoVenc === 'hoy'
+
+                // Verificar si el hito coincide con alguno de los estados seleccionados
+                matchesEstado = Array.from(selectedEstados).some(estado => {
+                    switch (estado) {
+                        case 'cumplido_en_plazo':
+                            return isFinalized && !finalizadoFuera
+                        case 'cumplido_fuera_plazo':
+                            return isFinalized && finalizadoFuera
+                        case 'vence_hoy':
+                            return venceHoy
+                        case 'pendiente_fuera_plazo':
+                            return !isFinalized && estadoVenc === 'vencido'
+                        case 'pendiente_en_plazo':
+                            return !isFinalized && estadoVenc === 'en_plazo'
+                        default:
+                            return false
+                    }
+                })
+            }
+
+            // Filtro de tipo (múltiple selección)
+            let matchesTipo = true
+            if (selectedTipos.size > 0) {
+                matchesTipo = hito.tipo ? selectedTipos.has(hito.tipo) : false
+            }
 
             let matchesFecha = true
             if (fechaDesde || fechaHasta) {
-                let fechaAComparar: Date | null = null
-
-                // Determinar qué fecha usar según el tipo de filtro
-                switch (tipoFiltroFecha) {
-                    case 'cumplimiento':
-                        fechaAComparar = cumplimiento.fecha ? new Date(cumplimiento.fecha) : null
-                        break
-                    case 'creacion':
-                        fechaAComparar = cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion) : null
-                        break
-                    case 'limite':
-                        fechaAComparar = cumplimiento.fecha_limite ? new Date(cumplimiento.fecha_limite) : null
-                        break
-                }
-
-                if (fechaAComparar && !isNaN(fechaAComparar.getTime())) {
+                const fechaLimite = hito.fecha_limite ? new Date(hito.fecha_limite) : null
+                if (fechaLimite && !isNaN(fechaLimite.getTime())) {
                     if (fechaDesde) {
                         const fechaDesdeDate = new Date(fechaDesde)
-                        matchesFecha = matchesFecha && fechaAComparar >= fechaDesdeDate
+                        matchesFecha = matchesFecha && fechaLimite >= fechaDesdeDate
                     }
                     if (fechaHasta) {
                         const fechaHastaDate = new Date(fechaHasta)
-                        matchesFecha = matchesFecha && fechaAComparar <= fechaHastaDate
+                        matchesFecha = matchesFecha && fechaLimite <= fechaHastaDate
                     }
                 } else {
-                    // Si no hay fecha válida para el tipo seleccionado, no mostrar el registro
                     matchesFecha = false
                 }
             }
 
-            return matchesSearch && matchesHito && matchesProceso && matchesFecha
+            return matchesSearch && matchesHito && matchesProceso && matchesEstado && matchesTipo && matchesFecha
         })
 
-        // Aplicar ordenamiento
-        return sortCumplimientos(filtrados)
-    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
+        return sortHitos(filtrados)
+    }, [hitos, debouncedSearchTerm, selectedHito, selectedProceso, selectedEstados, selectedTipos, fechaDesde, fechaHasta, sortField, sortDirection, cumplimientosPorHito])
+
+    // Paginación
+    const paginatedHitos = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return hitosFiltrados.slice(startIndex, endIndex)
+    }, [hitosFiltrados, currentPage, itemsPerPage])
+
+    // Obtener procesos únicos para el filtro
+    const procesosUnicos = useMemo(() => {
+        const procesosSet = new Set<string>()
+        hitos.forEach(hito => {
+            if (hito.proceso_nombre) {
+                procesosSet.add(hito.proceso_nombre)
+            }
+        })
+        return Array.from(procesosSet).sort()
+    }, [hitos])
+
+    // Obtener tipos únicos para el filtro
+    const tiposUnicos = useMemo(() => {
+        const tiposSet = new Set<string>()
+        hitos.forEach(hito => {
+            if (hito.tipo) {
+                tiposSet.add(hito.tipo)
+            }
+        })
+        return Array.from(tiposSet).sort()
+    }, [hitos])
+
+    // Obtener hitos únicos del cliente para el filtro
+    const hitosUnicosDelCliente = useMemo(() => {
+        const hitosSet = new Map<number, { id: number, nombre: string }>()
+        hitos.forEach(hito => {
+            if (hito.hito_id && hito.hito_nombre) {
+                hitosSet.set(hito.hito_id, {
+                    id: hito.hito_id,
+                    nombre: hito.hito_nombre
+                })
+            }
+        })
+        return Array.from(hitosSet.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
+    }, [hitos])
 
     return (
         <div
@@ -520,8 +631,8 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 gap: '12px'
                             }}
                         >
-                            <i className="bi bi-clock-history" style={{ color: 'white' }}></i>
-                            Histórico de Cumplimientos
+                            <i className="bi bi-info-circle" style={{ color: 'white' }}></i>
+                            Status de Hitos
                         </h2>
                         <p
                             style={{
@@ -649,7 +760,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     }}
                                 >
                                     <i className="bi bi-search me-2"></i>
-                                    Buscar por nombre, proceso, hito o usuario
+                                    Buscar por proceso, hito, estado o tipo
                                 </label>
                                 <div style={{ position: 'relative' }}>
                                     <input
@@ -743,17 +854,9 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'all 0.3s ease',
                                         backgroundColor: 'white'
                                     }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.accent
-                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.light
-                                        e.target.style.boxShadow = 'none'
-                                    }}
                                 >
                                     <option value="">Todos los hitos</option>
-                                    {hitos.map((hito) => (
+                                    {hitosUnicosDelCliente.map((hito) => (
                                         <option key={hito.id} value={hito.id}>
                                             {hito.nombre}
                                         </option>
@@ -789,19 +892,11 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'all 0.3s ease',
                                         backgroundColor: 'white'
                                     }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.accent
-                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.light
-                                        e.target.style.boxShadow = 'none'
-                                    }}
                                 >
                                     <option value="">Todos los procesos</option>
-                                    {procesos.map((proceso) => (
-                                        <option key={proceso.id} value={proceso.id}>
-                                            {proceso.nombre}
+                                    {procesosUnicos.map((proceso) => (
+                                        <option key={proceso} value={proceso}>
+                                            {proceso}
                                         </option>
                                     ))}
                                 </select>
@@ -818,51 +913,8 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
                         {/* Filtros de fecha */}
                         <div className="row g-3 mb-4">
-                            {/* Selector de tipo de fecha */}
-                            <div className="col-md-4">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-calendar-check me-2"></i>
-                                    Filtrar por fecha de
-                                </label>
-                                <select
-                                    className="form-select"
-                                    value={tipoFiltroFecha}
-                                    onChange={(e) => setTipoFiltroFecha(e.target.value as 'cumplimiento' | 'creacion' | 'limite')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.accent
-                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.light
-                                        e.target.style.boxShadow = 'none'
-                                    }}
-                                >
-                                    <option value="cumplimiento">Cumplimiento</option>
-                                    <option value="creacion">Creación</option>
-                                    <option value="limite">Límite del Hito</option>
-                                </select>
-                            </div>
-
                             {/* Filtro por fecha desde */}
-                            <div className="col-md-4">
+                            <div className="col-md-6">
                                 <label
                                     style={{
                                         fontFamily: atisaStyles.fonts.secondary,
@@ -873,7 +925,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     }}
                                 >
                                     <i className="bi bi-calendar-date me-2"></i>
-                                    Fecha desde
+                                    Fecha límite desde
                                 </label>
                                 <input
                                     type="date"
@@ -890,19 +942,11 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'all 0.3s ease',
                                         backgroundColor: 'white'
                                     }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.accent
-                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.light
-                                        e.target.style.boxShadow = 'none'
-                                    }}
                                 />
                             </div>
 
                             {/* Filtro por fecha hasta */}
-                            <div className="col-md-4">
+                            <div className="col-md-6">
                                 <label
                                     style={{
                                         fontFamily: atisaStyles.fonts.secondary,
@@ -913,7 +957,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     }}
                                 >
                                     <i className="bi bi-calendar-date me-2"></i>
-                                    Fecha hasta
+                                    Fecha límite hasta
                                 </label>
                                 <input
                                     type="date"
@@ -930,14 +974,6 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'all 0.3s ease',
                                         backgroundColor: 'white'
                                     }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.accent
-                                        e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = atisaStyles.colors.light
-                                        e.target.style.boxShadow = 'none'
-                                    }}
                                 />
                             </div>
                         </div>
@@ -950,10 +986,277 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             opacity: 0.5
                         }}></div>
 
-                        {/* Botón de limpiar filtros */}
+                        {/* Filtros de Estados y Tipos - Misma fila */}
+                        <div className="row g-3 mb-4">
+                            {/* Filtro por estado - Múltiple selección */}
+                            <div className="col-md-6">
+                                <label
+                                    style={{
+                                        fontFamily: atisaStyles.fonts.secondary,
+                                        fontWeight: '600',
+                                        color: atisaStyles.colors.primary,
+                                        marginBottom: '12px',
+                                        display: 'block'
+                                    }}
+                                >
+                                    <i className="bi bi-check-circle me-2"></i>
+                                    Estados
+                                </label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    <button
+                                        className="btn btn-sm"
+                                        style={{
+                                            backgroundColor: selectedEstados.size === 0 ? atisaStyles.colors.secondary : 'white',
+                                            color: selectedEstados.size === 0 ? 'white' : atisaStyles.colors.primary,
+                                            border: `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontWeight: 600,
+                                            position: 'relative'
+                                        }}
+                                        onClick={() => setSelectedEstados(new Set())}
+                                    >
+                                        Todos
+                                        {selectedEstados.size > 0 && (
+                                            <span
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-8px',
+                                                    right: '-8px',
+                                                    backgroundColor: '#ef4444',
+                                                    color: 'white',
+                                                    borderRadius: '50%',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontFamily: atisaStyles.fonts.secondary
+                                                }}
+                                            >
+                                                {selectedEstados.size}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        className="btn btn-sm"
+                                        style={{
+                                            backgroundColor: selectedEstados.has('cumplido_en_plazo') ? '#16a34a' : 'white',
+                                            color: selectedEstados.has('cumplido_en_plazo') ? 'white' : atisaStyles.colors.primary,
+                                            border: `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontWeight: 600
+                                        }}
+                                        onClick={() => toggleEstado('cumplido_en_plazo')}
+                                    >
+                                        Cumplido en plazo
+                                    </button>
+                                    <button
+                                        className="btn btn-sm"
+                                        style={{
+                                            backgroundColor: selectedEstados.has('cumplido_fuera_plazo') ? '#b45309' : 'white',
+                                            color: selectedEstados.has('cumplido_fuera_plazo') ? 'white' : atisaStyles.colors.primary,
+                                            border: `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontWeight: 600
+                                        }}
+                                        onClick={() => toggleEstado('cumplido_fuera_plazo')}
+                                    >
+                                        Cumplido fuera de plazo
+                                    </button>
+                                    <button
+                                        className="btn btn-sm"
+                                        style={{
+                                            backgroundColor: selectedEstados.has('vence_hoy') ? '#dc2626' : 'white',
+                                            color: selectedEstados.has('vence_hoy') ? 'white' : atisaStyles.colors.primary,
+                                            border: `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontWeight: 600
+                                        }}
+                                        onClick={() => toggleEstado('vence_hoy')}
+                                    >
+                                        Vence hoy
+                                    </button>
+                                    <button
+                                        className="btn btn-sm"
+                                        style={{
+                                            backgroundColor: selectedEstados.has('pendiente_fuera_plazo') ? '#ef4444' : 'white',
+                                            color: selectedEstados.has('pendiente_fuera_plazo') ? 'white' : atisaStyles.colors.primary,
+                                            border: `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontWeight: 600
+                                        }}
+                                        onClick={() => toggleEstado('pendiente_fuera_plazo')}
+                                    >
+                                        Pendiente fuera de plazo
+                                    </button>
+                                    <button
+                                        className="btn btn-sm"
+                                        style={{
+                                            backgroundColor: selectedEstados.has('pendiente_en_plazo') ? atisaStyles.colors.accent : 'white',
+                                            color: selectedEstados.has('pendiente_en_plazo') ? 'white' : atisaStyles.colors.primary,
+                                            border: `1px solid ${atisaStyles.colors.light}`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontWeight: 600
+                                        }}
+                                        onClick={() => toggleEstado('pendiente_en_plazo')}
+                                    >
+                                        Pendiente en plazo
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Filtro por tipo - Múltiple selección */}
+                            {tiposUnicos.length > 0 && (
+                                <div className="col-md-6">
+                                    <label
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.secondary,
+                                            fontWeight: '600',
+                                            color: atisaStyles.colors.primary,
+                                            marginBottom: '12px',
+                                            display: 'block'
+                                        }}
+                                    >
+                                        <i className="bi bi-tag me-2"></i>
+                                        Tipos de Hito
+                                    </label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        <button
+                                            className="btn btn-sm"
+                                            style={{
+                                                backgroundColor: selectedTipos.size === 0 ? atisaStyles.colors.secondary : 'white',
+                                                color: selectedTipos.size === 0 ? 'white' : atisaStyles.colors.primary,
+                                                border: `1px solid ${atisaStyles.colors.light}`,
+                                                borderRadius: '20px',
+                                                padding: '6px 12px',
+                                                fontWeight: 600,
+                                                position: 'relative'
+                                            }}
+                                            onClick={() => setSelectedTipos(new Set())}
+                                        >
+                                            Todos
+                                            {selectedTipos.size > 0 && (
+                                                <span
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '-8px',
+                                                        right: '-8px',
+                                                        backgroundColor: '#ef4444',
+                                                        color: 'white',
+                                                        borderRadius: '50%',
+                                                        width: '20px',
+                                                        height: '20px',
+                                                        fontSize: '10px',
+                                                        fontWeight: 'bold',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontFamily: atisaStyles.fonts.secondary
+                                                    }}
+                                                >
+                                                    {selectedTipos.size}
+                                                </span>
+                                            )}
+                                        </button>
+                                        {tiposUnicos.map((tipo) => (
+                                            <button
+                                                key={tipo}
+                                                className="btn btn-sm"
+                                                style={{
+                                                    backgroundColor: selectedTipos.has(tipo) ? atisaStyles.colors.primary : 'white',
+                                                    color: selectedTipos.has(tipo) ? 'white' : atisaStyles.colors.primary,
+                                                    border: `1px solid ${atisaStyles.colors.light}`,
+                                                    borderRadius: '20px',
+                                                    padding: '6px 12px',
+                                                    fontWeight: 600
+                                                }}
+                                                onClick={() => toggleTipo(tipo)}
+                                            >
+                                                {tipo}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Separador visual */}
+                        <div style={{
+                            height: '1px',
+                            backgroundColor: atisaStyles.colors.light,
+                            margin: '1.5rem 0',
+                            opacity: 0.5
+                        }}></div>
+
+                        {/* Botones de acción */}
                         <div className="row g-3">
                             <div className="col-md-12">
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                    <button
+                                        className="btn"
+                                        onClick={exportarExcel}
+                                        disabled={exporting}
+                                        style={{
+                                            backgroundColor: exporting ? '#9ca3af' : '#16a34a',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontFamily: atisaStyles.fonts.secondary,
+                                            fontWeight: '600',
+                                            padding: '12px 24px',
+                                            fontSize: '14px',
+                                            transition: 'all 0.3s ease',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            cursor: exporting ? 'not-allowed' : 'pointer',
+                                            opacity: exporting ? 0.7 : 1
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!exporting) {
+                                                e.currentTarget.style.backgroundColor = '#15803d'
+                                                e.currentTarget.style.transform = 'translateY(-2px)'
+                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.3)'
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!exporting) {
+                                                e.currentTarget.style.backgroundColor = '#16a34a'
+                                                e.currentTarget.style.transform = 'translateY(0)'
+                                                e.currentTarget.style.boxShadow = 'none'
+                                            }
+                                        }}
+                                    >
+                                        {exporting ? (
+                                            <>
+                                                <div
+                                                    className="spinner-border spinner-border-sm"
+                                                    role="status"
+                                                    style={{
+                                                        width: '16px',
+                                                        height: '16px',
+                                                        borderWidth: '2px'
+                                                    }}
+                                                >
+                                                    <span className="visually-hidden">Exportando...</span>
+                                                </div>
+                                                Exportando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="bi bi-file-earmark-excel"></i>
+                                                Exportar a Excel
+                                            </>
+                                        )}
+                                    </button>
                                     <button
                                         className="btn"
                                         onClick={limpiarFiltros}
@@ -990,7 +1293,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 )}
             </div>
 
-            {/* Tabla de cumplimientos */}
+            {/* Tabla de hitos */}
             <div
                 style={{
                     backgroundColor: 'white',
@@ -1020,7 +1323,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                         }}
                     >
                         <i className="bi bi-list-ul" style={{ color: atisaStyles.colors.primary }}></i>
-                        Listado de Cumplimientos
+                        Listado de Hitos ({hitosFiltrados.length})
                     </h3>
                 </div>
 
@@ -1042,121 +1345,6 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             >
                                 <th
                                     className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('fecha_cumplimiento')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
-                                >
-                                    Fecha Cumplimiento {getSortIcon('fecha_cumplimiento')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('hora_cumplimiento')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
-                                >
-                                    Hora Cumplimiento {getSortIcon('hora_cumplimiento')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('fecha_limite')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
-                                >
-                                    Fecha Límite Hito {getSortIcon('fecha_limite')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('hora_limite')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
-                                >
-                                    Hora Límite Hito {getSortIcon('hora_limite')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('usuario')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
-                                >
-                                    Usuario {getSortIcon('usuario')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
                                     onClick={() => handleSort('proceso')}
                                     style={{
                                         fontFamily: atisaStyles.fonts.primary,
@@ -1168,12 +1356,6 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         backgroundColor: atisaStyles.colors.primary,
                                         transition: 'background-color 0.2s ease',
                                         cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                     }}
                                 >
                                     Proceso {getSortIcon('proceso')}
@@ -1192,18 +1374,12 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'background-color 0.2s ease',
                                         cursor: 'pointer'
                                     }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
                                 >
                                     Hito {getSortIcon('hito')}
                                 </th>
                                 <th
                                     className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('observacion')}
+                                    onClick={() => handleSort('estado')}
                                     style={{
                                         fontFamily: atisaStyles.fonts.primary,
                                         fontWeight: 'bold',
@@ -1215,18 +1391,12 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'background-color 0.2s ease',
                                         cursor: 'pointer'
                                     }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
                                 >
-                                    Observación {getSortIcon('observacion')}
+                                    Estado {getSortIcon('estado')}
                                 </th>
                                 <th
                                     className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('fecha_creacion')}
+                                    onClick={() => handleSort('fecha_limite')}
                                     style={{
                                         fontFamily: atisaStyles.fonts.primary,
                                         fontWeight: 'bold',
@@ -1238,16 +1408,12 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         transition: 'background-color 0.2s ease',
                                         cursor: 'pointer'
                                     }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    }}
                                 >
-                                    Fecha / Hora Creación {getSortIcon('fecha_creacion')}
+                                    Fecha Límite {getSortIcon('fecha_limite')}
                                 </th>
                                 <th
+                                    className="cursor-pointer user-select-none"
+                                    onClick={() => handleSort('hora_limite')}
                                     style={{
                                         fontFamily: atisaStyles.fonts.primary,
                                         fontWeight: 'bold',
@@ -1256,10 +1422,45 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         border: 'none',
                                         color: 'white',
                                         backgroundColor: atisaStyles.colors.primary,
-                                        textAlign: 'center'
+                                        transition: 'background-color 0.2s ease',
+                                        cursor: 'pointer'
                                     }}
                                 >
-                                    Documentos
+                                    Hora Límite {getSortIcon('hora_limite')}
+                                </th>
+                                <th
+                                    className="cursor-pointer user-select-none"
+                                    onClick={() => handleSort('fecha_estado')}
+                                    style={{
+                                        fontFamily: atisaStyles.fonts.primary,
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        padding: '16px 12px',
+                                        border: 'none',
+                                        color: 'white',
+                                        backgroundColor: atisaStyles.colors.primary,
+                                        transition: 'background-color 0.2s ease',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Fecha Estado {getSortIcon('fecha_estado')}
+                                </th>
+                                <th
+                                    className="cursor-pointer user-select-none"
+                                    onClick={() => handleSort('tipo')}
+                                    style={{
+                                        fontFamily: atisaStyles.fonts.primary,
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        padding: '16px 12px',
+                                        border: 'none',
+                                        color: 'white',
+                                        backgroundColor: atisaStyles.colors.primary,
+                                        transition: 'background-color 0.2s ease',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Tipo {getSortIcon('tipo')}
                                 </th>
                             </tr>
                         </thead>
@@ -1267,7 +1468,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             {loading ? (
                                 <tr>
                                     <td
-                                        colSpan={10}
+                                        colSpan={7}
                                         className="text-center py-4"
                                         style={{
                                             backgroundColor: '#f8f9fa',
@@ -1284,7 +1485,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 height: '2rem'
                                             }}
                                         >
-                                            <span className="visually-hidden">Cargando cumplimientos...</span>
+                                            <span className="visually-hidden">Cargando hitos...</span>
                                         </div>
                                         <span
                                             className="ms-2"
@@ -1294,14 +1495,14 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 fontWeight: '500'
                                             }}
                                         >
-                                            Cargando cumplimientos...
+                                            Cargando hitos...
                                         </span>
                                     </td>
                                 </tr>
-                            ) : cumplimientosFiltrados.length === 0 ? (
+                            ) : hitosFiltrados.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={10}
+                                        colSpan={7}
                                         className="text-center py-4"
                                         style={{
                                             backgroundColor: '#f8f9fa',
@@ -1311,16 +1512,16 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         }}
                                     >
                                         <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
-                                        {debouncedSearchTerm || selectedHito || selectedProceso || fechaDesde || fechaHasta
-                                            ? 'No se encontraron cumplimientos con los filtros aplicados'
-                                            : 'No hay cumplimientos registrados para este cliente'
+                                        {debouncedSearchTerm || selectedHito || selectedProceso || selectedEstados.size > 0 || selectedTipos.size > 0 || fechaDesde || fechaHasta
+                                            ? 'No se encontraron hitos con los filtros aplicados'
+                                            : 'No hay hitos registrados para este cliente'
                                         }
                                     </td>
                                 </tr>
                             ) : (
-                                cumplimientosFiltrados.map((cumplimiento, index) => (
+                                paginatedHitos.map((hito, index) => (
                                     <tr
-                                        key={cumplimiento.id}
+                                        key={hito.id}
                                         style={{
                                             backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
                                             transition: 'all 0.2s ease'
@@ -1339,23 +1540,14 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         <td
                                             style={{
                                                 fontFamily: atisaStyles.fonts.secondary,
-                                                color: atisaStyles.colors.primary,
-                                                fontWeight: '600',
-                                                padding: '16px 12px',
-                                                verticalAlign: 'middle'
-                                            }}
-                                        >
-                                            {formatDate(cumplimiento.fecha)}
-                                        </td>
-                                        <td
-                                            style={{
-                                                fontFamily: atisaStyles.fonts.secondary,
                                                 color: atisaStyles.colors.dark,
                                                 padding: '16px 12px',
                                                 verticalAlign: 'middle'
                                             }}
                                         >
-                                            {formatTime(cumplimiento.hora)}
+                                            <span title={hito.proceso_nombre || 'No disponible'}>
+                                                {hito.proceso_nombre || 'No disponible'}
+                                            </span>
                                         </td>
                                         <td
                                             style={{
@@ -1366,21 +1558,65 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 verticalAlign: 'middle'
                                             }}
                                         >
-                                            <span
-                                                style={{
-                                                    backgroundColor: '#e8f5e8',
-                                                    color: '#2e7d32',
-                                                    padding: '6px 12px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    border: '1px solid #c8e6c9',
-                                                    boxShadow: '0 1px 3px rgba(46, 125, 50, 0.1)'
-                                                }}
-                                                title={cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
-                                            >
-                                                {cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
+                                            <span title={hito.hito_nombre || 'No disponible'}>
+                                                {hito.hito_nombre || 'No disponible'}
                                             </span>
+                                        </td>
+                                        <td
+                                            style={{
+                                                fontFamily: atisaStyles.fonts.secondary,
+                                                padding: '16px 12px',
+                                                verticalAlign: 'middle'
+                                            }}
+                                        >
+                                            {(() => {
+                                                const isFinalized = hito.estado === 'Finalizado'
+                                                const isNuevo = hito.estado === 'Nuevo'
+                                                const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
+                                                const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
+                                                const venceHoy = isNuevo && estadoVenc === 'hoy'
+
+                                                if (isFinalized) {
+                                                    return finalizadoFuera ? (
+                                                        <span style={{ backgroundColor: '#b45309', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Cumplido fuera de plazo
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Cumplido en plazo
+                                                        </span>
+                                                    )
+                                                } else if (venceHoy) {
+                                                    return (
+                                                        <span style={{ backgroundColor: '#dc2626', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Vence hoy
+                                                        </span>
+                                                    )
+                                                } else if (estadoVenc === 'vencido') {
+                                                    return (
+                                                        <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Pendiente fuera de plazo
+                                                        </span>
+                                                    )
+                                                } else {
+                                                    return (
+                                                        <span style={{ backgroundColor: atisaStyles.colors.accent, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Pendiente en plazo
+                                                        </span>
+                                                    )
+                                                }
+                                            })()}
+                                        </td>
+                                        <td
+                                            style={{
+                                                fontFamily: atisaStyles.fonts.secondary,
+                                                color: atisaStyles.colors.primary,
+                                                fontWeight: '600',
+                                                padding: '16px 12px',
+                                                verticalAlign: 'middle'
+                                            }}
+                                        >
+                                            {hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}
                                         </td>
                                         <td
                                             style={{
@@ -1390,21 +1626,17 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 verticalAlign: 'middle'
                                             }}
                                         >
-                                            <span
-                                                style={{
-                                                    backgroundColor: '#fff3e0',
-                                                    color: '#f57c00',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '500',
-                                                    border: '1px solid #ffcc02',
-                                                    boxShadow: '0 1px 3px rgba(245, 124, 0, 0.1)'
-                                                }}
-                                                title={cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : 'No disponible'}
-                                            >
-                                                {cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : 'No disponible'}
-                                            </span>
+                                            {formatTime(hito.hora_limite)}
+                                        </td>
+                                        <td
+                                            style={{
+                                                fontFamily: atisaStyles.fonts.secondary,
+                                                color: atisaStyles.colors.dark,
+                                                padding: '16px 12px',
+                                                verticalAlign: 'middle'
+                                            }}
+                                        >
+                                            {hito.fecha_estado ? formatDate(hito.fecha_estado) : '-'}
                                         </td>
                                         <td
                                             style={{
@@ -1423,185 +1655,8 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                     fontWeight: '500'
                                                 }}
                                             >
-                                                {cumplimiento.usuario}
+                                                {hito.tipo || '-'}
                                             </span>
-                                        </td>
-                                        <td
-                                            style={{
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                color: atisaStyles.colors.dark,
-                                                padding: '16px 12px',
-                                                verticalAlign: 'middle'
-                                            }}
-                                        >
-                                            <span title={cumplimiento.proceso || 'No disponible'}>
-                                                {cumplimiento.proceso || 'No disponible'}
-                                            </span>
-                                        </td>
-                                        <td
-                                            style={{
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                color: atisaStyles.colors.primary,
-                                                fontWeight: '600',
-                                                padding: '16px 12px',
-                                                verticalAlign: 'middle'
-                                            }}
-                                        >
-                                            <span title={cumplimiento.hito || 'No disponible'}>
-                                                {cumplimiento.hito || 'No disponible'}
-                                            </span>
-                                        </td>
-                                        <td
-                                            style={{
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                color: atisaStyles.colors.dark,
-                                                padding: '16px 12px',
-                                                verticalAlign: 'middle'
-                                            }}
-                                        >
-                                            {cumplimiento.observacion ? (
-                                                <span
-                                                    style={{
-                                                        backgroundColor: '#e3f2fd',
-                                                        color: '#1976d2',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500'
-                                                    }}
-                                                    title={cumplimiento.observacion}
-                                                >
-                                                    {cumplimiento.observacion.length > 50
-                                                        ? `${cumplimiento.observacion.substring(0, 50)}...`
-                                                        : cumplimiento.observacion
-                                                    }
-                                                </span>
-                                            ) : (
-                                                <span
-                                                    style={{
-                                                        color: '#6c757d',
-                                                        fontStyle: 'italic',
-                                                        fontSize: '12px'
-                                                    }}
-                                                >
-                                                    Sin observación
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td
-                                            style={{
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                color: atisaStyles.colors.primary,
-                                                fontWeight: '600',
-                                                padding: '16px 12px',
-                                                verticalAlign: 'middle'
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    backgroundColor: '#f3e5f5',
-                                                    color: '#7b1fa2',
-                                                    padding: '6px 12px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    border: '1px solid #e1bee7',
-                                                    boxShadow: '0 1px 3px rgba(123, 31, 162, 0.1)'
-                                                }}
-                                                title={cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion).toLocaleString('es-ES', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    second: '2-digit'
-                                                }) : 'No disponible'}
-                                            >
-                                                {cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion).toLocaleString('es-ES', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    second: '2-digit'
-                                                }) : 'No disponible'}
-                                            </span>
-                                        </td>
-                                        <td
-                                            style={{
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                padding: '16px 12px',
-                                                textAlign: 'center',
-                                                verticalAlign: 'middle'
-                                            }}
-                                        >
-                                            {cumplimiento.id && cumplimiento.num_documentos && cumplimiento.num_documentos > 0 ? (
-                                                <button
-                                                    className="btn btn-sm"
-                                                    onClick={() => handleDescargarDocumentos(cumplimiento.id!)}
-                                                    disabled={downloadingCumplimientoId === cumplimiento.id}
-                                                    style={{
-                                                        backgroundColor: atisaStyles.colors.accent,
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '8px',
-                                                        padding: '0',
-                                                        transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '38px',
-                                                        height: '38px',
-                                                        boxShadow: '0 2px 8px rgba(0, 161, 222, 0.25)',
-                                                        cursor: downloadingCumplimientoId === cumplimiento.id ? 'not-allowed' : 'pointer',
-                                                        lineHeight: '1',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (!e.currentTarget.disabled) {
-                                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 80, 92, 0.35)'
-                                                        }
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        if (!e.currentTarget.disabled) {
-                                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 161, 222, 0.25)'
-                                                        }
-                                                    }}
-                                                    title={`Descargar ${cumplimiento.num_documentos} documento(s)`}
-                                                >
-                                                    {downloadingCumplimientoId === cumplimiento.id ? (
-                                                        <span
-                                                            className="spinner-border spinner-border-sm"
-                                                            style={{
-                                                                width: '20px',
-                                                                height: '20px',
-                                                                borderWidth: '3px',
-                                                                borderColor: 'rgba(255, 255, 255, 0.3)',
-                                                                borderTopColor: 'white'
-                                                            }}
-                                                        ></span>
-                                                    ) : (
-                                                        <i className="bi bi-download" style={{ fontSize: '20px', lineHeight: '1', fontWeight: 'bold', color: 'white' }}></i>
-                                                    )}
-                                                </button>
-                                            ) : (
-                                                <span
-                                                    style={{
-                                                        color: '#9ca3af',
-                                                        fontStyle: 'italic',
-                                                        fontSize: '13px',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    <i className="bi bi-file-x" style={{ fontSize: '14px' }}></i>
-                                                    Sin documentos
-                                                </span>
-                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -1611,7 +1666,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 </div>
 
                 {/* Paginación */}
-                {cumplimientosFiltrados.length > itemsPerPage && (
+                {hitosFiltrados.length > itemsPerPage && (
                     <div
                         style={{
                             padding: '1.5rem',
@@ -1621,7 +1676,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                     >
                         <SharedPagination
                             currentPage={currentPage}
-                            totalItems={cumplimientosFiltrados.length}
+                            totalItems={hitosFiltrados.length}
                             pageSize={itemsPerPage}
                             onPageChange={handlePageChange}
                         />
@@ -1632,4 +1687,4 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     )
 }
 
-export default HistoricoCumplimientos
+export default StatusCliente

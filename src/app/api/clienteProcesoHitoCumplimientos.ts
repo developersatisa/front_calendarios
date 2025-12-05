@@ -8,6 +8,7 @@ export interface ClienteProcesoHitoCumplimiento {
   observacion?: string
   usuario: string
   fecha_creacion?: string
+  num_documentos?: number
 }
 
 export interface ClienteProcesoHitoCumplimientosResponse {

@@ -1,6 +1,29 @@
 import api from './axiosConfig'
+import { getAuth } from '../modules/auth/core/AuthHelpers'
 
-const FIXED_EMAIL = 'david.burgos@atisa.es'
+/**
+ * Obtiene el email/usuario del usuario logueado desde el token JWT
+ * @returns El email o username del usuario, o null si no se puede obtener
+ */
+const getCurrentUserEmail = (): string | null => {
+  try {
+    const auth = getAuth()
+
+    if (!auth?.api_token) {
+      return null
+    }
+
+    // Decodificar el JWT (solo la parte del payload)
+    const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+
+    // Intentar obtener el email o username del payload
+    // El backend puede incluir 'email', 'username', 'sub', o 'preferred_username'
+    return payload.email || payload.username || payload.sub || payload.preferred_username || null
+  } catch (error) {
+    console.warn('Error obteniendo usuario del token JWT:', error)
+    return null
+  }
+}
 
 // Interfaces para las respuestas de métricas
 export interface CumplimientoHitosResponse {
@@ -14,10 +37,18 @@ export interface ProcesoData {
   hitosCompletados: number
 }
 
+export interface ClienteData {
+  clienteId: string
+  clienteNombre: string
+  hitosPendientes?: number
+  hitosCompletados?: number
+}
+
 export interface HitosPorProcesoResponse {
   totalPendientes: number
   tendencia: string
   procesoData: ProcesoData[]
+  clientesData?: ClienteData[]
 }
 
 export interface ResolucionData {
@@ -66,51 +97,98 @@ export interface ResumenMetricasResponse {
 }
 
 // Funciones de API
-export const getCumplimientoHitos = async (): Promise<CumplimientoHitosResponse> => {
-  const response = await api.get('/metricas/cumplimiento-hitos', {
-    params: { email: FIXED_EMAIL }
-  })
+export const getCumplimientoHitos = async (clienteId?: string): Promise<CumplimientoHitosResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
+  const params: { email: string; cliente_id?: string } = { email: userEmail }
+  if (clienteId) {
+    params.cliente_id = clienteId.trim()
+  }
+
+  const response = await api.get('/metricas/cumplimiento-hitos', { params })
   return response.data
 }
 
-export const getHitosPorProceso = async (): Promise<HitosPorProcesoResponse> => {
-  const response = await api.get('/metricas/hitos-por-proceso', {
-    params: { email: FIXED_EMAIL }
-  })
+export const getHitosPorProceso = async (clienteId?: string): Promise<HitosPorProcesoResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
+  const params: { email: string; cliente_id?: string } = { email: userEmail }
+  if (clienteId) {
+    params.cliente_id = clienteId.trim()
+  }
+
+  const response = await api.get('/metricas/hitos-por-proceso', { params })
   return response.data
 }
 
-export const getTiempoResolucion = async (): Promise<TiempoResolucionResponse> => {
-  const response = await api.get('/metricas/tiempo-resolucion', {
-    params: { email: FIXED_EMAIL }
-  })
+export const getTiempoResolucion = async (clienteId?: string): Promise<TiempoResolucionResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
+  const params: { email: string; cliente_id?: string } = { email: userEmail }
+  if (clienteId) {
+    params.cliente_id = clienteId.trim()
+  }
+
+  const response = await api.get('/metricas/tiempo-resolucion', { params })
   return response.data
 }
 
 export const getHitosVencidos = async (): Promise<HitosVencidosResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
   const response = await api.get('/api/metricas/hitos-vencidos', {
-    params: { email: FIXED_EMAIL }
+    params: { email: userEmail }
   })
   return response.data
 }
 
 export const getClientesInactivos = async (): Promise<ClientesInactivosResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
   const response = await api.get('/metricas/clientes-inactivos', {
-    params: { email: FIXED_EMAIL }
+    params: { email: userEmail }
   })
   return response.data
 }
 
-export const getVolumenMensual = async (): Promise<VolumenMensualResponse> => {
-  const response = await api.get('/metricas/volumen-mensual', {
-    params: { email: FIXED_EMAIL }
-  })
+export const getVolumenMensual = async (clienteId?: string): Promise<VolumenMensualResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
+  const params: { email: string; cliente_id?: string } = { email: userEmail }
+  if (clienteId) {
+    params.cliente_id = clienteId.trim()
+  }
+
+  const response = await api.get('/metricas/volumen-mensual', { params })
   return response.data
 }
 
 export const getResumenMetricas = async (): Promise<ResumenMetricasResponse> => {
+  const userEmail = getCurrentUserEmail()
+  if (!userEmail) {
+    throw new Error('No se pudo obtener el usuario logueado')
+  }
+
   const response = await api.get('/metricas/resumen', {
-    params: { email: FIXED_EMAIL }
+    params: { email: userEmail }
   })
   return response.data
 }

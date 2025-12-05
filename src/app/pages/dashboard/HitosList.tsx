@@ -1274,19 +1274,26 @@ const HitosList: FC = () => {
                   <div className="mb-3">
                     <label className="form-label" style={{ fontWeight: '600', color: atisaStyles.colors.primary }}>
                       <i className="bi bi-calendar-date me-2"></i>
-                      Fecha desde la cual deshabilitar
+                      Fecha desde la cual deshabilitar <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="date"
                       className="form-control"
                       value={fechaDesdeDeshabilitar}
                       onChange={(e) => setFechaDesdeDeshabilitar(e.target.value)}
+                      required
                       style={{
                         fontFamily: atisaStyles.fonts.secondary,
-                        border: `2px solid ${atisaStyles.colors.light}`,
+                        border: `2px solid ${!fechaDesdeDeshabilitar ? '#ef4444' : atisaStyles.colors.light}`,
                         borderRadius: '6px'
                       }}
                     />
+                    {!fechaDesdeDeshabilitar && (
+                      <div className="text-danger" style={{ fontSize: '0.875rem', marginTop: '4px' }}>
+                        <i className="bi bi-exclamation-circle me-1"></i>
+                        Este campo es obligatorio
+                      </div>
+                    )}
                   </div>
 
                   <div className="alert alert-warning" style={{ marginBottom: '0' }}>

@@ -729,8 +729,39 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             </p>
           </div>
 
-          {/* Columna derecha: Botón Ver Histórico */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {/* Columna derecha: Botones Ver Status y Ver Histórico */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <button
+              className="btn"
+              onClick={() => navigate(`/status-cliente/${clienteId}`)}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                padding: '12px 20px',
+                fontSize: '14px',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              <i className="bi bi-info-circle" style={{ color: 'white' }}></i>
+              Ver Status
+            </button>
             <button
               className="btn"
               onClick={() => navigate(`/historico-cumplimientos/${clienteId}`)}

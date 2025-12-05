@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect } from 'react'
+import React, { FC, useState, useEffect, useRef } from 'react'
 import { KTCard, KTCardBody, KTSVG } from '../../../_metronic/helpers'
 import {
   getResumenMetricas,
@@ -14,9 +14,11 @@ import {
 } from '../../api/metricas'
 import { CumplimientoHitosChart } from './components/CumplimientoHitosChart'
 import { HitosPorProcesoChart } from './components/HitosPorProcesoChart'
+import { HitosPorClienteChart } from './components/HitosPorClienteChart'
 import { TiempoResolucionChart } from './components/TiempoResolucionChart'
 import { VolumenMensualChart } from './components/VolumenMensualChart'
 import {atisaStyles} from '../../styles/atisaStyles'
+import { ClienteData } from '../../api/metricas'
 
 const MetricasList: FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
@@ -26,24 +28,51 @@ const MetricasList: FC = () => {
   const [procesosData, setProcesosData] = useState<HitosPorProcesoResponse | null>(null)
   const [resolucionData, setResolucionData] = useState<TiempoResolucionResponse | null>(null)
   const [volumenData, setVolumenData] = useState<VolumenMensualResponse | null>(null)
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<string>('')
+  const [clientesDisponibles, setClientesDisponibles] = useState<ClienteData[]>([])
+
+  const isInitialMount = useRef(true)
 
   // Cargar datos de métricas al montar el componente
   useEffect(() => {
     loadMetricas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Actualizar lista de clientes cuando se cargan los datos de procesos (solo si no hay cliente seleccionado)
+  useEffect(() => {
+    if (procesosData?.clientesData && !clienteSeleccionado) {
+      setClientesDisponibles(procesosData.clientesData)
+    }
+  }, [procesosData, clienteSeleccionado])
+
+  // Recargar métricas cuando cambia el cliente seleccionado (no en la carga inicial)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
+    if (clienteSeleccionado !== undefined) {
+      loadMetricas()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteSeleccionado])
 
   const loadMetricas = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Cargar todas las métricas en paralelo
+      const clienteId = clienteSeleccionado || undefined
+
+      // Cargar todas las métricas en paralelo con el filtro de cliente si está seleccionado
       const [resumen, cumplimiento, procesos, resolucion, volumen] = await Promise.all([
         getResumenMetricas(),
-        getCumplimientoHitos(),
-        getHitosPorProceso(),
-        getTiempoResolucion(),
-        getVolumenMensual()
+        getCumplimientoHitos(clienteId),
+        getHitosPorProceso(clienteId),
+        getTiempoResolucion(clienteId),
+        getVolumenMensual(clienteId)
       ])
 
       setMetricasData(resumen)
@@ -149,7 +178,7 @@ const MetricasList: FC = () => {
             boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)'
           }}
         >
-          <div>
+          <div className="flex-grow-1">
             <h1
               className="d-flex align-items-center fw-bolder fs-3 my-1"
               style={{
@@ -172,6 +201,44 @@ const MetricasList: FC = () => {
               </small>
             </h1>
           </div>
+          {clientesDisponibles.length > 0 && (
+            <div style={{ minWidth: '300px', marginLeft: '24px' }}>
+              <label
+                className="form-label mb-2"
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                <i className="bi bi-funnel me-2"></i>
+                Filtrar por Cliente
+              </label>
+              <select
+                className="form-select"
+                value={clienteSeleccionado}
+                onChange={(e) => setClienteSeleccionado(e.target.value)}
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  borderRadius: '8px',
+                  border: `2px solid ${atisaStyles.colors.light}`,
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  backgroundColor: 'white',
+                  color: atisaStyles.colors.primary,
+                  fontWeight: '500'
+                }}
+              >
+                <option value="">Todos los clientes</option>
+                {clientesDisponibles.map((cliente) => (
+                  <option key={cliente.clienteId.trim()} value={cliente.clienteId.trim()}>
+                    {cliente.clienteNombre.trim()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Métricas Cards */}
@@ -389,7 +456,9 @@ const MetricasList: FC = () => {
                           color: atisaStyles.colors.dark
                         }}
                       >
-                        Porcentaje general
+                        {clienteSeleccionado
+                          ? `Cliente: ${clientesDisponibles.find(c => c.clienteId.trim() === clienteSeleccionado)?.clienteNombre.trim() || 'Seleccionado'}`
+                          : 'Porcentaje general'}
                       </span>
                     </h3>
                   </div>
@@ -405,7 +474,7 @@ const MetricasList: FC = () => {
                 </div>
               </div>
 
-              {/* Hitos por tipo de proceso */}
+              {/* Hitos por tipo de proceso o por cliente */}
               <div className="col-xl-6">
                 <div
                   style={{
@@ -434,7 +503,7 @@ const MetricasList: FC = () => {
                         }}
                       >
                         <i className="bi bi-bar-chart me-2"></i>
-                        Hitos por Proceso
+                        {clienteSeleccionado ? 'Hitos por Proceso' : 'Hitos por Cliente'}
                       </span>
                       <span
                         className="fw-bold fs-7"
@@ -443,17 +512,27 @@ const MetricasList: FC = () => {
                           color: atisaStyles.colors.dark
                         }}
                       >
-                        Distribución por tipo
+                        {clienteSeleccionado ? 'Distribución por tipo' : 'Distribución por cliente'}
                       </span>
                     </h3>
                   </div>
                   <div className="pt-0" style={{ padding: '20px 24px' }}>
-                    {procesosData && (
+                    {clienteSeleccionado && procesosData ? (
                       <HitosPorProcesoChart
                         className="card-xl-stretch"
                         procesoData={procesosData.procesoData}
                       />
-                    )}
+                    ) : procesosData?.clientesData && procesosData.clientesData.length > 0 ? (
+                      <HitosPorClienteChart
+                        className="card-xl-stretch"
+                        clientesData={procesosData.clientesData}
+                      />
+                    ) : procesosData ? (
+                      <HitosPorProcesoChart
+                        className="card-xl-stretch"
+                        procesoData={procesosData.procesoData}
+                      />
+                    ) : null}
                   </div>
                 </div>
               </div>
