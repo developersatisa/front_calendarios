@@ -2,221 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos base según Guía Técnica Atisa */
-@layer base {
-  body {
-    font-family: 'Lato', Arial, sans-serif;
-    font-weight: 400;
-    color: #1f2937;
-    background-color: #f9fafb;
-  }
+@reference "tailwindcss";
 
-  /* Tipografías según guía técnica */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Aleo', Georgia, serif;
-    font-weight: 700;
-    color: #00505C;
-  }
-
-  h1 {
-    @apply text-3xl md:text-4xl lg:text-6xl;
-  }
-
-  h2 {
-    @apply text-2xl md:text-3xl lg:text-4xl;
-  }
-
-  h3 {
-    @apply text-2xl md:text-3xl lg:text-4xl;
-  }
-
-  h4 {
-    @apply text-xl md:text-2xl lg:text-3xl;
-  }
-
-  h5 {
-    @apply text-lg md:text-xl lg:text-2xl;
-  }
-
-  h6 {
-    @apply text-base md:text-lg lg:text-xl;
-  }
-
-  /* Párrafos y texto corrido */
-  p {
-    font-family: 'Lato', Arial, sans-serif;
-    font-weight: 400;
-    color: #374151;
-    line-height: 1.625;
-  }
-
-  /* Enlaces según guía (azul Pantone 299 C) */
-  a {
-    @apply text-atisa-accent hover:text-atisa-blue-dark transition-colors duration-300;
-  }
-
-  /* Botones con transiciones suaves */
-  button {
-    @apply transition-all duration-300 ease-in-out;
-  }
-
-  /* Inputs con transiciones suaves */
-  input, textarea, select {
-    @apply transition-all duration-300 ease-in-out;
-  }
-}
-
-/* Componentes personalizados según Guía Técnica Atisa */
-@layer components {
-  /* Botones según guía técnica */
-  .btn-atisa-primary {
-    @apply bg-atisa-secondary hover:bg-atisa-accent text-white font-family: "Lato", Arial, sans-serif font-semibold rounded-atisa px-6 py-3 text-sm transition-all duration-300 ease-in-out shadow-atisa-button hover:shadow-atisa-button-hover hover:-translate-y-0.5;
-  }
-
-  .btn-atisa-secondary {
-    @apply bg-transparent hover:bg-atisa-green-light text-atisa-primary hover:text-atisa-primary font-family: "Lato", Arial, sans-serif font-semibold rounded-atisa px-6 py-3 text-sm border-2 border-atisa-primary hover:border-atisa-accent transition-all duration-300 ease-in-out;
-  }
-
-  .btn-atisa-actions {
-    @apply bg-atisa-primary hover:bg-atisa-accent text-white font-family: "Lato", Arial, sans-serif font-medium rounded-atisa px-4 py-2 text-xs transition-all duration-300 ease-in-out;
-  }
-
-  /* Inputs según guía técnica */
-  .input-atisa {
-    @apply border-2 border-atisa-green-light rounded-md font-family: "Lato", Arial, sans-serif font-normal text-sm px-4 py-3 h-12 transition-all duration-300 ease-in-out focus:border-atisa-accent focus:ring-2 focus:ring-atisa-accent/10 focus:outline-none;
-  }
-
-  /* Tarjetas según guía técnica */
-  .card-atisa {
-    @apply bg-white rounded-atisa-lg shadow-atisa border border-atisa-green-light p-8;
-  }
-
-  /* Tablas según guía técnica */
-  .table-atisa-header {
-    @apply bg-atisa-green-light text-atisa-primary font-family: "Aleo", Georgia, serif font-bold px-4 py-4 border-b-2 border-atisa-primary;
-  }
-
-  .table-atisa-cell {
-    @apply px-4 py-3 text-atisa-green-dark border-b border-atisa-green-light font-family: "Lato", Arial, sans-serif font-normal;
-  }
-
-  /* Badges según guía técnica */
-  .badge-atisa {
-    @apply text-white font-family: "Lato", Arial, sans-serif font-semibold px-4 py-2 rounded-full text-xs;
-  }
-
-  .badge-atisa-success {
-    @apply bg-atisa-secondary;
-  }
-
-  .badge-atisa-info {
-    @apply bg-atisa-accent;
-  }
-
-  .badge-atisa-warning {
-    @apply bg-atisa-orange;
-  }
-
-  .badge-atisa-danger {
-    @apply bg-red-500;
-  }
-
-  /* Modales según guía técnica */
-  .modal-atisa-header {
-    @apply bg-atisa-primary text-white border-none rounded-t-atisa-lg;
-  }
-
-  /* Alertas según guía técnica */
-  .alert-atisa {
-    @apply rounded-md font-family: "Lato", Arial, sans-serif font-normal text-sm p-4 mb-4 border-l-4;
-  }
-
-  .alert-atisa-danger {
-    @apply bg-red-50 border-red-200 text-red-800 border-l-red-500;
-  }
-
-  .alert-atisa-success {
-    @apply bg-green-50 border-green-200 text-green-800 border-l-green-500;
-  }
-
-  .alert-atisa-warning {
-    @apply bg-yellow-50 border-yellow-200 text-yellow-800 border-l-yellow-500;
-  }
-
-  .alert-atisa-info {
-    @apply bg-blue-50 border-blue-200 text-blue-800 border-l-blue-500;
-  }
-
-  /* Gradientes según guía técnica */
-  .gradient-atisa {
-    @apply bg-gradient-to-br from-gray-50 to-gray-100;
-  }
-
-  .gradient-atisa-primary {
-    @apply bg-gradient-to-br from-atisa-primary to-atisa-green-dark;
-  }
-
-  .gradient-atisa-secondary {
-    @apply bg-gradient-to-br from-atisa-secondary to-atisa-green-medium;
-  }
-
-  .gradient-atisa-accent {
-    @apply bg-gradient-to-br from-atisa-accent to-atisa-blue-dark;
-  }
-
-  /* Logo según guía técnica */
-  .logo-atisa {
-    @apply w-16 h-16 bg-atisa-primary rounded-full flex items-center justify-center shadow-atisa-lg;
-  }
-
-  .logo-atisa-responsive {
-    @apply w-8 h-8 bg-atisa-primary rounded-full flex items-center justify-center shadow-atisa-lg;
-  }
-
-  /* Iconografía según guía técnica (retícula 22x22) */
-  .icon-atisa {
-    @apply w-5.5 h-5.5; /* 22px = 5.5 * 4px */
-  }
-
-  .icon-atisa-primary {
-    @apply text-atisa-primary;
-  }
-
-  .icon-atisa-secondary {
-    @apply text-atisa-secondary;
-  }
-
-  .icon-atisa-accent {
-    @apply text-atisa-accent;
-  }
-
-  .icon-atisa-white {
-    @apply text-white;
-  }
-
-  /* Ideogramas según guía técnica */
-  .ideogram-atisa {
-    @apply w-12 h-12 rounded-full flex items-center justify-center;
-  }
-
-  .ideogram-atisa-primary {
-    @apply bg-atisa-primary;
-  }
-
-  .ideogram-atisa-secondary {
-    @apply bg-atisa-secondary;
-  }
-
-  .ideogram-atisa-accent {
-    @apply bg-atisa-accent;
-  }
-
-  .ideogram-atisa-gradient {
-    @apply bg-gradient-to-br from-atisa-primary via-atisa-secondary to-atisa-accent;
-  }
-}
-
-/* Utilidades personalizadas según Guía Técnica Atisa */
+/* Utilidades personalizadas según Guía Técnica Atisa - Deben estar primero para estar disponibles en otros layers */
 @layer utilities {
   /* Colores principales */
   .text-atisa-primary { color: #00505C; } /* Pantone 3165 C */
@@ -281,6 +69,20 @@
   .border-atisa-light { border-color: #80E0D3; }
   .border-atisa-dark { border-color: #007C92; }
 
+  /* Sombras según guía técnica */
+  .shadow-atisa { box-shadow: 0 15px 40px rgba(0, 80, 92, 0.15); }
+  .shadow-atisa-lg { box-shadow: 0 8px 25px rgba(0, 80, 92, 0.3); }
+  .shadow-atisa-button { box-shadow: 0 3px 12px rgba(156, 186, 57, 0.3); }
+  .shadow-atisa-button-hover { box-shadow: 0 4px 15px rgba(0, 161, 222, 0.4); }
+
+  /* Border radius según guía técnica */
+  .rounded-atisa { border-radius: 8px; }
+  .rounded-atisa-lg { border-radius: 16px; }
+  .rounded-t-atisa-lg {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+  }
+
   /* Tipografías según guía técnica - ahora manejadas por Tailwind theme */
 
   /* Pesos de Aleo */
@@ -296,4 +98,468 @@
   .lato-bold { font-weight: 700; }
   .lato-extrabold { font-weight: 800; }
   .lato-black { font-weight: 900; }
+}
+
+/* Acordeones personalizados según Guía Técnica Atisa */
+@layer components {
+  /* Acordeón principal - debe mantener la clase .accordion de Bootstrap */
+  .accordion.accordion-atisa {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 80, 92, 0.1);
+    border: 1px solid #80E0D3;
+    overflow: visible;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* Item del acordeón - debe mantener la clase .accordion-item de Bootstrap */
+  .accordion.accordion-atisa .accordion-item {
+    border: none;
+    border-bottom: 1px solid #80E0D3;
+    background-color: transparent;
+  }
+
+  .accordion.accordion-atisa .accordion-item:last-child {
+    border-bottom: none;
+  }
+
+  /* Header del acordeón - debe mantener la clase .accordion-header de Bootstrap */
+  .accordion.accordion-atisa .accordion-header {
+    background-color: #80E0D3;
+    border: none;
+    margin: 0;
+  }
+
+  .accordion.accordion-atisa .accordion-header button {
+    background-color: transparent !important;
+    border: none !important;
+    color: #00505C !important;
+    font-family: 'Aleo', Georgia, serif !important;
+    font-weight: bold !important;
+    font-size: 1.2rem !important;
+    padding: 20px 24px !important;
+    width: 100%;
+    text-align: left;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .accordion.accordion-atisa .accordion-header button:not(.collapsed) {
+    background-color: #80E0D3 !important;
+    color: #00505C !important;
+  }
+
+  .accordion.accordion-atisa .accordion-header button.collapsed {
+    background-color: #80E0D3 !important;
+    color: #00505C !important;
+  }
+
+  .accordion.accordion-atisa .accordion-header button:focus {
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: transparent !important;
+  }
+
+  .accordion.accordion-atisa .accordion-header button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2300505C'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+    width: 1.25rem;
+    height: 1.25rem;
+    transition: transform 0.35s ease;
+  }
+
+  .accordion.accordion-atisa .accordion-header button:not(.collapsed)::after {
+    transform: rotate(-180deg);
+  }
+
+  /* Body del acordeón - debe mantener la clase .accordion-body de Bootstrap */
+  .accordion.accordion-atisa .accordion-body {
+    background-color: white;
+    padding: 24px;
+    border-top: none;
+  }
+
+  /* Asegurar que el collapse funcione correctamente */
+  .accordion.accordion-atisa .accordion-collapse {
+    position: relative;
+  }
+
+  .accordion.accordion-atisa .accordion-collapse.collapse.show {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+  }
+
+  .accordion.accordion-atisa .accordion-collapse.collapse:not(.show) {
+    display: none !important;
+  }
+
+  .accordion.accordion-atisa .accordion-collapse.collapsing {
+    position: relative;
+    height: 0;
+    overflow: hidden;
+    transition: height 0.35s ease;
+    opacity: 1;
+  }
+
+  /* Asegurar que el body permanezca visible cuando el collapse está abierto */
+  .accordion.accordion-atisa .accordion-collapse.show .accordion-body,
+  .accordion.accordion-atisa .accordion-collapse.collapsing .accordion-body {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  /* Prevenir que cualquier estilo oculte el contenido después de la animación */
+  .accordion.accordion-atisa .accordion-item .accordion-collapse.show {
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Badge de contador en header */
+  .accordion-atisa-badge {
+    background-color: #9CBA39;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Lato', Arial, sans-serif;
+    margin-left: auto;
+  }
+}
+
+/* Estilos base según Guía Técnica Atisa */
+@layer base {
+  @reference "tailwindcss";
+
+  body {
+    font-family: 'Lato', Arial, sans-serif;
+    font-weight: 400;
+    color: #1f2937;
+    background-color: #f9fafb;
+  }
+
+  /* Tipografías según guía técnica */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Aleo', Georgia, serif;
+    font-weight: 700;
+    color: #00505C;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl lg:text-6xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl lg:text-3xl;
+  }
+
+  h5 {
+    @apply text-lg md:text-xl lg:text-2xl;
+  }
+
+  h6 {
+    @apply text-base md:text-lg lg:text-xl;
+  }
+
+  /* Párrafos y texto corrido */
+  p {
+    font-family: 'Lato', Arial, sans-serif;
+    font-weight: 400;
+    color: #374151;
+    line-height: 1.625;
+  }
+
+  /* Enlaces según guía (azul Pantone 299 C) */
+  a {
+    color: #00A1DE; /* text-atisa-accent */
+    transition: color 300ms;
+  }
+  a:hover {
+    color: #0065BD; /* hover:text-atisa-blue-dark */
+  }
+
+  /* Botones con transiciones suaves */
+  button {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Inputs con transiciones suaves */
+  input, textarea, select {
+    @apply transition-all duration-300 ease-in-out;
+  }
+}
+
+/* Componentes personalizados según Guía Técnica Atisa */
+@layer components {
+  @reference "tailwindcss";
+
+  /* Botones según guía técnica */
+  .btn-atisa-primary {
+    background-color: #9CBA39; /* bg-atisa-secondary */
+    color: white;
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 600;
+    border-radius: 8px; /* rounded-atisa */
+    padding: 12px 24px; /* px-6 py-3 */
+    font-size: 0.875rem; /* text-sm */
+    transition: all 300ms ease-in-out;
+    box-shadow: 0 3px 12px rgba(156, 186, 57, 0.3); /* shadow-atisa-button */
+  }
+  .btn-atisa-primary:hover {
+    background-color: #00A1DE; /* hover:bg-atisa-accent */
+    box-shadow: 0 4px 15px rgba(0, 161, 222, 0.4); /* hover:shadow-atisa-button-hover */
+    transform: translateY(-2px); /* hover:-translate-y-0.5 */
+  }
+
+  .btn-atisa-secondary {
+    background-color: transparent;
+    color: #00505C; /* text-atisa-primary */
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 600;
+    border-radius: 8px; /* rounded-atisa */
+    padding: 12px 24px; /* px-6 py-3 */
+    font-size: 0.875rem; /* text-sm */
+    border: 2px solid #00505C; /* border-atisa-primary */
+    transition: all 300ms ease-in-out;
+  }
+  .btn-atisa-secondary:hover {
+    background-color: #80E0D3; /* hover:bg-atisa-green-light */
+    border-color: #00A1DE; /* hover:border-atisa-accent */
+  }
+
+  .btn-atisa-actions {
+    background-color: #00505C; /* bg-atisa-primary */
+    color: white;
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 500;
+    border-radius: 8px; /* rounded-atisa */
+    padding: 8px 16px; /* px-4 py-2 */
+    font-size: 0.75rem; /* text-xs */
+    transition: all 300ms ease-in-out;
+  }
+  .btn-atisa-actions:hover {
+    background-color: #00A1DE; /* hover:bg-atisa-accent */
+  }
+
+  /* Inputs según guía técnica */
+  .input-atisa {
+    border: 2px solid #80E0D3; /* border-atisa-green-light */
+    border-radius: 6px; /* rounded-md */
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 0.875rem; /* text-sm */
+    padding: 12px 16px; /* px-4 py-3 */
+    height: 48px; /* h-12 */
+    transition: all 300ms ease-in-out;
+  }
+  .input-atisa:focus {
+    border-color: #00A1DE; /* focus:border-atisa-accent */
+    box-shadow: 0 0 0 2px rgba(0, 161, 222, 0.1); /* focus:ring-2 focus:ring-atisa-accent/10 */
+    outline: none;
+  }
+
+  /* Tarjetas según guía técnica */
+  .card-atisa {
+    background-color: white;
+    border-radius: 16px; /* rounded-atisa-lg */
+    box-shadow: 0 15px 40px rgba(0, 80, 92, 0.15); /* shadow-atisa */
+    border: 1px solid #80E0D3; /* border-atisa-green-light */
+    padding: 32px; /* p-8 */
+  }
+
+  /* Tablas según guía técnica */
+  .table-atisa-header {
+    background-color: #80E0D3; /* bg-atisa-green-light */
+    color: #00505C; /* text-atisa-primary */
+    font-family: "Aleo", Georgia, serif;
+    font-weight: 700;
+    padding: 16px; /* px-4 py-4 */
+    border-bottom: 2px solid #00505C; /* border-b-2 border-atisa-primary */
+  }
+
+  .table-atisa-cell {
+    padding: 12px 16px; /* px-4 py-3 */
+    color: #007C92; /* text-atisa-green-dark */
+    border-bottom: 1px solid #80E0D3; /* border-b border-atisa-green-light */
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 400;
+  }
+
+  /* Badges según guía técnica */
+  .badge-atisa {
+    color: white;
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 600;
+    padding: 8px 16px; /* px-4 py-2 */
+    border-radius: 9999px; /* rounded-full */
+    font-size: 0.75rem; /* text-xs */
+  }
+
+  .badge-atisa-success {
+    background-color: #9CBA39; /* bg-atisa-secondary */
+  }
+
+  .badge-atisa-info {
+    background-color: #00A1DE; /* bg-atisa-accent */
+  }
+
+  .badge-atisa-warning {
+    background-color: #FF6D22; /* bg-atisa-orange */
+  }
+
+  .badge-atisa-danger {
+    background-color: #ef4444; /* bg-red-500 */
+  }
+
+  /* Modales según guía técnica */
+  .modal-atisa-header {
+    background-color: #00505C; /* bg-atisa-primary */
+    color: white;
+    border: none;
+    border-top-left-radius: 16px; /* rounded-t-atisa-lg */
+    border-top-right-radius: 16px;
+  }
+
+  /* Alertas según guía técnica */
+  .alert-atisa {
+    border-radius: 6px; /* rounded-md */
+    font-family: "Lato", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 0.875rem; /* text-sm */
+    padding: 16px; /* p-4 */
+    margin-bottom: 16px; /* mb-4 */
+    border-left-width: 4px; /* border-l-4 */
+  }
+
+  .alert-atisa-danger {
+    background-color: #fef2f2; /* bg-red-50 */
+    border-color: #fecaca; /* border-red-200 */
+    color: #991b1b; /* text-red-800 */
+    border-left-color: #ef4444; /* border-l-red-500 */
+  }
+
+  .alert-atisa-success {
+    background-color: #f0fdf4; /* bg-green-50 */
+    border-color: #bbf7d0; /* border-green-200 */
+    color: #166534; /* text-green-800 */
+    border-left-color: #22c55e; /* border-l-green-500 */
+  }
+
+  .alert-atisa-warning {
+    background-color: #fefce8; /* bg-yellow-50 */
+    border-color: #fef08a; /* border-yellow-200 */
+    color: #854d0e; /* text-yellow-800 */
+    border-left-color: #eab308; /* border-l-yellow-500 */
+  }
+
+  .alert-atisa-info {
+    background-color: #eff6ff; /* bg-blue-50 */
+    border-color: #bfdbfe; /* border-blue-200 */
+    color: #1e40af; /* text-blue-800 */
+    border-left-color: #3b82f6; /* border-l-blue-500 */
+  }
+
+  /* Gradientes según guía técnica */
+  .gradient-atisa {
+    background: linear-gradient(to bottom right, #f9fafb, #f3f4f6); /* bg-gradient-to-br from-gray-50 to-gray-100 */
+  }
+
+  .gradient-atisa-primary {
+    background: linear-gradient(to bottom right, #00505C, #007C92); /* from-atisa-primary to-atisa-green-dark */
+  }
+
+  .gradient-atisa-secondary {
+    background: linear-gradient(to bottom right, #9CBA39, #7AB800); /* from-atisa-secondary to-atisa-green-medium */
+  }
+
+  .gradient-atisa-accent {
+    background: linear-gradient(to bottom right, #00A1DE, #0065BD); /* from-atisa-accent to-atisa-blue-dark */
+  }
+
+  /* Logo según guía técnica */
+  .logo-atisa {
+    width: 64px; /* w-16 */
+    height: 64px; /* h-16 */
+    background-color: #00505C; /* bg-atisa-primary */
+    border-radius: 9999px; /* rounded-full */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(0, 80, 92, 0.3); /* shadow-atisa-lg */
+  }
+
+  .logo-atisa-responsive {
+    width: 32px; /* w-8 */
+    height: 32px; /* h-8 */
+    background-color: #00505C; /* bg-atisa-primary */
+    border-radius: 9999px; /* rounded-full */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(0, 80, 92, 0.3); /* shadow-atisa-lg */
+  }
+
+  /* Iconografía según guía técnica (retícula 22x22) */
+  .icon-atisa {
+    width: 22px; /* w-5.5 = 22px */
+    height: 22px; /* h-5.5 = 22px */
+  }
+
+  .icon-atisa-primary {
+    color: #00505C; /* text-atisa-primary */
+  }
+
+  .icon-atisa-secondary {
+    color: #9CBA39; /* text-atisa-secondary */
+  }
+
+  .icon-atisa-accent {
+    color: #00A1DE; /* text-atisa-accent */
+  }
+
+  .icon-atisa-white {
+    color: white;
+  }
+
+  /* Ideogramas según guía técnica */
+  .ideogram-atisa {
+    width: 48px; /* w-12 */
+    height: 48px; /* h-12 */
+    border-radius: 9999px; /* rounded-full */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ideogram-atisa-primary {
+    background-color: #00505C; /* bg-atisa-primary */
+  }
+
+  .ideogram-atisa-secondary {
+    background-color: #9CBA39; /* bg-atisa-secondary */
+  }
+
+  .ideogram-atisa-accent {
+    background-color: #00A1DE; /* bg-atisa-accent */
+  }
+
+  .ideogram-atisa-gradient {
+    background: linear-gradient(to bottom right, #00505C, #9CBA39, #00A1DE); /* from-atisa-primary via-atisa-secondary to-atisa-accent */
+  }
 }
