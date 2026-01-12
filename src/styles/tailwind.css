@@ -108,7 +108,7 @@
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 80, 92, 0.1);
     border: 1px solid #80E0D3;
-    overflow: visible;
+    overflow: hidden;
     max-width: 1600px;
     margin: 0 auto;
   }
@@ -183,7 +183,20 @@
 
   /* Asegurar que el collapse funcione correctamente */
   .accordion.accordion-atisa .accordion-collapse {
+    transition: height 0.35s ease;
+  }
+
+  .accordion.accordion-atisa .accordion-collapse.collapsing {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.35s ease;
+    opacity: 1;
     position: relative;
+    z-index: 1;
+  }
+
+  .accordion.accordion-atisa .accordion-collapse.collapse:not(.show) {
+    display: none !important;
   }
 
   .accordion.accordion-atisa .accordion-collapse.collapse.show {
@@ -194,32 +207,9 @@
     opacity: 1 !important;
   }
 
-  .accordion.accordion-atisa .accordion-collapse.collapse:not(.show) {
-    display: none !important;
-  }
-
-  .accordion.accordion-atisa .accordion-collapse.collapsing {
-    position: relative;
-    height: 0;
-    overflow: hidden;
-    transition: height 0.35s ease;
-    opacity: 1;
-  }
-
-  /* Asegurar que el body permanezca visible cuando el collapse está abierto */
-  .accordion.accordion-atisa .accordion-collapse.show .accordion-body,
-  .accordion.accordion-atisa .accordion-collapse.collapsing .accordion-body {
+  .accordion.accordion-atisa .accordion-collapse.show .accordion-body {
     display: block !important;
     visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
-    z-index: 1 !important;
-  }
-
-  /* Prevenir que cualquier estilo oculte el contenido después de la animación */
-  .accordion.accordion-atisa .accordion-item .accordion-collapse.show {
-    max-height: none !important;
-    height: auto !important;
   }
 
   /* Badge de contador en header */

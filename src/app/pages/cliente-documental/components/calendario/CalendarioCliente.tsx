@@ -1187,15 +1187,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           })
           setTodosAbiertos(nuevasClaves.length === procesosVisibles.length && procesosVisibles.length > 0)
         }}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-          border: `1px solid ${atisaStyles.colors.light}`,
-          overflow: 'hidden',
-          maxWidth: '1600px',
-          margin: '0 auto'
-        }}
+        className="accordion accordion-atisa"
       >
         {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
           const procesosFiltradosPorPeriodo = selectedPeriod
@@ -1215,51 +1207,28 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             <Accordion.Item
               key={nombreProceso}
               eventKey={index.toString()}
-              style={{
-                border: 'none',
-                borderBottom: `1px solid ${atisaStyles.colors.light}`
-              }}
             >
-              <Accordion.Header
-                style={{
-                  backgroundColor: atisaStyles.colors.light,
-                  border: 'none',
-                  padding: '20px 24px'
-                }}
-              >
-                <div className='d-flex justify-content-between w-100 me-3'>
-                  <span
-                    style={{
-                      fontFamily: atisaStyles.fonts.primary,
-                      color: atisaStyles.colors.primary,
-                      fontWeight: 'bold',
-                      fontSize: '1.2rem'
-                    }}
-                  >
-                    <i className="bi bi-diagram-3 me-2" style={{ color: atisaStyles.colors.primary }}></i>
-                    {nombreProceso}
-                  </span>
-                  <span
-                    style={{
-                      backgroundColor: atisaStyles.colors.secondary,
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      fontFamily: atisaStyles.fonts.secondary
-                    }}
-                  >
+              <Accordion.Header>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexGrow: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1 }}>
+                    <i className="bi bi-diagram-3" style={{ color: atisaStyles.colors.primary }}></i>
+                    <span
+                      style={{
+                        fontFamily: atisaStyles.fonts.primary,
+                        color: atisaStyles.colors.primary,
+                        fontWeight: 'bold',
+                        fontSize: '1.2rem'
+                      }}
+                    >
+                      {nombreProceso}
+                    </span>
+                  </div>
+                  <span className="accordion-atisa-badge">
                     {totalHitos} hitos
                   </span>
                 </div>
               </Accordion.Header>
-              <Accordion.Body
-                style={{
-                  backgroundColor: 'white',
-                  padding: '24px'
-                }}
-              >
+              <Accordion.Body>
                 {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
                   <div key={periodoKey} className='mb-5'>
                     <div
