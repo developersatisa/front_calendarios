@@ -90,6 +90,9 @@ export interface ClienteProcesoHitoResumido {
   fecha_limite: string;
   cliente: string;
   hito: string;
+  proceso: string;
+  estado: string;
+  hora_limite: string | null;
 }
 
 export interface ClienteProcesoHitosFechaResponse {
