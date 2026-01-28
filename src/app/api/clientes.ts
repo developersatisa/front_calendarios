@@ -68,3 +68,25 @@ export const getClienteById = async (id: string) => {
   const response = await api.get<Cliente>(`/clientes/${id}`)
   return response.data
 }
+
+export const getClientesPorHito = async (
+  hitoId: number,
+  page: number = 1,
+  limit: number = 10,
+  search: string = '',
+  sortField: string = 'razsoc',
+  sortDirection: 'asc' | 'desc' = 'asc'
+) => {
+  const params = new URLSearchParams()
+  params.append('page', String(page))
+  params.append('limit', String(limit))
+  if (search) params.append('search', search)
+  params.append('sort_field', sortField)
+  params.append('sort_direction', sortDirection)
+
+  const response = await api.get<ClientesResponse>(`/clientes/hito/${hitoId}?${params.toString()}`)
+  return {
+    clientes: response.data.clientes || [],
+    total: response.data.total || 0
+  }
+}

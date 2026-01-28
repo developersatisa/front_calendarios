@@ -1,6 +1,6 @@
 
-import {KTIcon} from '../../../helpers'
-import {atisaStyles} from '../../../../app/styles/atisaStyles'
+import { KTIcon } from '../../../helpers'
+import { atisaStyles } from '../../../../app/styles/atisaStyles'
 
 const SidebarFooter = () => {
   return (
@@ -25,7 +25,7 @@ const SidebarFooter = () => {
           marginBottom: '4px',
           fontWeight: '600'
         }}>
-          © 2024 ATISA
+          © 2025 ATISA
         </div>
         <div style={{
           fontSize: '10px',
@@ -38,4 +38,4 @@ const SidebarFooter = () => {
   )
 }
 
-export {SidebarFooter}
+export { SidebarFooter }

@@ -5,19 +5,21 @@
  * components (e.g: `src/app/modules/Auth/pages/AuthPage`, `src/app/BasePage`).
  */
 
-import {FC} from 'react'
-import {Routes, Route, BrowserRouter, Navigate} from 'react-router-dom'
-import {PrivateRoutes} from './PrivateRoutes'
-import {ErrorsPage} from '../modules/errors/ErrorsPage'
-import {Logout} from '../modules/auth'
-import {Login} from '../components/Login'
-import {App} from '../App'
-import {useAuth} from '../modules/auth/core/Auth'
+import { FC } from 'react'
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
+import { PrivateRoutes } from './PrivateRoutes'
+import { ErrorsPage } from '../modules/errors/ErrorsPage'
+import { Logout } from '../modules/auth'
+import { AuthPage } from '../modules/auth/AuthPage'
+import { SSOCallback } from '../modules/auth/SSOCallback'
+import { Login } from '../components/Login'
+import { App } from '../App'
+import { useAuth } from '../modules/auth/core/Auth'
 
-const {BASE_URL} = import.meta.env
+const { BASE_URL } = import.meta.env
 
 const AppRoutes: FC = () => {
-  const {auth} = useAuth()
+  const { auth } = useAuth()
   const isAuthenticated = !!auth?.api_token
 
   return (
@@ -34,6 +36,8 @@ const AppRoutes: FC = () => {
             </>
           ) : (
             <>
+              <Route path='auth/*' element={<AuthPage />} />
+              <Route path='sso/callback' element={<SSOCallback />} />
               <Route path='login' element={<Login />} />
               <Route path='*' element={<Navigate to='/login' />} />
             </>
@@ -44,4 +48,4 @@ const AppRoutes: FC = () => {
   )
 }
 
-export {AppRoutes}
+export { AppRoutes }

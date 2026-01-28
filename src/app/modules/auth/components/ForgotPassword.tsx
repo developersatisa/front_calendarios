@@ -1,9 +1,9 @@
-import {useState} from 'react'
+import { useState } from 'react'
 import * as Yup from 'yup'
 import clsx from 'clsx'
-import {Link} from 'react-router-dom'
-import {useFormik} from 'formik'
-import {requestPassword} from '../core/_requests'
+import { Link } from 'react-router-dom'
+import { useFormik } from 'formik'
+import { requestPassword } from '../core/_requests'
 
 const initialValues = {
   email: 'admin@demo.com',
@@ -23,7 +23,7 @@ export function ForgotPassword() {
   const formik = useFormik({
     initialValues,
     validationSchema: forgotPasswordSchema,
-    onSubmit: (values, {setStatus, setSubmitting}) => {
+    onSubmit: (values, { setStatus, setSubmitting }) => {
       setLoading(true)
       setHasErrors(undefined)
       setTimeout(() => {
@@ -51,12 +51,12 @@ export function ForgotPassword() {
     >
       <div className='text-center mb-10'>
         {/* begin::Title */}
-        <h1 className='text-gray-900 fw-bolder mb-3'>Forgot Password ?</h1>
+        <h1 className='text-gray-900 fw-bolder mb-3'>¿Has olvidado tu contraseña?</h1>
         {/* end::Title */}
 
         {/* begin::Link */}
         <div className='text-gray-500 fw-semibold fs-6'>
-          Enter your email to reset your password.
+          Introduce tu correo electrónico para restablecer tu contraseña.
         </div>
         {/* end::Link */}
       </div>
@@ -65,29 +65,29 @@ export function ForgotPassword() {
       {hasErrors === true && (
         <div className='mb-lg-15 alert alert-danger'>
           <div className='alert-text font-weight-bold'>
-            Sorry, looks like there are some errors detected, please try again.
+            Lo sentimos, parece que ha ocurrido un error. Por favor, inténtalo de nuevo.
           </div>
         </div>
       )}
 
       {hasErrors === false && (
         <div className='mb-10 bg-light-info p-8 rounded'>
-          <div className='text-info'>Sent password reset. Please check your email</div>
+          <div className='text-info text-center'>Hemos enviado un enlace de restablecimiento. Por favor, revisa tu correo.</div>
         </div>
       )}
       {/* end::Title */}
 
       {/* begin::Form group */}
       <div className='fv-row mb-8'>
-        <label className='form-label fw-bolder text-gray-900 fs-6'>Email</label>
+        <label className='form-label fw-bolder text-gray-900 fs-6'>Correo electrónico</label>
         <input
           type='email'
-          placeholder=''
+          placeholder='correo@atisa.es'
           autoComplete='off'
           {...formik.getFieldProps('email')}
           className={clsx(
             'form-control bg-transparent',
-            {'is-invalid': formik.touched.email && formik.errors.email},
+            { 'is-invalid': formik.touched.email && formik.errors.email },
             {
               'is-valid': formik.touched.email && !formik.errors.email,
             }
@@ -96,7 +96,7 @@ export function ForgotPassword() {
         {formik.touched.email && formik.errors.email && (
           <div className='fv-plugins-message-container'>
             <div className='fv-help-block'>
-              <span role='alert'>{formik.errors.email}</span>
+              <span role='alert' className='text-danger'>{formik.errors.email}</span>
             </div>
           </div>
         )}
@@ -105,11 +105,11 @@ export function ForgotPassword() {
 
       {/* begin::Form group */}
       <div className='d-flex flex-wrap justify-content-center pb-lg-0'>
-        <button type='submit' id='kt_password_reset_submit' className='btn btn-primary me-4'>
-          <span className='indicator-label'>Submit</span>
+        <button type='submit' id='kt_password_reset_submit' className='btn btn-primary me-4' style={{ backgroundColor: '#9CBA39', border: 'none' }}>
+          <span className='indicator-label'>Enviar</span>
           {loading && (
-            <span className='indicator-progress'>
-              Please wait...
+            <span className='indicator-progress' style={{ display: 'block' }}>
+              Por favor espere...
               <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
             </span>
           )}
@@ -119,9 +119,9 @@ export function ForgotPassword() {
             type='button'
             id='kt_login_password_reset_form_cancel_button'
             className='btn btn-light'
-            disabled={formik.isSubmitting || !formik.isValid}
+            disabled={formik.isSubmitting}
           >
-            Cancel
+            Cancelar
           </button>
         </Link>{' '}
       </div>

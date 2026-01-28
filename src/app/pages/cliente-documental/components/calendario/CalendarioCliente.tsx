@@ -14,11 +14,49 @@ interface Props {
   clienteId: string
 }
 
+interface MonthButtonProps {
+  periodo: string
+  month: string
+  isSelected: boolean
+  onClick: (periodo: string) => void
+  getMesName: (mes: number) => string
+}
+
+const MonthButton: FC<MonthButtonProps> = ({ periodo, month, isSelected, onClick, getMesName }) => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <button
+      className="btn btn-sm"
+      style={{
+        backgroundColor: isSelected ? atisaStyles.colors.secondary : (isHovered ? atisaStyles.colors.light : 'white'),
+        color: isSelected ? 'white' : atisaStyles.colors.primary,
+        border: `2px solid ${isSelected ? atisaStyles.colors.accent : (isHovered ? atisaStyles.colors.accent : atisaStyles.colors.light)}`,
+        borderRadius: '8px',
+        fontFamily: atisaStyles.fonts.secondary,
+        fontWeight: '600',
+        padding: '6px 16px',
+        fontSize: '13px',
+        transition: 'all 0.3s ease',
+        boxShadow: isSelected ? '0 4px 12px rgba(156, 186, 57, 0.3)' : (isHovered ? '0 2px 6px rgba(0,0,0,0.05)' : 'none'),
+        whiteSpace: 'nowrap',
+        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)'
+      }}
+      onClick={() => onClick(periodo)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {getMesName(parseInt(month))}
+    </button>
+  )
+}
+
 const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const navigate = useNavigate()
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [procesos, setProcesos] = useState<ClienteProceso[]>([])
   const [procesosList, setProcesosList] = useState<Proceso[]>([])
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState<string>('')
   const [hitosPorProceso, setHitosPorProceso] = useState<Record<number, ClienteProcesoHito[]>>({})
   const [loadingHitos, setLoadingHitos] = useState(false)
@@ -48,38 +86,83 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     getAllHitos().then((res) => setHitosMaestro(res.hitos || []))
   }, [clienteId])
 
-  // Obtener períodos únicos
-  const periodos = useMemo(() => {
-    const uniquePeriods = new Set<string>()
-    procesos.forEach(proceso => {
-      if (proceso.anio && proceso.mes) {
-        uniquePeriods.add(`${proceso.anio}-${proceso.mes.toString().padStart(2, '0')}`)
+  // Obtener años y periodos disponibles
+  const { availableYears, periodosDelAnio } = useMemo(() => {
+    const years = new Set<number>()
+    const periodsSet = new Set<string>()
+
+    procesos.forEach(p => {
+      if (p.anio) {
+        years.add(p.anio)
+        if (selectedYear && p.anio === selectedYear && p.mes) {
+          periodsSet.add(`${p.anio}-${p.mes.toString().padStart(2, '0')}`)
+        }
       }
     })
-    return Array.from(uniquePeriods)
-      .sort((a, b) => {
-        const [yearA, monthA] = a.split('-').map(Number)
-        const [yearB, monthB] = b.split('-').map(Number)
-        if (yearA !== yearB) return yearB - yearA
-        return monthA - monthB
-      })
-  }, [procesos])
 
-  useEffect(() => {
-    if (periodos.length > 0) {
-      // Obtener el mes y año actual usando UTC
-      const ahora = new Date()
-      const anoActual = ahora.getUTCFullYear()
-      const mesActual = (ahora.getUTCMonth() + 1).toString().padStart(2, '0')
-      const periodoActual = `${anoActual}-${mesActual}`
-
-      // Buscar si existe el período actual en la lista
-      const existePeriodoActual = periodos.includes(periodoActual)
-
-      // Seleccionar el período actual si existe, sino el más reciente
-      setSelectedPeriod(existePeriodoActual ? periodoActual : periodos[0])
+    // Si no hay años con datos, mostramos el año actual por defecto
+    if (years.size === 0) {
+      years.add(new Date().getFullYear())
     }
-  }, [periodos])
+
+    // Convertir periodos a array y ordenar
+    const periodsList = Array.from(periodsSet).sort((a, b) => {
+      const [, monthA] = a.split('-').map(Number)
+      const [, monthB] = b.split('-').map(Number)
+      return monthA - monthB
+    })
+
+    return {
+      availableYears: Array.from(years).sort((a, b) => b - a),
+      periodosDelAnio: periodsList
+    }
+  }, [procesos, selectedYear])
+
+  // Asegurar que el año seleccionado sea válido o inicializarlo
+  useEffect(() => {
+    const getClosestYear = (target: number, years: number[]) => {
+      return years.reduce((prev, curr) =>
+        Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev
+      )
+    }
+
+    const currentYear = new Date().getFullYear()
+
+    if (availableYears.length > 0) {
+      // Caso 1: No hay año seleccionado
+      if (selectedYear === null) {
+        if (availableYears.includes(currentYear)) {
+          setSelectedYear(currentYear)
+        } else {
+          setSelectedYear(getClosestYear(currentYear, availableYears))
+        }
+      }
+      // Caso 2: El año seleccionado ya no es válido (ej. cambio de datos)
+      else if (!availableYears.includes(selectedYear)) {
+        setSelectedYear(getClosestYear(currentYear, availableYears))
+      }
+    }
+  }, [availableYears, selectedYear])
+
+  // Seleccionar periodo por defecto al cambiar de año
+  useEffect(() => {
+    if (periodosDelAnio.length > 0) {
+      if (!periodosDelAnio.includes(selectedPeriod)) {
+        // Intentar seleccionar el mes actual si está disponible en el año seleccionado
+        const now = new Date()
+        const currentMonth = (now.getUTCMonth() + 1).toString().padStart(2, '0')
+        const currentPeriod = `${selectedYear}-${currentMonth}`
+
+        if (periodosDelAnio.includes(currentPeriod)) {
+          setSelectedPeriod(currentPeriod)
+        } else {
+          setSelectedPeriod(periodosDelAnio[0])
+        }
+      }
+    } else {
+      setSelectedPeriod('')
+    }
+  }, [selectedYear, periodosDelAnio])
   // Debounce para búsqueda por nombre de hito
   useEffect(() => {
     const normalizeText = (text: string) =>
@@ -111,28 +194,49 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           .catch(() => ({ procesoId: proceso.id, hitos: [] }))
       )
 
-      const resultados = await Promise.all(hitosPromises)
+      const resultadosHitos = await Promise.all(hitosPromises)
 
-      // Organizar hitos por proceso y ordenar por fecha límite
-      resultados.forEach(({ procesoId, hitos }) => {
+      // Organizar hitos por proceso y obtener lista plana de todos los hitos
+      const todosLosHitos: ClienteProcesoHito[] = []
+
+      resultadosHitos.forEach(({ procesoId, hitos }) => {
         hitosMap[procesoId] = hitos.sort((a, b) =>
           new Date(a.fecha_limite).getTime() - new Date(b.fecha_limite).getTime()
         )
+        todosLosHitos.push(...hitos)
       })
 
-      // Establecer hitos inmediatamente para que la tabla se muestre
-      setHitosPorProceso(hitosMap)
+      // Cargar cumplimientos también antes de terminar la carga
+      const cumplimientosMap: Record<number, ClienteProcesoHitoCumplimiento[]> = {}
 
-      // Cargar cumplimientos de forma asíncrona y no bloqueante
-      cargarCumplimientosAsync(hitosMap)
+      if (todosLosHitos.length > 0) {
+        const cumplimientosPromises = todosLosHitos.map(hito =>
+          getClienteProcesoHitoCumplimientosByHito(hito.id, 0, 1, 'id', 'desc')
+            .then(cumplimientos => ({ hitoId: hito.id, cumplimientos: cumplimientos || [] }))
+            .catch((error) => {
+              console.warn(`Error cargando cumplimientos para hito ${hito.id}:`, error)
+              return { hitoId: hito.id, cumplimientos: [] }
+            })
+        )
+
+        const resultadosCumplimientos = await Promise.all(cumplimientosPromises)
+
+        resultadosCumplimientos.forEach(({ hitoId, cumplimientos }) => {
+          cumplimientosMap[hitoId] = cumplimientos || []
+        })
+      }
+
+      // Actualizar estados "de golpe" solo cuando todo esté listo
+      setHitosPorProceso(hitosMap)
+      setCumplimientosPorHito(cumplimientosMap)
 
     } catch (error) {
       console.error('Error cargando hitos:', error)
       setHitosPorProceso({})
       setCumplimientosPorHito({})
+    } finally {
+      setLoadingHitos(false)
     }
-
-    setLoadingHitos(false)
   }
 
   // Navegación de períodos eliminada a petición
@@ -265,7 +369,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
         }
       })
       cargarHitosDeProcesos(procesosVisibles)
-      // Resetear el estado de acordeones cuando cambia el período
+      // Resetear el estado de acordeones cuando cambia el año
       setActiveKeys([])
       setTodosAbiertos(false)
     }
@@ -798,7 +902,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       </div>
 
 
-      {/* Selector de períodos */}
+      {/* Selector de Año y Periodos */}
       <div
         className="mb-4 position-relative"
         style={{
@@ -809,48 +913,58 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           border: `1px solid ${atisaStyles.colors.light}`,
           maxWidth: '1600px',
           marginLeft: 'auto',
-          marginRight: 'auto'
+          marginRight: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '24px'
         }}
       >
-        <div className="d-flex overflow-auto justify-content-end" style={{ scrollbarWidth: 'thin' }}>
-          {periodos.map((periodo) => {
-            const [year, month] = periodo.split('-')
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          <label
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              fontWeight: '600',
+              color: atisaStyles.colors.dark,
+              fontSize: '14px'
+            }}
+          >
+            <i className="bi bi-calendar-event me-2"></i>
+            Seleccionar Año:
+          </label>
+          <select
+            className="form-select w-auto"
+            value={selectedYear || ''}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            style={{
+              fontFamily: atisaStyles.fonts.secondary,
+              fontWeight: '600',
+              color: atisaStyles.colors.primary,
+              border: `2px solid ${atisaStyles.colors.light}`,
+              borderRadius: '8px',
+              padding: '8px 32px 8px 16px',
+              cursor: 'pointer'
+            }}
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Lista de meses horizontal */}
+        <div className="d-flex overflow-auto" style={{ scrollbarWidth: 'thin', gap: '8px', paddingBottom: '4px', flexGrow: 1 }}>
+          {periodosDelAnio.map((periodo) => {
+            const [, month] = periodo.split('-')
             const isSelected = selectedPeriod === periodo
             return (
-              <button
+              <MonthButton
                 key={periodo}
-                className="btn btn-sm"
-                style={{
-                  backgroundColor: isSelected ? atisaStyles.colors.secondary : 'white',
-                  color: isSelected ? 'white' : atisaStyles.colors.primary,
-                  border: `2px solid ${isSelected ? atisaStyles.colors.accent : atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: isSelected ? '0 4px 12px rgba(156, 186, 57, 0.3)' : '0 2px 8px rgba(0, 80, 92, 0.1)',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={() => setSelectedPeriod(periodo)}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                    e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'white'
-                    e.currentTarget.style.borderColor = atisaStyles.colors.light
-                    e.currentTarget.style.transform = 'translateY(0)'
-                  }
-                }}
-              >
-                {getMesName(parseInt(month))} {year}
-              </button>
+                periodo={periodo}
+                month={month}
+                isSelected={isSelected}
+                onClick={setSelectedPeriod}
+                getMesName={getMesName}
+              />
             )
           })}
         </div>
@@ -991,10 +1105,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                     // Abrir todos los procesos visibles (filtrando los que no tienen datos)
                     const procesosVisibles = Object.entries(groupedProcesos)
                       .map(([, grupo], idx) => {
-                        const procesosFiltradosPorPeriodo = selectedPeriod
+                        const procesosFiltrados = selectedPeriod
                           ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
-                          : Object.entries(grupo.periodos)
-                        return procesosFiltradosPorPeriodo.length > 0 ? idx.toString() : null
+                          : []
+                        return procesosFiltrados.length > 0 ? idx.toString() : null
                       })
                       .filter((key): key is string => key !== null)
                     setActiveKeys(procesosVisibles)
@@ -1180,23 +1294,24 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           setActiveKeys(nuevasClaves)
           // Contar cuántos procesos hay realmente (filtrando los que no tienen datos)
           const procesosVisibles = Object.entries(groupedProcesos).filter(([, grupo]) => {
-            const procesosFiltradosPorPeriodo = selectedPeriod
+            const procesosFiltrados = selectedPeriod
               ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
-              : Object.entries(grupo.periodos)
-            return procesosFiltradosPorPeriodo.length > 0
+              : []
+            return procesosFiltrados.length > 0
           })
           setTodosAbiertos(nuevasClaves.length === procesosVisibles.length && procesosVisibles.length > 0)
         }}
         className="accordion accordion-atisa"
       >
         {Object.entries(groupedProcesos).map(([nombreProceso, grupo], index) => {
-          const procesosFiltradosPorPeriodo = selectedPeriod
+          const procesosFiltrados = selectedPeriod
             ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
-            : Object.entries(grupo.periodos)
-          if (procesosFiltradosPorPeriodo.length === 0) return null
+            : []
+
+          if (procesosFiltrados.length === 0) return null
 
           // Calcular total de hitos para este grupo de procesos
-          const totalHitos = procesosFiltradosPorPeriodo.reduce((total, [, periodo]) => {
+          const totalHitos = procesosFiltrados.reduce((total, [, periodo]) => {
             return total + periodo.items.reduce((subtotal, proceso) => {
               const hitosDelProceso = hitosPorProceso[proceso.id] || []
               return subtotal + hitosDelProceso.length
@@ -1229,8 +1344,15 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                 </div>
               </Accordion.Header>
               <Accordion.Body>
-                {procesosFiltradosPorPeriodo.map(([periodoKey, periodo]) => (
+                {procesosFiltrados.map(([periodoKey, periodo]) => (
                   <div key={periodoKey} className='mb-5'>
+                    {/* Header del mes para separar si hay varios */}
+                    <div className="mb-3 d-flex align-items-center">
+                      <span className="badge me-2" style={{ backgroundColor: atisaStyles.colors.secondary, fontSize: '0.9rem', padding: '8px 12px' }}>
+                        {getMesName(periodo.mes || 0)} {periodo.anio}
+                      </span>
+                      <div style={{ height: '1px', backgroundColor: atisaStyles.colors.light, flexGrow: 1 }}></div>
+                    </div>
                     <div
                       className='table-responsive'
                       style={{

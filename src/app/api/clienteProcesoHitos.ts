@@ -68,6 +68,66 @@ export const deshabilitarHitosPorHitoDesde = async (hitoId: number, fechaDesde: 
   return response.data
 }
 
+
+export interface MassUpdatePayload {
+  hito_id: number
+  empresa_ids: string[]
+  nueva_fecha: string
+  fecha_desde: string
+}
+
+export const updateMasivoHitos = async (payload: MassUpdatePayload) => {
+  const response = await api.put('/cliente-proceso-hitos/update-masivo', payload)
+  return response.data
+}
+
 export const deleteProcesoHitosByHito = async (hitoId: number) => {
   return await api.delete(`/proceso-hitos/hito/${hitoId}`)
+}
+
+export interface ClienteProcesoHitoResumido {
+  id: number;
+  fecha_limite: string;
+  cliente: string;
+  hito: string;
+}
+
+export interface ClienteProcesoHitosFechaResponse {
+  anio: number;
+  mes: number;
+  total: number;
+  items: ClienteProcesoHitoResumido[];
+}
+
+export const getClienteProcesoHitosPorFecha = async (
+  anio: number,
+  mes: number,
+  page: number = 1,
+  limit: number = 10,
+  sortField: string = 'fecha_limite',
+  sortDirection: 'asc' | 'desc' = 'asc'
+) => {
+  const params = new URLSearchParams({
+    anio: anio.toString(),
+    mes: mes.toString(),
+    page: page.toString(),
+    limit: limit.toString(),
+    sort_by: sortField,
+    order: sortDirection
+  });
+  const response = await api.get<ClienteProcesoHitosFechaResponse>(`/cliente-proceso-hitos/fecha?${params.toString()}`);
+  return response.data;
+}
+
+export interface CumplimientoMasivoPayload {
+  ids: number[]
+  fecha: string
+  hora: string
+  observacion?: string
+  usuario?: string
+}
+
+export const cumplimientoMasivo = async (payload: CumplimientoMasivoPayload) => {
+  const response = await api.post('/cliente-proceso-hitos/cumplimiento-masivo', payload)
+  return response.data
 }

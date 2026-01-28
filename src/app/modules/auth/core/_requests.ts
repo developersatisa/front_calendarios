@@ -1,11 +1,13 @@
 import axios from "axios";
 import { AuthModel, UserModel } from "./_models";
 
-const API_URL = import.meta.env.VITE_APP_API_URL;
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const LOGIN_URL = `${API_URL}/login`;
 export const REGISTER_URL = `${API_URL}/register`;
 export const REQUEST_PASSWORD_URL = `${API_URL}/forgot_password`;
+export const SSO_LOGIN_URL = `${API_URL}/sso/login`;
+export const SSO_CALLBACK_URL = `${API_URL}/sso/callback`;
 
 // Server should return AuthModel
 export function login(email: string, password: string) {
@@ -37,4 +39,12 @@ export function requestPassword(email: string) {
   return axios.post<{ result: boolean }>(REQUEST_PASSWORD_URL, {
     email,
   });
+}
+
+export function getSSOLoginUrl() {
+  return axios.get<{ auth_url: string; message: string }>(SSO_LOGIN_URL);
+}
+
+export function ssoCallback(code: string) {
+  return axios.get<AuthModel & { user_info?: any }>(`${SSO_CALLBACK_URL}?code=${code}`);
 }
