@@ -1,15 +1,15 @@
 import { FC, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Accordion, Modal } from 'react-bootstrap'
-import CustomToast from '../../../../components/ui/CustomToast'
-import { Cliente, getClienteById } from '../../../../api/clientes'
-import { ClienteProceso, getClienteProcesosByCliente, createClienteProceso, generarCalendarioClienteProceso, GenerarCalendarioParams } from '../../../../api/clienteProcesos'
-import { Proceso, getAllProcesos } from '../../../../api/procesos'
-import { getClienteProcesoHitosByProceso, getClienteProcesoHitosHabilitadosByProceso, ClienteProcesoHito, updateClienteProcesoHito, deshabilitarHitosPorHitoDesde } from '../../../../api/clienteProcesoHitos'
-import { Hito, getAllHitos } from '../../../../api/hitos'
-import { createAuditoriaCalendario, AuditoriaCalendarioCreate } from '../../../../api/auditoriaCalendarios'
+import CustomToast from '../../../components/ui/CustomToast'
+import { Cliente, getClienteById } from '../../../api/clientes'
+import { ClienteProceso, getClienteProcesosByCliente, createClienteProceso, generarCalendarioClienteProceso, GenerarCalendarioParams } from '../../../api/clienteProcesos'
+import { Proceso, getAllProcesos } from '../../../api/procesos'
+import { getClienteProcesoHitosByProceso, getClienteProcesoHitosHabilitadosByProceso, ClienteProcesoHito, updateClienteProcesoHito, deshabilitarHitosPorHitoDesde } from '../../../api/clienteProcesoHitos'
+import { Hito, getAllHitos } from '../../../api/hitos'
+import { createAuditoriaCalendario, AuditoriaCalendarioCreate } from '../../../api/auditoriaCalendarios'
 import HistorialAuditoriaModal from './HistorialAuditoriaModal'
-import { atisaStyles, getSecondaryButtonStyles } from '../../../../styles/atisaStyles'
+import { atisaStyles, getSecondaryButtonStyles } from '../../../styles/atisaStyles'
 
 interface Props {
   clienteId: string
@@ -1296,36 +1296,36 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                   justifyContent: 'flex-end'
                 }}
               >
-                  <button
-                    className="btn"
-                    onClick={() => setVistaCalendario(!vistaCalendario)}
-                    style={{
-                      backgroundColor: atisaStyles.colors.primary,
-                      color: 'white',
-                      border: `2px solid ${atisaStyles.colors.primary}`,
-                      borderRadius: '8px',
-                      fontFamily: atisaStyles.fonts.secondary,
-                      fontWeight: '600',
-                      padding: '8px 16px',
-                      fontSize: '14px',
-                      transition: 'all 0.3s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      whiteSpace: 'nowrap'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                      e.currentTarget.style.borderColor = atisaStyles.colors.secondary
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                      e.currentTarget.style.borderColor = atisaStyles.colors.primary
-                    }}
-                  >
-                    <i className={`bi ${vistaCalendario ? 'bi-table' : 'bi-calendar3'}`} style={{ color: 'white' }}></i>
-                    {vistaCalendario ? 'Vista Tabla' : 'Vista Calendario'}
-                  </button>
+                <button
+                  className="btn"
+                  onClick={() => setVistaCalendario(!vistaCalendario)}
+                  style={{
+                    backgroundColor: atisaStyles.colors.primary,
+                    color: 'white',
+                    border: `2px solid ${atisaStyles.colors.primary}`,
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontWeight: '600',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                    e.currentTarget.style.borderColor = atisaStyles.colors.secondary
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                    e.currentTarget.style.borderColor = atisaStyles.colors.primary
+                  }}
+                >
+                  <i className={`bi ${vistaCalendario ? 'bi-table' : 'bi-calendar3'}`} style={{ color: 'white' }}></i>
+                  {vistaCalendario ? 'Vista Tabla' : 'Vista Calendario'}
+                </button>
               </div>
             </div>
           </div>
@@ -1350,135 +1350,135 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-              {/* Selector de período */}
-              <div className="period-selector" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'nowrap' }}>
-                <label
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: 'white',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <i className="bi bi-calendar3 me-2"></i>
-                  Período:
-                </label>
+                {/* Selector de período */}
+                <div className="period-selector" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'nowrap' }}>
+                  <label
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <i className="bi bi-calendar3 me-2"></i>
+                    Período:
+                  </label>
 
-                {/* Selector de Mes (primero) */}
-                <select
-                  className="form-select form-select-sm"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  disabled={mesesDisponibles.length === 0}
-                  style={{
-                    fontFamily: atisaStyles.fonts.secondary,
-                    fontSize: '14px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '6px',
-                    backgroundColor: mesesDisponibles.length === 0 ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)',
-                    color: 'white',
-                    padding: '6px 12px',
-                    minWidth: '150px',
-                    cursor: mesesDisponibles.length === 0 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s ease',
-                    opacity: mesesDisponibles.length === 0 ? 0.6 : 1
-                  }}
-                  onFocus={(e) => {
-                    if (mesesDisponibles.length > 0) {
+                  {/* Selector de Mes (primero) */}
+                  <select
+                    className="form-select form-select-sm"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                    disabled={mesesDisponibles.length === 0}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '6px',
+                      backgroundColor: mesesDisponibles.length === 0 ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)',
+                      color: 'white',
+                      padding: '6px 12px',
+                      minWidth: '150px',
+                      cursor: mesesDisponibles.length === 0 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.3s ease',
+                      opacity: mesesDisponibles.length === 0 ? 0.6 : 1
+                    }}
+                    onFocus={(e) => {
+                      if (mesesDisponibles.length > 0) {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (mesesDisponibles.length > 0) {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+                      }
+                    }}
+                  >
+                    {mesesDisponibles.length === 0 ? (
+                      <option value="0" style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
+                        Seleccione año
+                      </option>
+                    ) : (
+                      mesesDisponibles.map(mes => (
+                        <option key={mes} value={mes} style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
+                          {getMesName(mes)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  {/* Selector de Año (segundo) */}
+                  <select
+                    className="form-select form-select-sm"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      color: 'white',
+                      padding: '6px 12px',
+                      minWidth: '120px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'
                       e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
-                    }
-                  }}
-                  onBlur={(e) => {
-                    if (mesesDisponibles.length > 0) {
+                    }}
+                    onBlur={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
                       e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
-                    }
-                  }}
-                >
-                  {mesesDisponibles.length === 0 ? (
-                    <option value="0" style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
-                      Seleccione año
-                    </option>
-                  ) : (
-                    mesesDisponibles.map(mes => (
-                      <option key={mes} value={mes} style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
-                        {getMesName(mes)}
+                    }}
+                  >
+                    {anosDisponibles.map(ano => (
+                      <option key={ano} value={ano} style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
+                        {ano}
                       </option>
-                    ))
-                  )}
-                </select>
+                    ))}
+                  </select>
+                </div>
 
-                {/* Selector de Año (segundo) */}
-                <select
-                  className="form-select form-select-sm"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  style={{
-                    fontFamily: atisaStyles.fonts.secondary,
-                    fontSize: '14px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    color: 'white',
-                    padding: '6px 12px',
-                    minWidth: '120px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)'
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
-                  }}
-                >
-                  {anosDisponibles.map(ano => (
-                    <option key={ano} value={ano} style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
-                      {ano}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtro de proceso */}
-              <div className="filter-group" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <label
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: 'white',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <i className="bi bi-funnel me-2"></i>
-                  Proceso:
-                </label>
-                <select
-                  className="form-select form-select-sm"
-                  value={filtroProceso}
-                  onChange={(e) => setFiltroProceso(e.target.value)}
-                  style={{
-                    fontFamily: atisaStyles.fonts.secondary,
-                    fontSize: '14px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '6px',
-                    backgroundColor: 'white',
-                    color: atisaStyles.colors.primary,
-                    padding: '6px 12px',
-                    minWidth: '200px'
-                  }}
-                >
-                  <option value="">Todos los procesos</option>
-                  {procesosDelCalendario.map(proceso => (
-                    <option key={proceso.id} value={proceso.id.toString()}>
-                      {proceso.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Filtro de proceso */}
+                <div className="filter-group" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <label
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <i className="bi bi-funnel me-2"></i>
+                    Proceso:
+                  </label>
+                  <select
+                    className="form-select form-select-sm"
+                    value={filtroProceso}
+                    onChange={(e) => setFiltroProceso(e.target.value)}
+                    style={{
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      color: atisaStyles.colors.primary,
+                      padding: '6px 12px',
+                      minWidth: '200px'
+                    }}
+                  >
+                    <option value="">Todos los procesos</option>
+                    {procesosDelCalendario.map(proceso => (
+                      <option key={proceso.id} value={proceso.id.toString()}>
+                        {proceso.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Botones de acción movidos a la sección de filtros */}
@@ -1787,8 +1787,8 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                               : '#f1f5f9',
                             border: actual
                               ? (hitosDelDia.length > 0
-                                  ? `2px solid ${atisaStyles.colors.accent}`
-                                  : '2px solid #e2e8f0')
+                                ? `2px solid ${atisaStyles.colors.accent}`
+                                : '2px solid #e2e8f0')
                               : '2px solid #e2e8f0',
                             borderRadius: '12px',
                             padding: '10px',
@@ -1902,8 +1902,8 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 {(() => {
                                   const hoy = new Date()
                                   const esHoy = date.getDate() === hoy.getDate() &&
-                                               date.getMonth() === hoy.getMonth() &&
-                                               date.getFullYear() === hoy.getFullYear()
+                                    date.getMonth() === hoy.getMonth() &&
+                                    date.getFullYear() === hoy.getFullYear()
                                   return esHoy && actual ? (
                                     <div
                                       style={{
@@ -1983,122 +1983,122 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 }
 
                                 return (
-                                <div
-                                  key={hito.id}
-                                  className="hito-card"
-                                  onClick={() => editarHito(hito)}
-                                  style={{
-                                    backgroundColor: bgColor,
-                                    borderLeft: `4px solid ${accentColor}`,
-                                    border: `1px solid ${accentColor}40`,
-                                    padding: '8px 10px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    flexShrink: 0,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '5px',
-                                    position: 'relative',
-                                    boxShadow: `0 1px 3px ${accentColor}20`,
-                                    fontFamily: atisaStyles.fonts.secondary
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'white'
-                                    e.currentTarget.style.boxShadow = `0 2px 6px ${accentColor}40`
-                                    e.currentTarget.style.borderColor = accentColor
-                                    e.currentTarget.style.zIndex = '10'
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = bgColor
-                                    e.currentTarget.style.boxShadow = `0 1px 3px ${accentColor}20`
-                                    e.currentTarget.style.borderColor = `${accentColor}40`
-                                    e.currentTarget.style.zIndex = '1'
-                                  }}
-                                >
-                                  {/* Nombre del hito - línea única */}
                                   <div
-                                    className="hito-name"
+                                    key={hito.id}
+                                    className="hito-card"
+                                    onClick={() => editarHito(hito)}
                                     style={{
-                                      fontWeight: '600',
-                                      fontSize: '12px',
-                                      lineHeight: '1.4',
-                                      color: textColor,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
+                                      backgroundColor: bgColor,
+                                      borderLeft: `4px solid ${accentColor}`,
+                                      border: `1px solid ${accentColor}40`,
+                                      padding: '8px 10px',
+                                      borderRadius: '8px',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      flexShrink: 0,
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '5px',
+                                      position: 'relative',
+                                      boxShadow: `0 1px 3px ${accentColor}20`,
                                       fontFamily: atisaStyles.fonts.secondary
                                     }}
-                                    title={getNombreHito(hito.hito_id)}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'white'
+                                      e.currentTarget.style.boxShadow = `0 2px 6px ${accentColor}40`
+                                      e.currentTarget.style.borderColor = accentColor
+                                      e.currentTarget.style.zIndex = '10'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = bgColor
+                                      e.currentTarget.style.boxShadow = `0 1px 3px ${accentColor}20`
+                                      e.currentTarget.style.borderColor = `${accentColor}40`
+                                      e.currentTarget.style.zIndex = '1'
+                                    }}
                                   >
-                                    {getNombreHito(hito.hito_id)}
-                                  </div>
-
-                                  {/* Información secundaria en una línea */}
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: '6px',
-                                    fontSize: '10px',
-                                    color: atisaStyles.colors.dark
-                                  }}>
+                                    {/* Nombre del hito - línea única */}
                                     <div
+                                      className="hito-name"
                                       style={{
+                                        fontWeight: '600',
+                                        fontSize: '12px',
+                                        lineHeight: '1.4',
+                                        color: textColor,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
-                                        flex: 1,
-                                        minWidth: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        fontWeight: '500'
+                                        fontFamily: atisaStyles.fonts.secondary
                                       }}
-                                      title={getNombreProceso(hito.cliente_proceso_id)}
+                                      title={getNombreHito(hito.hito_id)}
                                     >
-                                      <span style={{
-                                        width: '5px',
-                                        height: '5px',
-                                        borderRadius: '50%',
-                                        backgroundColor: accentColor,
-                                        flexShrink: 0,
-                                        boxShadow: `0 0 0 1px ${accentColor}60`
-                                      }}></span>
-                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {getNombreProceso(hito.cliente_proceso_id)}
-                                      </span>
+                                      {getNombreHito(hito.hito_id)}
                                     </div>
-                                    {hito.hora_limite && (
-                                      <span style={{
-                                        whiteSpace: 'nowrap',
-                                        flexShrink: 0,
-                                        fontWeight: '700',
-                                        color: accentColor,
-                                        fontSize: '10px'
-                                      }}>
-                                        {hito.hora_limite.substring(0, 5)}
-                                      </span>
-                                    )}
-                                    {/* Indicadores de estado como iconos pequeños */}
-                                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                                      {hasChanges && (
-                                        <i
-                                          className="bi bi-pencil-fill"
-                                          style={{ fontSize: '10px', color: atisaStyles.colors.warning }}
-                                          title="Modificado"
-                                        />
+
+                                    {/* Información secundaria en una línea */}
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '6px',
+                                      fontSize: '10px',
+                                      color: atisaStyles.colors.dark
+                                    }}>
+                                      <div
+                                        style={{
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          flex: 1,
+                                          minWidth: 0,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          fontWeight: '500'
+                                        }}
+                                        title={getNombreProceso(hito.cliente_proceso_id)}
+                                      >
+                                        <span style={{
+                                          width: '5px',
+                                          height: '5px',
+                                          borderRadius: '50%',
+                                          backgroundColor: accentColor,
+                                          flexShrink: 0,
+                                          boxShadow: `0 0 0 1px ${accentColor}60`
+                                        }}></span>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {getNombreProceso(hito.cliente_proceso_id)}
+                                        </span>
+                                      </div>
+                                      {hito.hora_limite && (
+                                        <span style={{
+                                          whiteSpace: 'nowrap',
+                                          flexShrink: 0,
+                                          fontWeight: '700',
+                                          color: accentColor,
+                                          fontSize: '10px'
+                                        }}>
+                                          {hito.hora_limite.substring(0, 5)}
+                                        </span>
                                       )}
-                                      {!isHabilitado && (
-                                        <i
-                                          className="bi bi-x-circle-fill"
-                                          style={{ fontSize: '10px', color: atisaStyles.colors.error }}
-                                          title="Deshabilitado"
-                                        />
-                                      )}
+                                      {/* Indicadores de estado como iconos pequeños */}
+                                      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                        {hasChanges && (
+                                          <i
+                                            className="bi bi-pencil-fill"
+                                            style={{ fontSize: '10px', color: atisaStyles.colors.warning }}
+                                            title="Modificado"
+                                          />
+                                        )}
+                                        {!isHabilitado && (
+                                          <i
+                                            className="bi bi-x-circle-fill"
+                                            style={{ fontSize: '10px', color: atisaStyles.colors.error }}
+                                            title="Deshabilitado"
+                                          />
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
                                 )
                               })
                             )}
