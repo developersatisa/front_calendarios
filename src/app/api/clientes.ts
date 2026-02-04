@@ -90,3 +90,32 @@ export const getClientesPorHito = async (
     total: response.data.total || 0
   }
 }
+
+export const getClientesUsuario = async (
+  email: string,
+  page?: number,
+  limit?: number,
+  sortField?: string,
+  sortDirection?: 'asc' | 'desc'
+) => {
+  try {
+    const params = new URLSearchParams()
+    if (page && page > 0) params.append('page', String(page))
+    if (limit && limit > 0) params.append('limit', String(limit))
+    if (sortField) params.append('sort_field', sortField)
+    if (sortDirection) params.append('sort_direction', sortDirection)
+
+    const response = await api.get<ClientesResponse>(`/clientes/empresas_usuario/${email}` + (params.toString() ? `?${params.toString()}` : ''))
+
+    return {
+      clientes: response.data?.clientes || [],
+      total: response.data?.total || 0
+    }
+  } catch (error) {
+    console.error('Error in getClientesUsuario:', error)
+    return {
+      clientes: [],
+      total: 0
+    }
+  }
+}

@@ -1,14 +1,16 @@
 import { FC, useState, useEffect, useMemo } from 'react'
 import { KTCard, KTCardBody } from '../../../_metronic/helpers'
-import { Cliente, getAllClientes } from '../../api/clientes'
+import { Cliente, getAllClientes, getClientesUsuario } from '../../api/clientes'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import { useNavigate } from 'react-router-dom'
 import { atisaStyles } from '../../styles/atisaStyles'
 import CumplimientoMasivoModal from './components/calendario/CumplimientoMasivoModal'
 import CustomToast from '../../components/ui/CustomToast'
+import { useAuth } from '../../modules/auth/core/Auth'
 
 const ClientesDocumentalCalendarioList: FC = () => {
   const navigate = useNavigate()
+  const { isAdmin, currentUser } = useAuth()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
@@ -50,10 +52,13 @@ const ClientesDocumentalCalendarioList: FC = () => {
 
   // Cargar clientes paginados cuando NO hay búsqueda
   useEffect(() => {
+    // Solo cargar si tenemos información de usuario (o es admin, o currentUser está listo)
+    // Pero useAuth puede tardar un poco en iniciarse. isAdmin false por defecto?
+    // Mejor esperar a que se verifique auth si es posible, pero aquí isAdmin es booleano.
     if (!debouncedSearchTerm.trim()) {
       loadClientes()
     }
-  }, [page, sortField, sortDirection, debouncedSearchTerm])
+  }, [page, sortField, sortDirection, debouncedSearchTerm, isAdmin, currentUser])
 
   // Cargar todos los clientes cuando hay búsqueda
   useEffect(() => {
@@ -64,14 +69,22 @@ const ClientesDocumentalCalendarioList: FC = () => {
       // Limpiar todos los clientes cuando no hay búsqueda
       setAllClientes([])
     }
-  }, [debouncedSearchTerm])
+  }, [debouncedSearchTerm, isAdmin, currentUser])
 
   const loadAllClientes = async () => {
     try {
       setLoading(true)
       setSearching(true)
       // Cargar todos los clientes sin paginación para búsqueda
-      const response = await getAllClientes()
+      let response
+      if (isAdmin) {
+        response = await getAllClientes()
+      } else if (currentUser?.email) {
+        // Usuario normal: endpoint específico
+        response = await getClientesUsuario(currentUser.email, undefined, undefined, undefined, 'asc')
+      } else {
+        response = { clientes: [], total: 0 }
+      }
       setAllClientes(response.clientes || [])
     } catch (error) {
       setError('Error al cargar los clientes')
@@ -85,7 +98,15 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const loadClientes = async () => {
     try {
       setLoading(true)
-      const response = await getAllClientes(page, limit, sortField, sortDirection)
+      let response
+      if (isAdmin) {
+        response = await getAllClientes(page, limit, sortField, sortDirection)
+      } else if (currentUser?.email) {
+        // Usuario normal: endpoint específico
+        response = await getClientesUsuario(currentUser.email, page, limit, sortField, sortDirection)
+      } else {
+        response = { clientes: [], total: 0 }
+      }
       setClientes(response.clientes || [])
       setTotal(response.total || 0)
     } catch (error) {
