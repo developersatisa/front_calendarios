@@ -21,46 +21,6 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
   const [totalItems, setTotalItems] = useState(0)
   const [itemsPerPage] = useState(6)
 
-  // Estilos CSS personalizados para el modal más grande
-  const modalStyles = `
-    .modal-historial-auditoria .modal-dialog {
-      max-width: 99vw;
-      width: 99vw;
-      max-height: 98vh;
-      margin: 1vh auto;
-    }
-    .modal-historial-auditoria .modal-content {
-      height: 98vh;
-      display: flex;
-      flex-direction: column;
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .modal-historial-auditoria .modal-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-    }
-    .modal-historial-auditoria .modal-header {
-      flex-shrink: 0;
-    }
-    .modal-historial-auditoria .modal-footer {
-      flex-shrink: 0;
-    }
-    .modal-historial-auditoria .table-responsive {
-      max-height: 70vh;
-      overflow-y: auto;
-    }
-    .modal-historial-auditoria .table {
-      font-size: 14px;
-    }
-    .modal-historial-auditoria .table th {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background-color: ${atisaStyles.colors.primary} !important;
-    }
-  `
 
   useEffect(() => {
     if (show) {
@@ -141,13 +101,11 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
 
   return (
     <>
-      <style>{modalStyles}</style>
       <Modal
         show={show}
         onHide={onHide}
         size="xl"
         centered
-        dialogClassName="modal-historial-auditoria"
         style={{
           fontFamily: atisaStyles.fonts.secondary
         }}

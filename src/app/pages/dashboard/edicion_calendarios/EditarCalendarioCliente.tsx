@@ -28,7 +28,10 @@ interface EditForm {
   observaciones: string
 }
 
+import { useAuth } from '../../../modules/auth/core/Auth'
+
 const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
+  const { currentUser } = useAuth()
   const navigate = useNavigate()
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [procesos, setProcesos] = useState<ClienteProceso[]>([])
@@ -738,7 +741,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
         campo_modificado: campo,
         valor_anterior: valorAnterior || null,
         valor_nuevo: valorNuevo || null,
-        usuario_modificacion: 'Administrador', // TODO: Obtener del contexto de usuario
+        usuario_modificacion: currentUser?.username || 'Administrador',
         observaciones: observaciones || null
       }
 
@@ -1209,38 +1212,39 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           <div
             className="header-title-section"
             style={{
-              padding: '1.5rem 2rem',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+              padding: '32px 24px'
             }}
           >
             <div
               className="header-content"
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'auto 1fr auto',
+                gridTemplateColumns: '1fr auto 1fr',
                 alignItems: 'center',
-                gap: '1.5rem',
+                gap: '1rem',
                 maxWidth: '100%',
                 margin: '0 auto'
               }}
             >
               {/* Columna izquierda: Botón Volver */}
-              <button
-                className="back-button"
-                onClick={() => navigate('/clientes')}
-                style={getSecondaryButtonStyles()}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white'
-                  e.currentTarget.style.color = atisaStyles.colors.primary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = 'white'
-                }}
-              >
-                <i className="bi bi-arrow-left" style={{ color: 'inherit' }}></i>
-                Volver a Clientes
-              </button>
+              <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
+                <button
+                  className="back-button"
+                  onClick={() => navigate('/clientes')}
+                  style={getSecondaryButtonStyles()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white'
+                    e.currentTarget.style.color = atisaStyles.colors.primary
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.color = 'white'
+                  }}
+                >
+                  <i className="bi bi-arrow-left me-2" style={{ color: 'inherit' }}></i>
+                  Volver a Clientes
+                </button>
+              </div>
 
               {/* Columna centro: Título */}
               <div
@@ -1272,9 +1276,11 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 </h1>
                 <p
                   style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    color: atisaStyles.colors.light,
                     margin: '8px 0 0 0',
-                    fontSize: '1.1rem',
-                    opacity: 0.9,
+                    fontSize: '1.2rem',
+                    fontWeight: '500',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',

@@ -774,12 +774,12 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       {/* Header del calendario */}
       <div
         style={{
-          backgroundColor: atisaStyles.colors.primary,
+          background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
           color: 'white',
-          padding: '2rem',
+          padding: '32px 24px',
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
-          marginBottom: '2rem',
+          marginBottom: '24px',
           textAlign: 'center'
         }}
       >
@@ -824,9 +824,11 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
             </h2>
             <p
               style={{
+                fontFamily: atisaStyles.fonts.secondary,
+                color: atisaStyles.colors.light,
                 margin: '8px 0 0 0',
-                fontSize: '1.1rem',
-                opacity: 0.9
+                fontSize: '1.2rem',
+                fontWeight: '500'
               }}
             >
               {cliente?.razsoc || clienteId}
