@@ -1,6 +1,7 @@
 export interface AuthModel {
   api_token: string
   refreshToken?: string
+  id_api_rol?: number
 }
 
 export interface UserAddressModel {
@@ -64,4 +65,5 @@ export interface UserModel {
   communication?: UserCommunicationModel
   address?: UserAddressModel
   socialNetworks?: UserSocialNetworksModel
+  isAdmin?: boolean
 }

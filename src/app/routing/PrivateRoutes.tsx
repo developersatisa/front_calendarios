@@ -1,6 +1,6 @@
-import {lazy, FC, Suspense} from 'react'
-import {Route, Routes, Navigate, useParams} from 'react-router-dom'
-import {MasterLayout} from '../../_metronic/layout/MasterLayout'
+import { lazy, FC, Suspense } from 'react'
+import { Route, Routes, Navigate, useParams } from 'react-router-dom'
+import { MasterLayout } from '../../_metronic/layout/MasterLayout'
 import TopBarProgress from 'react-topbar-progress-indicator'
 
 import EntityDashboard from '../pages/dashboard/EntityDashboard'
@@ -8,9 +8,9 @@ import ClientesList from '../pages/dashboard/ClientesList'
 import ProcesosList from '../pages/dashboard/ProcesosList'
 import HitosList from '../pages/dashboard/HitosList'
 
-import {MenuTestPage} from '../pages/MenuTestPage'
-import {getCSSVariableValue} from '../../_metronic/assets/ts/_utils'
-import {WithChildren} from '../../_metronic/helpers'
+import { MenuTestPage } from '../pages/MenuTestPage'
+import { getCSSVariableValue } from '../../_metronic/assets/ts/_utils'
+import { WithChildren } from '../../_metronic/helpers'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 import PlantillasList from '../pages/dashboard/PlantillasList'
 import ClientesDocumentalCalendarioList from '../pages/cliente-documental/ClientesDocumentalCalendarioList'
@@ -21,10 +21,15 @@ import MetricasList from '../pages/dashboard-metricas/MetricasList'
 import HistoricoCumplimientos from '../pages/cliente-documental/components/calendario/HistoricoCumplimientos'
 import StatusCliente from '../pages/cliente-documental/components/calendario/StatusCliente'
 import StatusTodosClientes from '../pages/cliente-documental/components/calendario/StatusTodosClientes'
+import AdministradoresPage from '../pages/administracion/AdministradoresPage'
+import AdminRoute from './AdminRoute'
 
 
+
+import { useAuth } from '../modules/auth/core/Auth'
 
 const PrivateRoutes = () => {
+  const { isAdmin } = useAuth()
   const ProfilePage = lazy(() => import('../modules/profile/ProfilePage'))
   const WizardsPage = lazy(() => import('../modules/wizards/WizardsPage'))
   const AccountPage = lazy(() => import('../modules/accounts/AccountPage'))
@@ -36,9 +41,14 @@ const PrivateRoutes = () => {
     <Routes>
       <Route element={<MasterLayout />}>
         {/* Redirect to Dashboard after success login/registartion */}
-        <Route path='auth/*' element={<Navigate to='/dashboard' />} />
+        <Route path='auth/*' element={<Navigate to={isAdmin ? '/dashboard' : '/clientes'} />} />
         {/* Pages */}
-        <Route path='dashboard' element={<EntityDashboard />} />
+        {/* Dashboard - Solo para admins */}
+        <Route path='dashboard' element={
+          <AdminRoute>
+            <EntityDashboard />
+          </AdminRoute>
+        } />
         <Route path='builder' element={<BuilderPageWrapper />} />
         <Route path='menu-test' element={<MenuTestPage />} />
         <Route path='clientes' element={<ClientesList />} />
@@ -54,6 +64,12 @@ const PrivateRoutes = () => {
         <Route path='status-todos-clientes' element={<StatusTodosClientes />} />
         {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
+        {/* Administración - Solo para admins */}
+        <Route path='administracion' element={
+          <AdminRoute>
+            <AdministradoresPage />
+          </AdminRoute>
+        } />
         {/* Lazy Modules */}
         <Route
           path='crafted/pages/profile/*'
@@ -110,7 +126,7 @@ const PrivateRoutes = () => {
   )
 }
 
-const SuspensedView: FC<WithChildren> = ({children}) => {
+const SuspensedView: FC<WithChildren> = ({ children }) => {
   const baseColor = getCSSVariableValue('--bs-primary')
   TopBarProgress.config({
     barColors: {
@@ -157,4 +173,4 @@ const StatusClienteWrapper: FC = () => {
   return <StatusCliente clienteId={clienteId} />
 }
 
-export {PrivateRoutes}
+export { PrivateRoutes }

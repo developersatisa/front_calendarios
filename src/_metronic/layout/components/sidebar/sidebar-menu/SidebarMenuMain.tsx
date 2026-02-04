@@ -1,91 +1,64 @@
-import {useIntl} from 'react-intl'
-import {KTIcon} from '../../../../helpers'
-import {SidebarMenuItemWithSub} from './SidebarMenuItemWithSub'
-import {SidebarMenuItem} from './SidebarMenuItem'
+/* eslint-disable react-refresh/only-export-components */
+import { useIntl } from 'react-intl'
+import { KTIcon } from '../../../../helpers'
+import { SidebarMenuItemWithSub } from './SidebarMenuItemWithSub'
+import { SidebarMenuItem } from './SidebarMenuItem'
+import { useAuth } from '../../../../../app/modules/auth/core/Auth'
 
 const SidebarMenuMain = () => {
   const intl = useIntl()
+  const { isAdmin } = useAuth()
 
   return (
     <>
-      <SidebarMenuItem
-        to='/dashboard'
-        icon='element-11'
-        title={intl.formatMessage({id: 'MENU.DASHBOARD'})}
-        fontIcon='bi-app-indicator'
-      />
-      <SidebarMenuItem to='/builder' icon='switch' title='Layout Builder' fontIcon='bi-layers' />
-      <div className='menu-item'>
-        <div className='menu-content pt-8 pb-2'>
-          <span className='menu-section text-muted text-uppercase fs-8 ls-1'>Crafted</span>
-        </div>
-      </div>
-      <SidebarMenuItemWithSub
-        to='/crafted/pages'
-        title='Pages'
-        fontIcon='bi-archive'
-        icon='element-plus'
-      >
-        <SidebarMenuItemWithSub to='/crafted/pages/profile' title='Profile' hasBullet={true}>
-          <SidebarMenuItem to='/crafted/pages/profile/overview' title='Overview' hasBullet={true} />
-          <SidebarMenuItem to='/crafted/pages/profile/projects' title='Projects' hasBullet={true} />
-          <SidebarMenuItem
-            to='/crafted/pages/profile/campaigns'
-            title='Campaigns'
-            hasBullet={true}
-          />
-          <SidebarMenuItem
-            to='/crafted/pages/profile/documents'
-            title='Documents'
-            hasBullet={true}
-          />
-          <SidebarMenuItem
-            to='/crafted/pages/profile/connections'
-            title='Connections'
-            hasBullet={true}
-          />
-        </SidebarMenuItemWithSub>
+      {/* Dashboard - Solo para admins */}
+      {isAdmin && (
+        <SidebarMenuItem
+          to='/dashboard'
+          icon='element-11'
+          title={intl.formatMessage({ id: 'MENU.DASHBOARD' })}
+          fontIcon='bi-app-indicator'
+        />
+      )}
 
-        <SidebarMenuItemWithSub to='/crafted/pages/wizards' title='Wizards' hasBullet={true}>
+      {/* Módulos de gestión - Solo para admins */}
+      {isAdmin && (
+        <>
+          <SidebarMenuItem to='/clientes' icon='briefcase' title='Clientes' fontIcon='bi-briefcase' />
+          <SidebarMenuItem to='/procesos' icon='gear' title='Procesos' fontIcon='bi-gear' />
+          <SidebarMenuItem to='/hitos' icon='flag' title='Hitos' fontIcon='bi-flag' />
+          <SidebarMenuItem to='/plantillas' icon='file-text' title='Plantillas' fontIcon='bi-file-text' />
+        </>
+      )}
+
+      {/* Módulos accesibles para todos (Usuarios y Admins) */}
+      <SidebarMenuItem to='/clientes-documental-calendario' icon='calendar' title='Calendario Documental' fontIcon='bi-calendar' />
+      <SidebarMenuItem to='/status-todos-clientes' icon='check-circle' title='Status Clientes' fontIcon='bi-check-circle' />
+      <SidebarMenuItem to='/metricas' icon='graph-up' title='Métricas' fontIcon='bi-graph-up' />
+
+      {/* Sección de Administración - Solo para admins */}
+      {isAdmin && (
+        <>
+          <div className='menu-item'>
+            <div className='menu-content pt-8 pb-2'>
+              <span className='menu-section text-muted text-uppercase fs-8 ls-1'>Administración</span>
+            </div>
+          </div>
           <SidebarMenuItem
-            to='/crafted/pages/wizards/horizontal'
-            title='Horizontal'
-            hasBullet={true}
+            to='/administracion'
+            icon='shield-tick'
+            title='Administradores'
+            fontIcon='bi-shield-lock'
           />
-          <SidebarMenuItem to='/crafted/pages/wizards/vertical' title='Vertical' hasBullet={true} />
-        </SidebarMenuItemWithSub>
-      </SidebarMenuItemWithSub>
-      <SidebarMenuItemWithSub
-        to='/crafted/accounts'
-        title='Accounts'
-        icon='profile-circle'
-        fontIcon='bi-person'
-      >
-        <SidebarMenuItem to='/crafted/account/overview' title='Overview' hasBullet={true} />
-        <SidebarMenuItem to='/crafted/account/settings' title='Settings' hasBullet={true} />
-      </SidebarMenuItemWithSub>
-      <SidebarMenuItemWithSub to='/error' title='Errors' fontIcon='bi-sticky' icon='cross-circle'>
-        <SidebarMenuItem to='/error/404' title='Error 404' hasBullet={true} />
-        <SidebarMenuItem to='/error/500' title='Error 500' hasBullet={true} />
-      </SidebarMenuItemWithSub>
-      <SidebarMenuItemWithSub
-        to='/crafted/widgets'
-        title='Widgets'
-        icon='element-7'
-        fontIcon='bi-layers'
-      >
-        <SidebarMenuItem to='/crafted/widgets/lists' title='Lists' hasBullet={true} />
-        <SidebarMenuItem to='/crafted/widgets/statistics' title='Statistics' hasBullet={true} />
-        <SidebarMenuItem to='/crafted/widgets/charts' title='Charts' hasBullet={true} />
-        <SidebarMenuItem to='/crafted/widgets/mixed' title='Mixed' hasBullet={true} />
-        <SidebarMenuItem to='/crafted/widgets/tables' title='Tables' hasBullet={true} />
-        <SidebarMenuItem to='/crafted/widgets/feeds' title='Feeds' hasBullet={true} />
-      </SidebarMenuItemWithSub>
+        </>
+      )}
+
       <div className='menu-item'>
         <div className='menu-content pt-8 pb-2'>
           <span className='menu-section text-muted text-uppercase fs-8 ls-1'>Apps</span>
         </div>
       </div>
+
       <SidebarMenuItemWithSub
         to='/apps/chat'
         title='Chat'
@@ -102,20 +75,9 @@ const SidebarMenuMain = () => {
         title='User management'
         fontIcon='bi-layers'
       />
-      <div className='menu-item'>
-        <a
-          target='_blank'
-          className='menu-link'
-          href={import.meta.env.VITE_APP_PREVIEW_DOCS_URL + '/changelog'}
-        >
-          <span className='menu-icon'>
-            <KTIcon iconName='code' className='fs-2' />
-          </span>
-          <span className='menu-title'>Changelog {import.meta.env.VITE_APP_VERSION}</span>
-        </a>
-      </div>
+
     </>
   )
 }
 
-export {SidebarMenuMain}
+export { SidebarMenuMain }
