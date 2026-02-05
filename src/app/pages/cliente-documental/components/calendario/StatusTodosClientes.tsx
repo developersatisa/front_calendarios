@@ -427,11 +427,8 @@ const StatusTodosClientes: FC = () => {
         const filtrados = hitos.filter(hito => {
             const searchNormalized = normalizeText(debouncedSearchTerm)
             const matchesSearch = !debouncedSearchTerm ||
-                normalizeText(hito.cliente_nombre).includes(searchNormalized) ||
                 normalizeText(hito.proceso_nombre).includes(searchNormalized) ||
-                normalizeText(hito.hito_nombre).includes(searchNormalized) ||
-                normalizeText(hito.estado).includes(searchNormalized) ||
-                normalizeText(hito.tipo).includes(searchNormalized)
+                normalizeText(hito.hito_nombre).includes(searchNormalized)
 
             const matchesHito = !selectedHito || hito.hito_id?.toString() === selectedHito
             const matchesProceso = !selectedProceso || hito.proceso_nombre === selectedProceso
@@ -553,99 +550,400 @@ const StatusTodosClientes: FC = () => {
 
     return (
         <div
-            className="container-fluid py-5"
             style={{
                 fontFamily: atisaStyles.fonts.secondary,
                 backgroundColor: '#f8f9fa',
-                minHeight: '100vh'
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column'
             }}
         >
-            {/* Header */}
-            <div
+            {/* Header Sticky con Título y Filtros */}
+            <header
                 style={{
-                    backgroundColor: atisaStyles.colors.primary,
+                    background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
                     color: 'white',
-                    padding: '2rem',
-                    borderRadius: '12px',
                     boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
-                    marginBottom: '2rem',
-                    textAlign: 'center'
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 1000,
+                    width: '100%'
                 }}
             >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
-                    {/* Columna izquierda: Botón Volver */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                        <button
-                            className="btn"
-                            onClick={() => navigate(`/clientes-documental-calendario`)}
-                            style={getSecondaryButtonStyles()}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'white'
-                                e.currentTarget.style.color = atisaStyles.colors.primary
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent'
-                                e.currentTarget.style.color = 'white'
-                            }}
-                        >
-                            <i className="bi bi-arrow-left" style={{ color: 'inherit' }}></i>
-                            Volver a Gestor Documental / Clientes
-                        </button>
-                    </div>
-
-                    {/* Columna centro: Título */}
-                    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <h2
-                            style={{
-                                fontFamily: atisaStyles.fonts.primary,
-                                fontWeight: 'bold',
-                                color: 'white',
-                                margin: 0,
-                                fontSize: '2rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '12px'
-                            }}
-                        >
-                            <i className="bi bi-info-circle" style={{ color: 'white' }}></i>
-                            Status de Hitos - Todos los Clientes
-                        </h2>
-                        <p
-                            style={{
-                                margin: '8px 0 0 0',
-                                fontSize: '1.1rem',
-                                opacity: 0.9
-                            }}
-                        >
-                            Vista global de todos los hitos de todos los clientes
-                        </p>
-                    </div>
-
-                    {/* Columna derecha: Espacio vacío */}
-                    <div></div>
-                </div>
-            </div>
-
-            {/* Panel de filtros - Similar a StatusCliente pero con filtro adicional de cliente */}
-            <div
-                style={{
-                    backgroundColor: 'white',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-                    border: `1px solid ${atisaStyles.colors.light}`,
-                    marginBottom: '2rem',
-                    overflow: 'hidden'
-                }}
-            >
+                {/* Sección Título */}
                 <div
                     style={{
-                        padding: '1.5rem',
-                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                        backgroundColor: atisaStyles.colors.light
+                        padding: '24px 24px 16px 24px',
+                        borderBottom: showFilters ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        {/* Columna izquierda: Botón Volver */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                            <button
+                                className="btn"
+                                onClick={() => navigate(`/clientes-documental-calendario`)}
+                                style={getSecondaryButtonStyles()}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'white'
+                                    e.currentTarget.style.color = atisaStyles.colors.primary
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent'
+                                    e.currentTarget.style.color = 'white'
+                                }}
+                            >
+                                <i className="bi bi-arrow-left" style={{ color: 'inherit' }}></i>
+                                Volver a Gestor Documental / Clientes
+                            </button>
+                        </div>
+
+                        {/* Columna centro: Título */}
+                        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <h2
+                                style={{
+                                    fontFamily: atisaStyles.fonts.primary,
+                                    fontWeight: 'bold',
+                                    color: 'white',
+                                    margin: 0,
+                                    fontSize: '2rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '12px'
+                                }}
+                            >
+                                <i className="bi bi-info-circle" style={{ color: 'white' }}></i>
+                                Status de Hitos - Todos los Clientes
+                            </h2>
+                            <p
+                                style={{
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    color: atisaStyles.colors.light,
+                                    margin: '8px 0 0 0',
+                                    fontSize: '1.2rem',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                Vista global de todos los hitos de todos los clientes
+                            </p>
+                        </div>
+
+                        {/* Columna derecha: Toggle Filtros */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button
+                                className="btn"
+                                onClick={() => setShowFilters(!showFilters)}
+                                style={{
+                                    backgroundColor: showFilters ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                                    color: 'white',
+                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    borderRadius: '8px',
+                                    fontFamily: atisaStyles.fonts.secondary,
+                                    fontWeight: '600',
+                                    padding: '8px 16px',
+                                    fontSize: '14px',
+                                    transition: 'all 0.3s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <i className={`bi ${showFilters ? 'bi-funnel-fill' : 'bi-funnel'}`}></i>
+                                Filtros
+                                <i className={`bi ${showFilters ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sección Filtros Collapsible */}
+                {showFilters && (
+                    <div
+                        style={{
+                            padding: '1.5rem 2rem',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            maxHeight: 'calc(100vh - 150px)',
+                            overflowY: 'auto'
+                        }}
+                    >
+                        {/* Búsqueda Global */}
+                        <div className="row g-3 mb-3">
+                            <div className="col-12">
+                                <div style={{ position: 'relative' }}>
+                                    <i className="bi bi-search" style={{
+                                        position: 'absolute',
+                                        left: '12px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        color: 'rgba(255, 255, 255, 0.7)'
+                                    }}></i>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Buscar por proceso, hito..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{
+                                            paddingLeft: '36px',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                                            color: 'white',
+                                            borderRadius: '6px'
+                                        }}
+                                    />
+                                    {searching && (
+                                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                                            <div className="spinner-border spinner-border-sm text-light" role="status"></div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="row g-3">
+                            {/* Filtro Cliente */}
+                            <div className="col-md-3">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cliente</label>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={selectedCliente}
+                                    onChange={(e) => setSelectedCliente(e.target.value)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                >
+                                    <option value="" style={{ color: 'black' }}>Todos los clientes</option>
+                                    {clientesUnicos.map((cliente) => (
+                                        <option key={cliente.id} value={cliente.id} style={{ color: 'black' }}>{cliente.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Filtro Proceso */}
+                            <div className="col-md-3">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Proceso</label>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={selectedProceso}
+                                    onChange={(e) => setSelectedProceso(e.target.value)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                >
+                                    <option value="" style={{ color: 'black' }}>Todos los procesos</option>
+                                    {procesosUnicos.map((proceso, index) => (
+                                        <option key={index} value={proceso} style={{ color: 'black' }}>{proceso}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Filtro Hito */}
+                            <div className="col-md-3">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Hito</label>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={selectedHito}
+                                    onChange={(e) => setSelectedHito(e.target.value)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                >
+                                    <option value="" style={{ color: 'black' }}>Todos los hitos</option>
+                                    {hitosUnicos.map((hito) => (
+                                        <option key={hito.id} value={hito.id} style={{ color: 'black' }}>{hito.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Fechas en la misma fila si caben, o nueva fila. Vamos a poner fechas en una fila abajo para no saturar */}
+                        </div>
+
+                        <div className="row g-3 mt-1">
+                            {/* Fecha Desde */}
+                            <div className="col-md-3">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Vencimiento Desde</label>
+                                <input
+                                    type="date"
+                                    className="form-control form-control-sm"
+                                    value={fechaDesde}
+                                    onChange={(e) => setFechaDesde(e.target.value)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Fecha Hasta */}
+                            <div className="col-md-3">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Vencimiento Hasta</label>
+                                <input
+                                    type="date"
+                                    className="form-control form-control-sm"
+                                    value={fechaHasta}
+                                    onChange={(e) => setFechaHasta(e.target.value)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Filtros de Estado y Tipo */}
+                        <div className="row mt-3">
+                            <div className="col-md-6">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Estado del Hito</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {/* Botón Todos */}
+                                    <div
+                                        onClick={() => setSelectedEstados(new Set())}
+                                        style={{
+                                            cursor: 'pointer',
+                                            backgroundColor: selectedEstados.size === 0 ? 'white' : 'rgba(255, 255, 255, 0.1)',
+                                            color: selectedEstados.size === 0 ? atisaStyles.colors.primary : 'white',
+                                            border: '1px solid white',
+                                            padding: '6px 12px',
+                                            borderRadius: '20px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            transition: 'all 0.2s ease',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        Todos
+                                    </div>
+
+                                    {[
+                                        { id: 'cumplido_en_plazo', label: 'Cumplido en Plazo', color: '#50cd89' },
+                                        { id: 'cumplido_fuera_plazo', label: 'Cumplido Fuera de Plazo', color: '#ffc107' },
+                                        { id: 'vence_hoy', label: 'Vence Hoy', color: '#009ef7' },
+                                        { id: 'pendiente_en_plazo', label: 'Pendiente en Plazo', color: '#7239ea' },
+                                        { id: 'pendiente_fuera_plazo', label: 'Pendiente Fuera de Plazo', color: '#f1416c' }
+                                    ].map((estado) => {
+                                        const isSelected = selectedEstados.has(estado.id as any)
+                                        return (
+                                            <div
+                                                key={estado.id}
+                                                onClick={() => toggleEstado(estado.id as any)}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    backgroundColor: isSelected ? estado.color : 'rgba(255, 255, 255, 0.1)',
+                                                    color: 'white',
+                                                    border: `1px solid ${estado.color}`,
+                                                    padding: '6px 12px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    opacity: isSelected ? 1 : 0.6,
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                {estado.label}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="col-md-6">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Tipo</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {['Atisa', 'Cliente', 'Terceros'].map((tipo) => (
+                                        <div key={tipo} className="form-check me-3">
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id={`check-tipo-${tipo}`}
+                                                checked={selectedTipos.has(tipo)}
+                                                onChange={() => toggleTipo(tipo)}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                            <label className="form-check-label" htmlFor={`check-tipo-${tipo}`} style={{ color: 'white', fontSize: '13px', cursor: 'pointer' }}>
+                                                {tipo}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="row mt-3">
+                            <div className="col-12 d-flex justify-content-end gap-2">
+                                <button
+                                    className="btn btn-sm"
+                                    onClick={exportarExcel}
+                                    disabled={exporting}
+                                    style={{
+                                        color: 'white',
+                                        backgroundColor: '#50cd89',
+                                        borderColor: '#50cd89',
+                                        opacity: exporting ? 0.7 : 1
+                                    }}
+                                >
+                                    {exporting ? (
+                                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    ) : (
+                                        <i className="bi bi-file-earmark-excel me-1"></i>
+                                    )}
+                                    Exportar a Excel
+                                </button>
+
+                                <button
+                                    className="btn btn-sm"
+                                    onClick={limpiarFiltros}
+                                    style={{
+                                        color: 'white',
+                                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }}
+                                >
+                                    <i className="bi bi-arrow-clockwise me-1"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </header>
+
+            <div className="p-4 flex-grow-1">
+                {/* Tabla de hitos */}
+                <div
+                    style={{
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+                        border: `1px solid ${atisaStyles.colors.light}`,
+                        overflow: 'hidden'
+                    }}
+                >
+                    <div
+                        style={{
+                            padding: '1.5rem',
+                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                            backgroundColor: atisaStyles.colors.light
+                        }}
+                    >
                         <h3
                             style={{
                                 fontFamily: atisaStyles.fonts.primary,
@@ -658,1031 +956,389 @@ const StatusTodosClientes: FC = () => {
                                 gap: '8px'
                             }}
                         >
-                            <i className="bi bi-funnel" style={{ color: atisaStyles.colors.primary }}></i>
-                            Filtros de Búsqueda
+                            <i className="bi bi-list-ul" style={{ color: atisaStyles.colors.primary }}></i>
+                            Listado de Hitos ({hitosFiltrados.length})
                         </h3>
-                        <button
-                            className="btn btn-sm"
-                            onClick={() => setShowFilters(!showFilters)}
+                    </div>
+
+                    <div className="table-responsive">
+                        <table
+                            className="table table-hover"
                             style={{
-                                backgroundColor: atisaStyles.colors.accent,
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
                                 fontFamily: atisaStyles.fonts.secondary,
-                                fontWeight: '600',
-                                padding: '8px 16px',
-                                fontSize: '12px',
-                                transition: 'all 0.3s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                e.currentTarget.style.transform = 'translateY(-1px)'
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                e.currentTarget.style.transform = 'translateY(0)'
+                                margin: 0
                             }}
                         >
-                            <i className={`bi ${showFilters ? 'bi-chevron-up' : 'bi-chevron-down'} me-1`}></i>
-                            {showFilters ? 'Ocultar' : 'Mostrar'} Filtros
-                        </button>
-                    </div>
-                </div>
-
-                {showFilters && (
-                    <div style={{ padding: '1.5rem' }}>
-                        {/* Búsqueda global */}
-                        <div className="row g-3 mb-4">
-                            <div className="col-md-12">
-                                <label
+                            <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+                                <tr
                                     style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
+                                        backgroundColor: atisaStyles.colors.primary,
+                                        color: 'white',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                                     }}
                                 >
-                                    <i className="bi bi-search me-2"></i>
-                                    Buscar por cliente, proceso, hito, estado o tipo
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Escriba para buscar..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('cliente')}
                                         style={{
-                                            fontFamily: atisaStyles.fonts.secondary,
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
                                             fontSize: '14px',
-                                            padding: '12px 16px',
-                                            height: '48px',
-                                            border: `2px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '8px',
-                                            transition: 'all 0.3s ease',
-                                            backgroundColor: 'white',
-                                            paddingRight: searching ? '50px' : '16px'
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
                                         }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = atisaStyles.colors.accent
-                                            e.target.style.boxShadow = `0 0 0 3px ${atisaStyles.colors.accent}20`
+                                    >
+                                        Cliente {getSortIcon('cliente')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('proceso')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
                                         }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = atisaStyles.colors.light
-                                            e.target.style.boxShadow = 'none'
+                                    >
+                                        Proceso {getSortIcon('proceso')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('hito')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
                                         }}
-                                    />
-                                    {searching && (
-                                        <div
+                                    >
+                                        Hito {getSortIcon('hito')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('estado')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Estado {getSortIcon('estado')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('fecha_limite')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Fecha Límite {getSortIcon('fecha_limite')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('hora_limite')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Hora Límite {getSortIcon('hora_limite')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('fecha_estado')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Fecha Estado {getSortIcon('fecha_estado')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('tipo')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Tipo {getSortIcon('tipo')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td
+                                            colSpan={8}
+                                            className="text-center py-4"
                                             style={{
-                                                position: 'absolute',
-                                                right: '12px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                zIndex: 10
+                                                backgroundColor: '#f8f9fa',
+                                                fontFamily: atisaStyles.fonts.secondary,
+                                                padding: '2rem'
                                             }}
                                         >
                                             <div
-                                                className="spinner-border spinner-border-sm"
+                                                className="spinner-border"
                                                 role="status"
                                                 style={{
                                                     color: atisaStyles.colors.primary,
-                                                    width: '20px',
-                                                    height: '20px'
+                                                    width: '2rem',
+                                                    height: '2rem'
                                                 }}
                                             >
-                                                <span className="visually-hidden">Buscando...</span>
+                                                <span className="visually-hidden">Cargando hitos...</span>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Separador visual */}
-                        <div style={{
-                            height: '1px',
-                            backgroundColor: atisaStyles.colors.light,
-                            margin: '1.5rem 0',
-                            opacity: 0.5
-                        }}></div>
-
-                        {/* Filtros principales: Cliente, Hito y Proceso */}
-                        <div className="row g-3 mb-4">
-                            {/* Filtro por cliente */}
-                            <div className="col-md-4">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-building me-2"></i>
-                                    Cliente
-                                </label>
-                                <select
-                                    className="form-select"
-                                    value={selectedCliente}
-                                    onChange={(e) => setSelectedCliente(e.target.value)}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                >
-                                    <option value="">Todos los clientes</option>
-                                    {clientesUnicos.map((cliente) => (
-                                        <option key={cliente.id} value={cliente.id}>
-                                            {cliente.nombre}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Filtro por hito */}
-                            <div className="col-md-4">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-flag me-2"></i>
-                                    Hito
-                                </label>
-                                <select
-                                    className="form-select"
-                                    value={selectedHito}
-                                    onChange={(e) => setSelectedHito(e.target.value)}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                >
-                                    <option value="">Todos los hitos</option>
-                                    {hitosUnicos.map((hito) => (
-                                        <option key={hito.id} value={hito.id}>
-                                            {hito.nombre}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Filtro por proceso */}
-                            <div className="col-md-4">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-diagram-3 me-2"></i>
-                                    Proceso
-                                </label>
-                                <select
-                                    className="form-select"
-                                    value={selectedProceso}
-                                    onChange={(e) => setSelectedProceso(e.target.value)}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                >
-                                    <option value="">Todos los procesos</option>
-                                    {procesosUnicos.map((proceso) => (
-                                        <option key={proceso} value={proceso}>
-                                            {proceso}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Separador visual */}
-                        <div style={{
-                            height: '1px',
-                            backgroundColor: atisaStyles.colors.light,
-                            margin: '1.5rem 0',
-                            opacity: 0.5
-                        }}></div>
-
-                        {/* Filtros de fecha */}
-                        <div className="row g-3 mb-4">
-                            <div className="col-md-6">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-calendar-date me-2"></i>
-                                    Fecha límite desde
-                                </label>
-                                <input
-                                    type="date"
-                                    className="form-control"
-                                    value={fechaDesde}
-                                    onChange={(e) => setFechaDesde(e.target.value)}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                />
-                            </div>
-
-                            <div className="col-md-6">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '8px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-calendar-date me-2"></i>
-                                    Fecha límite hasta
-                                </label>
-                                <input
-                                    type="date"
-                                    className="form-control"
-                                    value={fechaHasta}
-                                    onChange={(e) => setFechaHasta(e.target.value)}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontSize: '14px',
-                                        padding: '12px 16px',
-                                        height: '48px',
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: 'white'
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Separador visual */}
-                        <div style={{
-                            height: '1px',
-                            backgroundColor: atisaStyles.colors.light,
-                            margin: '1.5rem 0',
-                            opacity: 0.5
-                        }}></div>
-
-                        {/* Filtros de Estados y Tipos */}
-                        <div className="row g-3 mb-4">
-                            <div className="col-md-6">
-                                <label
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        fontWeight: '600',
-                                        color: atisaStyles.colors.primary,
-                                        marginBottom: '12px',
-                                        display: 'block'
-                                    }}
-                                >
-                                    <i className="bi bi-check-circle me-2"></i>
-                                    Estados
-                                </label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    <button
-                                        className="btn btn-sm"
-                                        style={{
-                                            backgroundColor: selectedEstados.size === 0 ? atisaStyles.colors.secondary : 'white',
-                                            color: selectedEstados.size === 0 ? 'white' : atisaStyles.colors.primary,
-                                            border: `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontWeight: 600,
-                                            position: 'relative'
-                                        }}
-                                        onClick={() => setSelectedEstados(new Set())}
-                                    >
-                                        Todos
-                                        {selectedEstados.size > 0 && (
                                             <span
+                                                className="ms-2"
                                                 style={{
-                                                    position: 'absolute',
-                                                    top: '-8px',
-                                                    right: '-8px',
-                                                    backgroundColor: '#ef4444',
-                                                    color: 'white',
-                                                    borderRadius: '50%',
-                                                    width: '20px',
-                                                    height: '20px',
-                                                    fontSize: '10px',
-                                                    fontWeight: 'bold',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontFamily: atisaStyles.fonts.secondary
+                                                    color: atisaStyles.colors.dark,
+                                                    fontFamily: atisaStyles.fonts.secondary,
+                                                    fontWeight: '500'
                                                 }}
                                             >
-                                                {selectedEstados.size}
+                                                Cargando hitos...
                                             </span>
-                                        )}
-                                    </button>
-                                    <button
-                                        className="btn btn-sm"
-                                        style={{
-                                            backgroundColor: selectedEstados.has('cumplido_en_plazo') ? '#16a34a' : 'white',
-                                            color: selectedEstados.has('cumplido_en_plazo') ? 'white' : atisaStyles.colors.primary,
-                                            border: `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontWeight: 600
-                                        }}
-                                        onClick={() => toggleEstado('cumplido_en_plazo')}
-                                    >
-                                        Cumplido en plazo
-                                    </button>
-                                    <button
-                                        className="btn btn-sm"
-                                        style={{
-                                            backgroundColor: selectedEstados.has('cumplido_fuera_plazo') ? '#b45309' : 'white',
-                                            color: selectedEstados.has('cumplido_fuera_plazo') ? 'white' : atisaStyles.colors.primary,
-                                            border: `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontWeight: 600
-                                        }}
-                                        onClick={() => toggleEstado('cumplido_fuera_plazo')}
-                                    >
-                                        Cumplido fuera de plazo
-                                    </button>
-                                    <button
-                                        className="btn btn-sm"
-                                        style={{
-                                            backgroundColor: selectedEstados.has('vence_hoy') ? '#dc2626' : 'white',
-                                            color: selectedEstados.has('vence_hoy') ? 'white' : atisaStyles.colors.primary,
-                                            border: `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontWeight: 600
-                                        }}
-                                        onClick={() => toggleEstado('vence_hoy')}
-                                    >
-                                        Vence hoy
-                                    </button>
-                                    <button
-                                        className="btn btn-sm"
-                                        style={{
-                                            backgroundColor: selectedEstados.has('pendiente_fuera_plazo') ? '#ef4444' : 'white',
-                                            color: selectedEstados.has('pendiente_fuera_plazo') ? 'white' : atisaStyles.colors.primary,
-                                            border: `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontWeight: 600
-                                        }}
-                                        onClick={() => toggleEstado('pendiente_fuera_plazo')}
-                                    >
-                                        Pendiente fuera de plazo
-                                    </button>
-                                    <button
-                                        className="btn btn-sm"
-                                        style={{
-                                            backgroundColor: selectedEstados.has('pendiente_en_plazo') ? atisaStyles.colors.accent : 'white',
-                                            color: selectedEstados.has('pendiente_en_plazo') ? 'white' : atisaStyles.colors.primary,
-                                            border: `1px solid ${atisaStyles.colors.light}`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontWeight: 600
-                                        }}
-                                        onClick={() => toggleEstado('pendiente_en_plazo')}
-                                    >
-                                        Pendiente en plazo
-                                    </button>
-                                </div>
-                            </div>
-
-                            {tiposUnicos.length > 0 && (
-                                <div className="col-md-6">
-                                    <label
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            fontWeight: '600',
-                                            color: atisaStyles.colors.primary,
-                                            marginBottom: '12px',
-                                            display: 'block'
-                                        }}
-                                    >
-                                        <i className="bi bi-tag me-2"></i>
-                                        Tipos de Hito
-                                    </label>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                        <button
-                                            className="btn btn-sm"
+                                        </td>
+                                    </tr>
+                                ) : hitosFiltrados.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={8}
+                                            className="text-center py-4"
                                             style={{
-                                                backgroundColor: selectedTipos.size === 0 ? atisaStyles.colors.secondary : 'white',
-                                                color: selectedTipos.size === 0 ? 'white' : atisaStyles.colors.primary,
-                                                border: `1px solid ${atisaStyles.colors.light}`,
-                                                borderRadius: '20px',
-                                                padding: '6px 12px',
-                                                fontWeight: 600,
-                                                position: 'relative'
-                                            }}
-                                            onClick={() => setSelectedTipos(new Set())}
-                                        >
-                                            Todos
-                                            {selectedTipos.size > 0 && (
-                                                <span
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '-8px',
-                                                        right: '-8px',
-                                                        backgroundColor: '#ef4444',
-                                                        color: 'white',
-                                                        borderRadius: '50%',
-                                                        width: '20px',
-                                                        height: '20px',
-                                                        fontSize: '10px',
-                                                        fontWeight: 'bold',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontFamily: atisaStyles.fonts.secondary
-                                                    }}
-                                                >
-                                                    {selectedTipos.size}
-                                                </span>
-                                            )}
-                                        </button>
-                                        {tiposUnicos.map((tipo) => (
-                                            <button
-                                                key={tipo}
-                                                className="btn btn-sm"
-                                                style={{
-                                                    backgroundColor: selectedTipos.has(tipo) ? atisaStyles.colors.primary : 'white',
-                                                    color: selectedTipos.has(tipo) ? 'white' : atisaStyles.colors.primary,
-                                                    border: `1px solid ${atisaStyles.colors.light}`,
-                                                    borderRadius: '20px',
-                                                    padding: '6px 12px',
-                                                    fontWeight: 600
-                                                }}
-                                                onClick={() => toggleTipo(tipo)}
-                                            >
-                                                {tipo}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Separador visual */}
-                        <div style={{
-                            height: '1px',
-                            backgroundColor: atisaStyles.colors.light,
-                            margin: '1.5rem 0',
-                            opacity: 0.5
-                        }}></div>
-
-                        {/* Botones de acción */}
-                        <div className="row g-3">
-                            <div className="col-md-12">
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                                    <button
-                                        className="btn"
-                                        onClick={exportarExcel}
-                                        disabled={exporting}
-                                        style={{
-                                            backgroundColor: exporting ? '#9ca3af' : '#16a34a',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            fontWeight: '600',
-                                            padding: '12px 24px',
-                                            fontSize: '14px',
-                                            transition: 'all 0.3s ease',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            cursor: exporting ? 'not-allowed' : 'pointer',
-                                            opacity: exporting ? 0.7 : 1
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!exporting) {
-                                                e.currentTarget.style.backgroundColor = '#15803d'
-                                                e.currentTarget.style.transform = 'translateY(-2px)'
-                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.3)'
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!exporting) {
-                                                e.currentTarget.style.backgroundColor = '#16a34a'
-                                                e.currentTarget.style.transform = 'translateY(0)'
-                                                e.currentTarget.style.boxShadow = 'none'
-                                            }
-                                        }}
-                                    >
-                                        {exporting ? (
-                                            <>
-                                                <div
-                                                    className="spinner-border spinner-border-sm"
-                                                    role="status"
-                                                    style={{
-                                                        width: '16px',
-                                                        height: '16px',
-                                                        borderWidth: '2px'
-                                                    }}
-                                                >
-                                                    <span className="visually-hidden">Exportando...</span>
-                                                </div>
-                                                Exportando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <i className="bi bi-file-earmark-excel"></i>
-                                                Exportar a Excel
-                                            </>
-                                        )}
-                                    </button>
-                                    <button
-                                        className="btn"
-                                        onClick={limpiarFiltros}
-                                        style={{
-                                            backgroundColor: 'transparent',
-                                            color: atisaStyles.colors.primary,
-                                            border: `2px solid ${atisaStyles.colors.primary}`,
-                                            borderRadius: '8px',
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            fontWeight: '600',
-                                            padding: '12px 24px',
-                                            fontSize: '14px',
-                                            transition: 'all 0.3s ease',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                            e.currentTarget.style.color = 'white'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'transparent'
-                                            e.currentTarget.style.color = atisaStyles.colors.primary
-                                        }}
-                                    >
-                                        <i className="bi bi-arrow-clockwise"></i>
-                                        Limpiar Filtros
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Tabla de hitos */}
-            <div
-                style={{
-                    backgroundColor: 'white',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-                    border: `1px solid ${atisaStyles.colors.light}`,
-                    overflow: 'hidden'
-                }}
-            >
-                <div
-                    style={{
-                        padding: '1.5rem',
-                        borderBottom: `1px solid ${atisaStyles.colors.light}`,
-                        backgroundColor: atisaStyles.colors.light
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontFamily: atisaStyles.fonts.primary,
-                            color: atisaStyles.colors.primary,
-                            fontWeight: 'bold',
-                            margin: 0,
-                            fontSize: '1.3rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        <i className="bi bi-list-ul" style={{ color: atisaStyles.colors.primary }}></i>
-                        Listado de Hitos ({hitosFiltrados.length})
-                    </h3>
-                </div>
-
-                <div className="table-responsive">
-                    <table
-                        className="table table-hover"
-                        style={{
-                            fontFamily: atisaStyles.fonts.secondary,
-                            margin: 0
-                        }}
-                    >
-                        <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-                            <tr
-                                style={{
-                                    backgroundColor: atisaStyles.colors.primary,
-                                    color: 'white',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                                }}
-                            >
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('cliente')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Cliente {getSortIcon('cliente')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('proceso')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Proceso {getSortIcon('proceso')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('hito')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Hito {getSortIcon('hito')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('estado')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Estado {getSortIcon('estado')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('fecha_limite')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Fecha Límite {getSortIcon('fecha_limite')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('hora_limite')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Hora Límite {getSortIcon('hora_limite')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('fecha_estado')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Fecha Estado {getSortIcon('fecha_estado')}
-                                </th>
-                                <th
-                                    className="cursor-pointer user-select-none"
-                                    onClick={() => handleSort('tipo')}
-                                    style={{
-                                        fontFamily: atisaStyles.fonts.primary,
-                                        fontWeight: 'bold',
-                                        fontSize: '14px',
-                                        padding: '16px 12px',
-                                        border: 'none',
-                                        color: 'white',
-                                        backgroundColor: atisaStyles.colors.primary,
-                                        transition: 'background-color 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Tipo {getSortIcon('tipo')}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td
-                                        colSpan={8}
-                                        className="text-center py-4"
-                                        style={{
-                                            backgroundColor: '#f8f9fa',
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            padding: '2rem'
-                                        }}
-                                    >
-                                        <div
-                                            className="spinner-border"
-                                            role="status"
-                                            style={{
-                                                color: atisaStyles.colors.primary,
-                                                width: '2rem',
-                                                height: '2rem'
-                                            }}
-                                        >
-                                            <span className="visually-hidden">Cargando hitos...</span>
-                                        </div>
-                                        <span
-                                            className="ms-2"
-                                            style={{
-                                                color: atisaStyles.colors.dark,
+                                                backgroundColor: '#f8f9fa',
                                                 fontFamily: atisaStyles.fonts.secondary,
-                                                fontWeight: '500'
+                                                padding: '2rem',
+                                                color: atisaStyles.colors.dark
                                             }}
                                         >
-                                            Cargando hitos...
-                                        </span>
-                                    </td>
-                                </tr>
-                            ) : hitosFiltrados.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={8}
-                                        className="text-center py-4"
-                                        style={{
-                                            backgroundColor: '#f8f9fa',
-                                            fontFamily: atisaStyles.fonts.secondary,
-                                            padding: '2rem',
-                                            color: atisaStyles.colors.dark
-                                        }}
-                                    >
-                                        <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
-                                        {debouncedSearchTerm || selectedHito || selectedProceso || selectedCliente || selectedEstados.size > 0 || selectedTipos.size > 0 || fechaDesde || fechaHasta
-                                            ? 'No se encontraron hitos con los filtros aplicados'
-                                            : 'No hay hitos registrados'
-                                        }
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedHitos.map((hito, index) => {
-                                    const isFinalized = hito.estado === 'Finalizado'
-                                    const isNuevo = hito.estado === 'Nuevo'
-                                    const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
-                                    const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
-                                    const venceHoy = isNuevo && estadoVenc === 'hoy'
+                                            <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
+                                            {debouncedSearchTerm || selectedHito || selectedProceso || selectedCliente || selectedEstados.size > 0 || selectedTipos.size > 0 || fechaDesde || fechaHasta
+                                                ? 'No se encontraron hitos con los filtros aplicados'
+                                                : 'No hay hitos registrados'
+                                            }
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    paginatedHitos.map((hito, index) => {
+                                        const isFinalized = hito.estado === 'Finalizado'
+                                        const isNuevo = hito.estado === 'Nuevo'
+                                        const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
+                                        const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
+                                        const venceHoy = isNuevo && estadoVenc === 'hoy'
 
-                                    return (
-                                        <tr
-                                            key={`${hito.cliente_id}-${hito.id}`}
-                                            style={{
-                                                backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                                                transition: 'all 0.2s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#e9ecef'
-                                                e.currentTarget.style.transform = 'translateY(-1px)'
-                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
-                                                e.currentTarget.style.transform = 'translateY(0)'
-                                                e.currentTarget.style.boxShadow = 'none'
-                                            }}
-                                        >
-                                            <td
+                                        return (
+                                            <tr
+                                                key={`${hito.cliente_id}-${hito.id}`}
                                                 style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
+                                                    backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = '#e9ecef'
+                                                    e.currentTarget.style.transform = 'translateY(-1px)'
+                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                                                    e.currentTarget.style.transform = 'translateY(0)'
+                                                    e.currentTarget.style.boxShadow = 'none'
                                                 }}
                                             >
-                                                <span title={hito.cliente_nombre || 'No disponible'}>
-                                                    {hito.cliente_nombre || 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span title={hito.proceso_nombre || 'No disponible'}>
-                                                    {hito.proceso_nombre || 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span title={hito.hito_nombre || 'No disponible'}>
-                                                    {hito.hito_nombre || 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {finalizadoFuera ? (
-                                                    <span style={{ backgroundColor: '#b45309', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                        Cumplido fuera de plazo
-                                                    </span>
-                                                ) : isFinalized ? (
-                                                    <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                        Cumplido en plazo
-                                                    </span>
-                                                ) : venceHoy ? (
-                                                    <span style={{ backgroundColor: '#dc2626', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                        Vence hoy
-                                                    </span>
-                                                ) : estadoVenc === 'vencido' ? (
-                                                    <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                        Pendiente fuera de plazo
-                                                    </span>
-                                                ) : (
-                                                    <span style={{ backgroundColor: atisaStyles.colors.accent, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                        Pendiente en plazo
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {formatTime(hito.hora_limite)}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {hito.fecha_estado ? formatDate(hito.fecha_estado) : '-'}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span
+                                                <td
                                                     style={{
-                                                        backgroundColor: atisaStyles.colors.light,
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500'
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.primary,
+                                                        fontWeight: '600',
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
                                                     }}
                                                 >
-                                                    {hito.tipo || '-'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    )
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Paginación */}
-                {hitosFiltrados.length > itemsPerPage && (
-                    <div
-                        style={{
-                            padding: '1.5rem',
-                            borderTop: `1px solid ${atisaStyles.colors.light}`,
-                            backgroundColor: '#f8f9fa'
-                        }}
-                    >
-                        <SharedPagination
-                            currentPage={currentPage}
-                            totalItems={hitosFiltrados.length}
-                            pageSize={itemsPerPage}
-                            onPageChange={handlePageChange}
-                        />
+                                                    <span title={hito.cliente_nombre || 'No disponible'}>
+                                                        {hito.cliente_nombre || 'No disponible'}
+                                                    </span>
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.dark,
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    <span title={hito.proceso_nombre || 'No disponible'}>
+                                                        {hito.proceso_nombre || 'No disponible'}
+                                                    </span>
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.primary,
+                                                        fontWeight: '600',
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    <span title={hito.hito_nombre || 'No disponible'}>
+                                                        {hito.hito_nombre || 'No disponible'}
+                                                    </span>
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    {finalizadoFuera ? (
+                                                        <span style={{ backgroundColor: '#b45309', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Cumplido fuera de plazo
+                                                        </span>
+                                                    ) : isFinalized ? (
+                                                        <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Cumplido en plazo
+                                                        </span>
+                                                    ) : venceHoy ? (
+                                                        <span style={{ backgroundColor: '#dc2626', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Vence hoy
+                                                        </span>
+                                                    ) : estadoVenc === 'vencido' ? (
+                                                        <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Pendiente fuera de plazo
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ backgroundColor: atisaStyles.colors.accent, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
+                                                            Pendiente en plazo
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.primary,
+                                                        fontWeight: '600',
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    {hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.dark,
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    {formatTime(hito.hora_limite)}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.dark,
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    {hito.fecha_estado ? formatDate(hito.fecha_estado) : '-'}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        fontFamily: atisaStyles.fonts.secondary,
+                                                        color: atisaStyles.colors.dark,
+                                                        padding: '16px 12px',
+                                                        verticalAlign: 'middle'
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            backgroundColor: atisaStyles.colors.light,
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '500'
+                                                        }}
+                                                    >
+                                                        {hito.tipo || '-'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-                )}
+
+                    {/* Paginación */}
+                    {hitosFiltrados.length > itemsPerPage && (
+                        <div
+                            style={{
+                                padding: '1.5rem',
+                                borderTop: `1px solid ${atisaStyles.colors.light}`,
+                                backgroundColor: '#f8f9fa'
+                            }}
+                        >
+                            <SharedPagination
+                                currentPage={currentPage}
+                                totalItems={hitosFiltrados.length}
+                                pageSize={itemsPerPage}
+                                onPageChange={handlePageChange}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
