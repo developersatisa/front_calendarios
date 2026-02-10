@@ -10,6 +10,7 @@ import { getAllProcesos, Proceso } from '../../../../api/procesos'
 import { descargarDocumentosCumplimiento } from '../../../../api/documentosCumplimiento'
 import { getClienteProcesoHitoById, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { getClienteProcesosByCliente } from '../../../../api/clienteProcesos'
+import { getAllSubdepartamentos, Subdepartamento } from '../../../../api/subdepartamentos'
 
 // Extendemos la interfaz para incluir los campos adicionales que devuelve el endpoint
 interface CumplimientoHistorico extends ClienteProcesoHitoCumplimiento {
@@ -45,9 +46,11 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     const [tipoFiltroFecha, setTipoFiltroFecha] = useState<'cumplimiento' | 'creacion' | 'limite'>('cumplimiento')
     const [hitos, setHitos] = useState<Hito[]>([])
     const [procesos, setProcesos] = useState<Proceso[]>([])
+    const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
+    const [selectedDepartamento, setSelectedDepartamento] = useState('')
     const [showFilters, setShowFilters] = useState(false)
     const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
-    const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion'>('fecha_creacion')
+    const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento'>('fecha_creacion')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
     // Función para cargar cumplimientos
@@ -132,8 +135,20 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     useEffect(() => {
         if (clienteId) {
             cargarHitosYProcesosDelCliente()
+            cargarSubdepartamentos()
         }
     }, [clienteId])
+
+    // Cargar subdepartamentos para el filtro
+    const cargarSubdepartamentos = async () => {
+        try {
+            const response = await getAllSubdepartamentos(undefined, 1000, undefined, 'asc')
+            setSubdepartamentos(response.subdepartamentos || [])
+        } catch (error) {
+            console.error('Error cargando subdepartamentos:', error)
+            setSubdepartamentos([])
+        }
+    }
 
     // Cargar hitos y procesos únicos del cliente basados en sus cumplimientos
     const cargarHitosYProcesosDelCliente = async () => {
@@ -287,6 +302,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         setSearchTerm('')
         setSelectedHito('')
         setSelectedProceso('')
+        setSelectedDepartamento('')
         setFechaDesde('')
         setFechaHasta('')
         setTipoFiltroFecha('cumplimiento')
@@ -294,7 +310,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     }
 
     // Función para manejar el ordenamiento
-    const handleSort = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion') => {
+    const handleSort = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento') => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
         } else {
@@ -304,7 +320,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     }
 
     // Función para obtener el icono de ordenamiento
-    const getSortIcon = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion') => {
+    const getSortIcon = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento') => {
         if (sortField !== field) {
             return (
                 <i
@@ -378,6 +394,13 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                     comparison = usuarioA.localeCompare(usuarioB, 'es', { sensitivity: 'base' })
                     break
 
+
+                case 'departamento':
+                    const depA = a.departamento || ''
+                    const depB = b.departamento || ''
+                    comparison = depA.localeCompare(depB, 'es', { sensitivity: 'base' })
+                    break
+
                 case 'proceso':
                     const procesoA = a.proceso || ''
                     const procesoB = b.proceso || ''
@@ -424,6 +447,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
             const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
             const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
+            const matchesDepartamento = !selectedDepartamento || cumplimiento.departamento === selectedDepartamento
 
             let matchesFecha = true
             if (fechaDesde || fechaHasta) {
@@ -457,12 +481,12 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 }
             }
 
-            return matchesSearch && matchesHito && matchesProceso && matchesFecha
+            return matchesSearch && matchesHito && matchesProceso && matchesFecha && matchesDepartamento
         })
 
         // Aplicar ordenamiento
         return sortCumplimientos(filtrados)
-    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
+    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, selectedDepartamento, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
 
     return (
         <div
@@ -482,7 +506,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                     boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
                     position: 'sticky',
                     top: 0,
-                    zIndex: 1000,
+                    zIndex: 10,
                     width: '100%'
                 }}
             >
@@ -687,6 +711,27 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     <option value="" style={{ color: 'black' }}>Todos los procesos</option>
                                     {procesos.map((proceso) => (
                                         <option key={proceso.id} value={proceso.id} style={{ color: 'black' }}>{proceso.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Filtro Departamento */}
+                            <div className="col-md-3">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Departamento</label>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={selectedDepartamento}
+                                    onChange={(e) => setSelectedDepartamento(e.target.value)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                >
+                                    <option value="" style={{ color: 'black' }}>Todos los departamentos</option>
+                                    {subdepartamentos.map((subdep) => (
+                                        <option key={subdep.id} value={subdep.nombre || ''} style={{ color: 'black' }}>{subdep.nombre}</option>
                                     ))}
                                 </select>
                             </div>
@@ -931,6 +976,30 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         }}
                                     >
                                         Usuario {getSortIcon('usuario')}
+                                    </th>
+
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('departamento')}
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            transition: 'background-color 0.2s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                                        }}
+                                    >
+                                        Departamento {getSortIcon('departamento')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1203,6 +1272,17 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 >
                                                     {cumplimiento.usuario}
                                                 </span>
+                                            </td>
+
+                                            <td
+                                                style={{
+                                                    fontFamily: atisaStyles.fonts.secondary,
+                                                    color: atisaStyles.colors.dark,
+                                                    padding: '16px 12px',
+                                                    verticalAlign: 'middle'
+                                                }}
+                                            >
+                                                {cumplimiento.departamento || '-'}
                                             </td>
                                             <td
                                                 style={{

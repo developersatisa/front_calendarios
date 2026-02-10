@@ -773,7 +773,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
       }}
     >
       {/* Header del calendario */}
-      <div
+      <header
         style={{
           background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
           color: 'white',
@@ -782,7 +782,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           textAlign: 'center',
           position: 'sticky',
           top: 0,
-          zIndex: 1000,
+          zIndex: 10,
           width: '100%'
         }}
       >
@@ -1198,7 +1198,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
           </div>
         </div>
-      </div>
+      </header>
 
 
 
@@ -2043,6 +2043,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
         )}
       </div>
     </div>
+
   )
 }
 

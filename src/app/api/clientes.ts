@@ -1,121 +1,135 @@
 import api from './axiosConfig'
 
+export interface ConfiguracionAviso {
+  id: number
+  aviso_vence_hoy: boolean
+  temporicidad_vence_hoy: number | null
+  tiempo_vence_hoy: number | null
+  hora_vence_hoy: string | null
+
+  aviso_proximo_vencimiento: boolean
+  temporicidad_proximo_vencimiento: number | null
+  tiempo_proximo_vencimiento: number | null
+  hora_proximo_vencimiento: string | null
+  dias_proximo_vencimiento: number | null
+
+  aviso_vencido: boolean
+  temporicidad_vencido: number | null
+  tiempo_vencido: number | null
+  hora_vencido: string | null
+
+  config_global: boolean
+}
+
+export type ConfiguracionAvisos = ConfiguracionAviso
+
+export interface Departamento {
+  ceco: string
+  nombre: string
+  configuracion?: ConfiguracionAviso | null
+}
+
 export interface Cliente {
   idcliente: string
   cif: string | null
-  cif_empresa: string | null
-  razsoc: string | null
-  direccion: string | null
-  localidad: string | null
-  provincia: string | null
-  cpostal: string | null
-  codigop: string | null
-  pais: string | null
-  cif_factura: string | null
+  razsoc: string
+  departamentos?: Departamento[]
+  cif_empresa?: string | null
+  direccion?: string | null
+  localidad?: string | null
+  provincia?: string | null
+  cpostal?: string | null
+  pais?: string | null
+  codigop?: string | null
+  cif_factura?: string | null
 }
 
 export interface ClientesResponse {
   clientes: Cliente[]
   total: number
+  page: number
+  limit: number
+}
+
+// --- API Functions ---
+
+export const getClientesConDepartamentos = async (
+  page: number = 1,
+  limit: number = 10,
+  sort_field: string = 'razsoc',
+  sort_direction: string = 'asc',
+  search?: string,
+  ceco?: string
+) => {
+  const params: any = {
+    page,
+    limit,
+    sort_field,
+    sort_direction
+  }
+  if (search) params.search = search
+  if (ceco) params.ceco = ceco
+
+  const response = await api.get<ClientesResponse>('/clientes/departamentos', { params })
+  return response.data
 }
 
 export const getAllClientes = async (
-  page?: number,
-  limit?: number,
-  sortField?: string,
-  sortDirection?: 'asc' | 'desc'
+  page: number = 1,
+  limit: number = 10,
+  sort_field: string = 'razsoc',
+  sort_direction: string = 'asc',
+  search?: string
 ) => {
-  try {
-    const params = new URLSearchParams()
-    if (page && page > 0) params.append('page', String(page))
-    if (limit && limit > 0) params.append('limit', String(limit))
-    if (sortField) params.append('sort_field', sortField)
-    if (sortDirection) params.append('sort_direction', sortDirection)
-
-    // Si no se proporcionan parámetros, añadir limit=100 por defecto para el selector
-    if (!page && !limit) {
-      params.append('limit', '50')
-    }
-
-    const response = await api.get<ClientesResponse>('/clientes' + (params.toString() ? `?${params.toString()}` : ''))
-
-    // En caso de que la respuesta no tenga la estructura esperada
-    return {
-      clientes: response.data?.clientes || [],
-      total: response.data?.total || 0
-    }
-  } catch (error) {
-    console.error('Error in getAllClientes:', error)
-    // Devolver un objeto válido en caso de error
-    return {
-      clientes: [],
-      total: 0
-    }
+  const params: any = {
+    page,
+    limit,
+    sort_field,
+    sort_direction
   }
-}
-
-export const getClienteByNombre = async (nombre: string) => {
-  const response = await api.get<Cliente>(`/clientes/nombre/${nombre}`)
+  if (search) params.search = search
+  const response = await api.get<ClientesResponse>('/clientes', { params })
   return response.data
 }
 
-export const getClienteByCIF = async (cif: string) => {
-  const response = await api.get<Cliente>(`/clientes/cif/${cif}`)
-  return response.data
-}
-
-export const getClienteById = async (id: string) => {
+export const getClienteById = async (id: string | number) => {
   const response = await api.get<Cliente>(`/clientes/${id}`)
   return response.data
 }
 
-export const getClientesPorHito = async (
-  hitoId: number,
-  page: number = 1,
-  limit: number = 10,
-  search: string = '',
-  sortField: string = 'razsoc',
-  sortDirection: 'asc' | 'desc' = 'asc'
-) => {
-  const params = new URLSearchParams()
-  params.append('page', String(page))
-  params.append('limit', String(limit))
-  if (search) params.append('search', search)
-  params.append('sort_field', sortField)
-  params.append('sort_direction', sortDirection)
-
-  const response = await api.get<ClientesResponse>(`/clientes/hito/${hitoId}?${params.toString()}`)
-  return {
-    clientes: response.data.clientes || [],
-    total: response.data.total || 0
-  }
-}
-
 export const getClientesUsuario = async (
-  email: string,
+  email?: string,
   page?: number,
   limit?: number,
-  sortField?: string,
-  sortDirection?: 'asc' | 'desc'
+  search?: string,
+  sortDirection?: string
 ) => {
-  try {
-    const params = new URLSearchParams()
-    if (page && page > 0) params.append('page', String(page))
-    if (limit && limit > 0) params.append('limit', String(limit))
-    if (sortField) params.append('sort_field', sortField)
-    if (sortDirection) params.append('sort_direction', sortDirection)
+  const params: any = {}
+  if (email) params.email = email
+  if (page) params.page = page
+  if (limit) params.limit = limit
+  if (search) params.search = search
+  if (sortDirection) params.sort_direction = sortDirection
 
-    const response = await api.get<ClientesResponse>(`/clientes/empresas_usuario/${email}` + (params.toString() ? `?${params.toString()}` : ''))
+  const response = await api.get<ClientesResponse>('/clientes/usuario', { params })
+  return response.data
+}
 
-    return {
-      clientes: response.data?.clientes || [],
-      total: response.data?.total || 0
-    }
-  } catch (error) {
-    console.error('Error in getClientesUsuario:', error)
-    return {
-      clientes: [],
-      total: 0
-    }
+export const getClientesPorHito = async (
+  hitoId: string | number,
+  page: number = 1,
+  limit: number = 5,
+  search: string = '',
+  sort_field: string = 'razsoc',
+  sort_direction: string = 'asc'
+) => {
+  const params = {
+    page,
+    limit,
+    search,
+    sort_field,
+    sort_direction
   }
+  const response = await api.get<ClientesResponse>(`/clientes/hito/${hitoId}`, { params })
+  return response.data
 }

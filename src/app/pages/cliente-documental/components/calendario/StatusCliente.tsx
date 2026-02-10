@@ -590,7 +590,7 @@ const StatusCliente: FC<Props> = ({ clienteId }) => {
                     boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
                     position: 'sticky',
                     top: 0,
-                    zIndex: 1000,
+                    zIndex: 10,
                     width: '100%'
                 }}
             >

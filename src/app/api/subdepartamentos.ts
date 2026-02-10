@@ -15,6 +15,11 @@ export interface SubdepartamentosResponse {
   total: number
 }
 
+export interface SubdepartamentoCliente {
+  ceco: string
+  nombre: string
+}
+
 export const getAllSubdepartamentos = async (
   page?: number,
   limit?: number,
@@ -33,5 +38,10 @@ export const getAllSubdepartamentos = async (
 
 export const getSubdepartamentoById = async (id: number) => {
   const response = await api.get<Subdepartamento>(`/subdepartamentos/${id}`)
+  return response.data
+}
+
+export const getSubdepartamentosByCliente = async (clienteId: string) => {
+  const response = await api.get<SubdepartamentoCliente[]>(`/subdepartamentos/cliente/${clienteId}`)
   return response.data
 }
