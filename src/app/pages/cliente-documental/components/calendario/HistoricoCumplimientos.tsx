@@ -717,7 +717,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
                             {/* Filtro Departamento */}
                             <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Departamento</label>
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubo</label>
                                 <select
                                     className="form-select form-select-sm"
                                     value={selectedDepartamento}
@@ -731,7 +731,9 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 >
                                     <option value="" style={{ color: 'black' }}>Todos los departamentos</option>
                                     {subdepartamentos.map((subdep) => (
-                                        <option key={subdep.id} value={subdep.nombre || ''} style={{ color: 'black' }}>{subdep.nombre}</option>
+                                        <option key={subdep.id} value={subdep.nombre || ''} style={{ color: 'black' }}>
+                                            {subdep.codSubDepar?.substring(4)} - {subdep.nombre}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
@@ -999,7 +1001,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                             e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                         }}
                                     >
-                                        Departamento {getSortIcon('departamento')}
+                                        Cubo {getSortIcon('departamento')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1282,6 +1284,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                     verticalAlign: 'middle'
                                                 }}
                                             >
+                                                {cumplimiento.codSubDepar?.substring(4)} -
                                                 {cumplimiento.departamento || '-'}
                                             </td>
                                             <td

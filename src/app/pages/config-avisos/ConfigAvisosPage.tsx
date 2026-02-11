@@ -672,8 +672,7 @@ const ConfigAvisosPage: FC = () => {
                                                                         <table className="table table-sm table-bordered bg-white align-middle">
                                                                             <thead className="bg-light">
                                                                                 <tr className="fw-bold text-gray-600">
-                                                                                    <th className="min-w-100px ps-4">Cod. SubDepar</th>
-                                                                                    <th className="min-w-150px">Nombre</th>
+                                                                                    <th className="min-w-150px">Cubo</th>
                                                                                     <th className="min-w-400px">Configuración de Avisos</th>
                                                                                 </tr>
                                                                             </thead>
@@ -683,8 +682,7 @@ const ConfigAvisosPage: FC = () => {
                                                                                     const isSaving = savingDepartments.has(`${cliente.idcliente}-${dep.codSubDepar}`)
                                                                                     return (
                                                                                         <tr key={dep.codSubDepar || index}>
-                                                                                            <td className="ps-4"><span className="badge badge-light-primary">{dep.codSubDepar}</span></td>
-                                                                                            <td className="fw-bold text-gray-700">{dep.nombre}</td>
+                                                                                            <td className="fw-bold text-gray-700">{dep.codSubDepar?.substring(4)} - {dep.nombre}</td>
                                                                                             <td className="p-2">
                                                                                                 {/* Activar Todos / Unified Block */}
                                                                                                 {renderUnifiedBlock(config, cliente.idcliente, dep.codSubDepar || '')}
