@@ -447,7 +447,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
             const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
             const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
-            const matchesDepartamento = !selectedDepartamento || cumplimiento.departamento === selectedDepartamento
+            const matchesDepartamento = !selectedDepartamento || cumplimiento.codSubDepar === selectedDepartamento
 
             let matchesFecha = true
             if (fechaDesde || fechaHasta) {
@@ -731,7 +731,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 >
                                     <option value="" style={{ color: 'black' }}>Todos los departamentos</option>
                                     {subdepartamentos.map((subdep) => (
-                                        <option key={subdep.id} value={subdep.nombre || ''} style={{ color: 'black' }}>
+                                        <option key={subdep.id} value={subdep.codSubDepar || ''} style={{ color: 'black' }}>
                                             {subdep.codSubDepar?.substring(4)} - {subdep.nombre}
                                         </option>
                                     ))}
