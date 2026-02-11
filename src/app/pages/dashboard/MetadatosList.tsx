@@ -8,7 +8,7 @@ import { Subdepartamento, getAllSubdepartamentos } from '../../api/subdepartamen
 import SharedPagination from '../../components/pagination/SharedPagination'
 import MetadatoModal from './components/MetadatoModal'
 import MetadatoSubdepartamentosModal from './components/MetadatoSubdepartamentosModal'
-import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles} from '../../styles/atisaStyles'
+import { atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles } from '../../styles/atisaStyles'
 
 const MetadatosList: FC = () => {
   const navigate = useNavigate()
@@ -160,7 +160,7 @@ const MetadatosList: FC = () => {
     if (!groups[ma.id_metadato]) {
       groups[ma.id_metadato] = []
     }
-    const subdep = subdepartamentos.find(s => s.ceco === ma.codigo_ceco && s.ceco !== null)
+    const subdep = subdepartamentos.find(s => s.codSubDepar === ma.codSubDepar && s.codSubDepar !== null)
     if (subdep) {
       groups[ma.id_metadato].push({ ...ma, subdepData: subdep })
     }
@@ -222,7 +222,7 @@ const MetadatosList: FC = () => {
     setShowSubdepartamentosModal(true)
   }
 
-  const handleSaveSubdepartamentos = async (newRelations: { id_metadato: number; codigo_ceco: string }[]) => {
+  const handleSaveSubdepartamentos = async (newRelations: { id_metadato: number; codSubDepar: string }[]) => {
     try {
       const promises = newRelations.map(relation => createMetadatoArea(relation))
       await Promise.all(promises)
@@ -645,7 +645,7 @@ const MetadatosList: FC = () => {
                                       className='badge me-2'
                                       style={getBadgeStyles(true)}
                                     >
-                                      {ma.subdepData.ceco || '-'}
+                                      {ma.subdepData.codSubDepar || '-'}
                                     </span>
                                     <span
                                       style={{
@@ -728,9 +728,9 @@ const MetadatosList: FC = () => {
                               </div>
                             </div>
                           </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                        </tr>
+                      ))}
+                    </tbody>
                   </table>
                 </div>
               )}

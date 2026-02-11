@@ -23,8 +23,9 @@ export interface ConfiguracionAviso {
 
 export type ConfiguracionAvisos = ConfiguracionAviso
 
+
 export interface Departamento {
-  ceco: string
+  codSubDepar: string
   nombre: string
   configuracion?: ConfiguracionAviso | null
 }
@@ -56,10 +57,10 @@ export interface ClientesResponse {
 export const getClientesConDepartamentos = async (
   page: number = 1,
   limit: number = 10,
-  sort_field: string = 'razsoc',
+  sort_field: string = '',
   sort_direction: string = 'asc',
   search?: string,
-  ceco?: string
+  codSubDepar?: string
 ) => {
   const params: any = {
     page,
@@ -68,7 +69,7 @@ export const getClientesConDepartamentos = async (
     sort_direction
   }
   if (search) params.search = search
-  if (ceco) params.ceco = ceco
+  if (codSubDepar) params.codSubDepar = codSubDepar
 
   const response = await api.get<ClientesResponse>('/clientes/departamentos', { params })
   return response.data
@@ -77,7 +78,7 @@ export const getClientesConDepartamentos = async (
 export const getAllClientes = async (
   page: number = 1,
   limit: number = 10,
-  sort_field: string = 'razsoc',
+  sort_field: string = 'idcliente',
   sort_direction: string = 'asc',
   search?: string
 ) => {
@@ -111,7 +112,7 @@ export const getClientesUsuario = async (
   if (search) params.search = search
   if (sortDirection) params.sort_direction = sortDirection
 
-  const response = await api.get<ClientesResponse>('/clientes/usuario', { params })
+  const response = await api.get<ClientesResponse>('/clientes/empresas_usuario/' + email, { params })
   return response.data
 }
 
@@ -120,7 +121,7 @@ export const getClientesPorHito = async (
   page: number = 1,
   limit: number = 5,
   search: string = '',
-  sort_field: string = 'razsoc',
+  sort_field: string = 'idcliente',
   sort_direction: string = 'asc'
 ) => {
   const params = {

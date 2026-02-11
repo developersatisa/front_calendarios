@@ -13,15 +13,6 @@ const SidebarMenuMain = () => {
         title='Gestor Documental/Calendario'
       />
 
-      {isAdmin && (
-        <SidebarMenuItem
-          to='/dashboard'
-          icon='table'
-          fontIcon='bi-table'
-          title='Dashboard'
-        />
-      )}
-
       <SidebarMenuItem
         to='/metricas'
         icon='table'
@@ -30,12 +21,31 @@ const SidebarMenuMain = () => {
       />
 
       {isAdmin && (
-        <SidebarMenuItem
-          to='/administracion'
-          icon='table'
-          fontIcon='bi-shield-lock'
-          title='Administración'
-        />
+        <>
+          <div className='menu-item'>
+            <div className='menu-content pt-8 pb-2'>
+              <span className='menu-section text-muted text-uppercase fs-8 ls-1'>Opciones administrador</span>
+            </div>
+          </div>
+          <SidebarMenuItem
+            to='/administracion'
+            icon='table'
+            fontIcon='bi-shield-lock'
+            title='Roles y Usuarios'
+          />
+          <SidebarMenuItem
+            to='/dashboard'
+            icon='table'
+            fontIcon='bi-table'
+            title='Dashboard'
+          />
+          <SidebarMenuItem
+            to='/config-avisos'
+            icon='table'
+            fontIcon='bi-table'
+            title='Configuración de Avisos'
+          />
+        </>
       )}
     </>
   )

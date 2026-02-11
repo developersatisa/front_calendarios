@@ -9,7 +9,7 @@ export interface ClienteProcesoHitoCumplimiento {
   usuario: string
   fecha_creacion?: string
   num_documentos?: number
-  ceco?: string
+  codSubDepar?: string
   departamento?: string
 }
 

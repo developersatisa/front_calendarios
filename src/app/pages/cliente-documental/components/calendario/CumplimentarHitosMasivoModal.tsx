@@ -67,6 +67,18 @@ const CumplimentarHitosMasivoModal: FC<Props> = ({ show, onHide, ids, onSuccess 
         return 'usuario'
     }
 
+    const getCurrentCodSubDepar = (): string | undefined => {
+        if (auth?.api_token) {
+            try {
+                const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+                return payload.codSubDepar
+            } catch (error) {
+                console.warn('Error decodificando token JWT para codSubDepar:', error)
+            }
+        }
+        return undefined
+    }
+
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -191,7 +203,8 @@ const CumplimentarHitosMasivoModal: FC<Props> = ({ show, onHide, ids, onSuccess 
                         fecha: fechaCumplimiento,
                         hora: horaCumplimiento,
                         observacion: observacion || undefined,
-                        usuario: getCurrentUsername()
+                        usuario: getCurrentUsername(),
+                        codSubDepar: getCurrentCodSubDepar()
                     })
 
                     // 3. Subir Archivos (si hay)

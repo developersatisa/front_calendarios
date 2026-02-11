@@ -22,6 +22,7 @@ import HistoricoCumplimientos from '../pages/cliente-documental/components/calen
 import StatusCliente from '../pages/cliente-documental/components/calendario/StatusCliente'
 import StatusTodosClientes from '../pages/cliente-documental/components/calendario/StatusTodosClientes'
 import AdministradoresPage from '../pages/administracion/AdministradoresPage'
+import ConfigAvisosPage from '../pages/config-avisos/ConfigAvisosPage'
 import AdminRoute from './AdminRoute'
 
 
@@ -64,6 +65,7 @@ const PrivateRoutes = () => {
         <Route path='status-todos-clientes' element={<StatusTodosClientes />} />
         {/* <Route path='metadatos' element={<MetadatosList />} /> */}
         <Route path='metricas' element={<MetricasList />} />
+        <Route path='config-avisos' element={<ConfigAvisosPage />} />
         {/* Administración - Solo para admins */}
         <Route path='administracion' element={
           <AdminRoute>

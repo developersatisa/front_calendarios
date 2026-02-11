@@ -1,15 +1,15 @@
-import {FC, useEffect, useState} from 'react'
-import {Modal} from 'react-bootstrap'
-import {KTSVG} from '../../../../_metronic/helpers'
-import {MetadatoArea, deleteMetadatoArea} from '../../../api/metadatosArea'
-import {Metadato} from '../../../api/metadatos'
-import {Subdepartamento} from '../../../api/subdepartamentos'
+import { FC, useEffect, useState } from 'react'
+import { Modal } from 'react-bootstrap'
+import { KTSVG } from '../../../../_metronic/helpers'
+import { MetadatoArea, deleteMetadatoArea } from '../../../api/metadatosArea'
+import { Metadato } from '../../../api/metadatos'
+import { Subdepartamento } from '../../../api/subdepartamentos'
 import SharedPagination from '../../../components/pagination/SharedPagination'
 
 interface Props {
   show: boolean
   onHide: () => void
-  onSave: (metadatoAreas: { id_metadato: number; codigo_ceco: string }[]) => void
+  onSave: (metadatoAreas: { id_metadato: number; codSubDepar: string }[]) => void
   metadatos: Metadato[]
   subdepartamentos: Subdepartamento[]
   areasActuales?: MetadatoArea[]
@@ -50,7 +50,7 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
       if (selectedMetadatoId) {
         const subdepartamentosDelMetadato = areasActuales
           .filter(area => area.id_metadato === selectedMetadatoId)
-          .map(area => area.codigo_ceco)
+          .map(area => area.codSubDepar)
         setSelectedSubdepartamentos(subdepartamentosDelMetadato)
       } else {
         setSelectedSubdepartamentos([])
@@ -61,7 +61,7 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
     }
   }, [show, selectedMetadatoId, areasActuales])
 
-    const sortSubdepartamentos = (data: Subdepartamento[]) => {
+  const sortSubdepartamentos = (data: Subdepartamento[]) => {
     return [...data].sort((a, b) => {
       const aValue = a.nombre || ''
       const bValue = b.nombre || ''
@@ -75,8 +75,8 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
     const validData = data.filter(subdep =>
       subdep.nombre &&
       subdep.nombre.trim() !== '' &&
-      subdep.ceco &&
-      subdep.ceco.trim() !== ''
+      subdep.codSubDepar &&
+      subdep.codSubDepar.trim() !== ''
     )
 
     const groups = validData.reduce((acc, subdep) => {
@@ -102,7 +102,7 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
 
 
   const handleGroupCheckboxChange = (groupName: string, checked: boolean, groupSubdeps: Subdepartamento[]) => {
-    const groupCecos = groupSubdeps.map(s => s.ceco).filter(Boolean) as string[]
+    const groupCecos = groupSubdeps.map(s => s.codSubDepar).filter(Boolean) as string[]
 
     if (checked) {
       const newSelected = [...new Set([...selectedSubdepartamentos, ...groupCecos])]
@@ -123,10 +123,10 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
 
         // Luego crear las nuevas relaciones (filtrar cecos válidos)
         const newRelations = selectedSubdepartamentos
-          .filter(ceco => ceco && ceco.trim() !== '')
-          .map(ceco => ({
+          .filter(cod => cod && cod.trim() !== '')
+          .map(cod => ({
             id_metadato: selectedMetadatoId,
-            codigo_ceco: ceco
+            codSubDepar: cod
           }))
         await onSave(newRelations)
       } catch (error) {
@@ -135,14 +135,14 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
     }
   }
 
-    // Agrupar primero, luego filtrar por nombres de grupo
+  // Agrupar primero, luego filtrar por nombres de grupo
   const allGroupedSubdepartamentos = groupSubdepartamentosByName(subdepartamentos)
 
   const filteredGroupedSubdepartamentos = allGroupedSubdepartamentos.filter(group =>
     group.departmentName.toLowerCase().includes(searchTerm.toLowerCase().trim())
   )
 
-    // Solo mostrar headers de grupo
+  // Solo mostrar headers de grupo
   const flattenedForPagination: TableItem[] = filteredGroupedSubdepartamentos.map((group: GroupedSubdepartamento) => ({
     type: 'group-header' as const,
     departmentName: group.departmentName,
@@ -192,7 +192,7 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
           <table className='table align-middle fs-6 gy-2'>
             <thead>
               <tr className='text-start text-muted fw-bold fs-7 text-uppercase gs-0'>
-                <th style={{width: '60px'}} className='text-center py-3'>
+                <th style={{ width: '60px' }} className='text-center py-3'>
                   <div className='form-check form-check-custom form-check-solid d-flex justify-content-center align-items-center'>
                     <input
                       className='form-check-input form-check-input-lg'
@@ -203,14 +203,14 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
                         borderRadius: '4px',
                         cursor: 'pointer'
                       }}
-                      checked={filteredGroupedSubdepartamentos.length > 0 && filteredGroupedSubdepartamentos.every(group => group.subdepartamentos.every((s: Subdepartamento) => s.ceco ? selectedSubdepartamentos.includes(s.ceco) : false))}
+                      checked={filteredGroupedSubdepartamentos.length > 0 && filteredGroupedSubdepartamentos.every(group => group.subdepartamentos.every((s: Subdepartamento) => s.codSubDepar ? selectedSubdepartamentos.includes(s.codSubDepar) : false))}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          const allCecos = filteredGroupedSubdepartamentos.flatMap(group => group.subdepartamentos.map((s: Subdepartamento) => s.ceco).filter(Boolean)) as string[]
+                          const allCecos = filteredGroupedSubdepartamentos.flatMap(group => group.subdepartamentos.map((s: Subdepartamento) => s.codSubDepar).filter(Boolean)) as string[]
                           const newSelected = [...new Set([...selectedSubdepartamentos, ...allCecos])]
                           setSelectedSubdepartamentos(newSelected)
                         } else {
-                          const allCecosSet = new Set(filteredGroupedSubdepartamentos.flatMap(group => group.subdepartamentos.map((s: Subdepartamento) => s.ceco).filter(Boolean)))
+                          const allCecosSet = new Set(filteredGroupedSubdepartamentos.flatMap(group => group.subdepartamentos.map((s: Subdepartamento) => s.codSubDepar).filter(Boolean)))
                           setSelectedSubdepartamentos(selectedSubdepartamentos.filter(ceco => !allCecosSet.has(ceco)))
                         }
                       }}
@@ -223,8 +223,8 @@ const MetadatoSubdepartamentosModal: FC<Props> = ({
             <tbody>
               {currentItems.map((item, index) => {
                 const group = filteredGroupedSubdepartamentos.find((g: GroupedSubdepartamento) => g.departmentName === item.departmentName)
-                const isGroupSelected = group?.subdepartamentos.every((s: Subdepartamento) => s.ceco ? selectedSubdepartamentos.includes(s.ceco) : false)
-                const isGroupPartiallySelected = group?.subdepartamentos.some((s: Subdepartamento) => s.ceco ? selectedSubdepartamentos.includes(s.ceco) : false)
+                const isGroupSelected = group?.subdepartamentos.every((s: Subdepartamento) => s.codSubDepar ? selectedSubdepartamentos.includes(s.codSubDepar) : false)
+                const isGroupPartiallySelected = group?.subdepartamentos.some((s: Subdepartamento) => s.codSubDepar ? selectedSubdepartamentos.includes(s.codSubDepar) : false)
 
                 return (
                   <tr key={`group-${item.departmentName}`} className='bg-light-primary border-0'>

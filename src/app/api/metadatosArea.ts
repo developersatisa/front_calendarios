@@ -3,12 +3,12 @@ import api from './axiosConfig'
 export interface MetadatoArea {
   id: number
   id_metadato: number
-  codigo_ceco: string
+  codSubDepar: string
 }
 
 export interface MetadatoAreaCreate {
   id_metadato: number
-  codigo_ceco: string
+  codSubDepar: string
 }
 
 export interface MetadatoAreaResponse {

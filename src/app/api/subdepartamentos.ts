@@ -3,7 +3,6 @@ import api from './axiosConfig'
 export interface Subdepartamento {
   id: number
   codidepar: string | null
-  ceco: string | null
   codSubDepar: string | null
   nombre: string | null
   fechaini: string | null
@@ -16,7 +15,7 @@ export interface SubdepartamentosResponse {
 }
 
 export interface SubdepartamentoCliente {
-  ceco: string
+  codSubDepar: string
   nombre: string
 }
 
