@@ -1,14 +1,15 @@
 import { FC, useRef, useState, useEffect } from 'react'
 import { Modal, Button, Form, ProgressBar, Alert } from 'react-bootstrap'
 import CustomToast from '../../../../components/ui/CustomToast'
-import { crearDocumento } from '../../../../api/documentalDocumentos'
+import { uploadDocumentalCarpetaDocumentos } from '../../../../api/documentalCarpetaDocumentos'
 import { atisaStyles } from '../../../../styles/atisaStyles'
+import { useAuth } from '../../../../modules/auth/core/Auth'
 
 interface Props {
   show: boolean
   onHide: () => void
-  categoriaId: number
-  categoriaNombre: string
+  carpetaId: number
+  carpetaNombre: string
   clienteId: string
   onUploadSuccess: () => void
 }
@@ -20,7 +21,8 @@ interface FileUploadStatus {
   error?: string
 }
 
-const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categoriaNombre, clienteId, onUploadSuccess }) => {
+const SubirDocumentosModal: FC<Props> = ({ show, onHide, carpetaId, carpetaNombre, clienteId, onUploadSuccess }) => {
+  const { currentUser, auth } = useAuth()
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -38,6 +40,38 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
     setToastMessage(message)
     setToastType(type)
     setShowToast(true)
+  }
+
+  // Función para obtener el numeross del usuario actual (autor)
+  const getCurrentAutor = (): string => {
+    if (auth?.api_token) {
+      try {
+        const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+        return payload.numeross || payload.username || 'usuario'
+      } catch (error) {
+        console.warn('Error decodificando token JWT:', error)
+      }
+    }
+    return getCurrentUsername() || 'usuario'
+  }
+
+  // Backup username getter just in case
+  const getCurrentUsername = (): string => {
+    if (currentUser?.username) return currentUser.username
+    return 'usuario'
+  }
+
+  // Función para obtener el codSubDepar del token JWT
+  const getCurrentCodSubDepar = (): string => {
+    if (auth?.api_token) {
+      try {
+        const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+        return payload.codSubDepar || ''
+      } catch (error) {
+        console.warn('Error decodificando token JWT para codSubDepar:', error)
+      }
+    }
+    return ''
   }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -165,13 +199,14 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
         )
 
         try {
-          // Usar la nueva función crearDocumento del API
-          await crearDocumento({
-            cliente_id: clienteId,
-            categoria_id: categoriaId,
-            nombre_documento: fileName,
-            file: file
-          })
+          // Usar la función de API para subir documentos a la carpeta, uno a uno
+          const result = await uploadDocumentalCarpetaDocumentos(carpetaId, [file], getCurrentAutor(), getCurrentCodSubDepar())
+
+          // Si la respuesta tiene id, asumimos éxito. Si tiene success: false, lanzamos error.
+          if (result.success === false) {
+            throw new Error(result.message || 'Error al subir el archivo')
+          }
+
           uploadedFiles++
 
           // Marcar como exitoso
@@ -210,21 +245,30 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
         if (uploadedFiles === 0) {
           console.warn(message)
           showToastMessage(message, 'warning')
-          return
+          // return  <-- Removed return to allow closing if needed, or maybe keep open?
+          // Usually if some failed, we might want to keep open to show errors.
+          // But strict "onUploadSuccess" logic usually means refresh anyway.
         }
       }
 
-      // Si llegamos aquí, al menos algunos archivos se subieron exitosamente
-      onUploadSuccess()
-      onHide()
+      // Si llegamos aquí, al menos intentamos subir todos
+      if (uploadedFiles > 0) {
+        onUploadSuccess()
+        onHide()
+        resetearFormulario()
+      } else {
+        // Si todos fallaron, no cerramos para que vea los errores
+        setLoading(false) // Stop loading state
+      }
 
-      // Resetear el formulario usando la función centralizada
-      resetearFormulario()
     } catch (err) {
-      console.error('Error al categorizar documentos:', err)
-      showToastMessage('Error al categorizar los documentos', 'error')
+      console.error('Error al subir documentos:', err)
+      showToastMessage('Error al subir los documentos', 'error')
     } finally {
-      setLoading(false)
+      // setLoading(false) // Handled inside condition logic or here?
+      // If we close modal, component unmounts.
+      // If we stay open (all failed), we need loading false.
+      if (files.length === 0) setLoading(false) // Just safeguard
     }
   }
 
@@ -255,7 +299,7 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
           }}
         >
           <i className="bi bi-upload me-2" style={{ color: 'white' }}></i>
-          Subir Documentos - {categoriaNombre}
+          Subir Documentos - {carpetaNombre}
         </Modal.Title>
         <div
           className='btn btn-icon btn-sm'
@@ -286,7 +330,7 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
       <Modal.Body>
         <Form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <Form.Label className="fw-bold mb-3">Seleccionar archivos para categorizar</Form.Label>
+            <Form.Label className="fw-bold mb-3">Seleccionar archivos a subir</Form.Label>
 
             {/* Zona de Drag & Drop */}
             <div
@@ -467,4 +511,4 @@ const CategorizarDocumentoModal: FC<Props> = ({ show, onHide, categoriaId, categ
   )
 }
 
-export default CategorizarDocumentoModal
+export default SubirDocumentosModal

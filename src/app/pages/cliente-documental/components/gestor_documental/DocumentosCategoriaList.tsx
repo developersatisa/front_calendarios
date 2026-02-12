@@ -1,31 +1,31 @@
 import React, { FC, useEffect, useState } from 'react'
 import { Modal, Button, Table, Badge, Spinner, Alert } from 'react-bootstrap'
 import CustomToast from '../../../../components/ui/CustomToast'
-import { DocumentalDocumento, getDocumentosByClienteAndCategoria, descargarDocumento, eliminarDocumento } from '../../../../api/documentalDocumentos'
+import { DocumentalCarpetaDocumentoResponse, getDocumentosByCarpetaId, descargarDocumentoCarpeta, eliminarDocumentoCarpeta } from '../../../../api/documentalCarpetaDocumentos'
 import { atisaStyles } from '../../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
   onHide: () => void
-  categoriaId: number
-  categoriaNombre: string
+  carpetaId: number
+  carpetaNombre: string
   clienteId: string
 }
 
 const DocumentosCategoriaList: FC<Props> = ({
   show,
   onHide,
-  categoriaId,
-  categoriaNombre,
+  carpetaId,
+  carpetaNombre,
   clienteId
 }) => {
-  const [documentos, setDocumentos] = useState<DocumentalDocumento[]>([])
+  const [documentos, setDocumentos] = useState<DocumentalCarpetaDocumentoResponse[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false)
-  const [documentoToDelete, setDocumentoToDelete] = useState<DocumentalDocumento | null>(null)
+  const [documentoToDelete, setDocumentoToDelete] = useState<DocumentalCarpetaDocumentoResponse | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
@@ -38,16 +38,16 @@ const DocumentosCategoriaList: FC<Props> = ({
   }
 
   useEffect(() => {
-    if (show && categoriaId && clienteId) {
+    if (show && carpetaId && clienteId) {
       loadDocumentos()
     }
-  }, [show, categoriaId, clienteId])
+  }, [show, carpetaId, clienteId])
 
   const loadDocumentos = async () => {
     try {
       setLoading(true)
       setError(null)
-      const response = await getDocumentosByClienteAndCategoria(clienteId, categoriaId)
+      const response = await getDocumentosByCarpetaId(carpetaId)
       setDocumentos(response.documentos || [])
     } catch (err) {
       console.error('Error al cargar documentos:', err)
@@ -61,12 +61,13 @@ const DocumentosCategoriaList: FC<Props> = ({
     loadDocumentos()
   }
 
-  const handleDescargar = async (documento: DocumentalDocumento) => {
+  const handleDescargar = async (documento: DocumentalCarpetaDocumentoResponse) => {
+    if (!documento.id || !documento.original_file_name) return
     try {
       setDownloadingId(documento.id)
 
       // Usar la función de la API para descargar el documento
-      const blob = await descargarDocumento(documento.id)
+      const blob = await descargarDocumentoCarpeta(documento.id)
 
       // Crear URL del blob
       const url = window.URL.createObjectURL(blob)
@@ -95,14 +96,15 @@ const DocumentosCategoriaList: FC<Props> = ({
   }
 
   const handleDeleteConfirm = async () => {
-    if (!documentoToDelete) return
+    if (!documentoToDelete || !documentoToDelete.id) return
 
     try {
       setDeletingId(documentoToDelete.id)
-      await eliminarDocumento(documentoToDelete.id)
+      await eliminarDocumentoCarpeta(documentoToDelete.id)
       setDocumentos(documentos.filter(doc => doc.id !== documentoToDelete.id))
       setShowDeleteConfirm(false)
       setDocumentoToDelete(null)
+      showToastMessage('Documento eliminado correctamente', 'success')
     } catch (err) {
       console.error('Error al eliminar documento:', err)
       showToastMessage('Error al eliminar el documento. Por favor, inténtalo de nuevo.', 'error')
@@ -176,7 +178,7 @@ const DocumentosCategoriaList: FC<Props> = ({
           }}
         >
           <i className="bi bi-folder-fill me-2" style={{ color: 'white' }}></i>
-          Documentos de: {categoriaNombre}
+          Documentos de: {carpetaNombre}
         </Modal.Title>
         <div
           className='btn btn-icon btn-sm'
@@ -239,6 +241,14 @@ const DocumentosCategoriaList: FC<Props> = ({
                           <i className="bi bi-file-earmark me-1"></i>
                           Documento
                         </th>
+                        <th className="border-0">
+                          <i className="bi bi-calendar-check me-1"></i>
+                          Fecha Creación
+                        </th>
+                        <th className="border-0">
+                          <i className="bi bi-person me-1"></i>
+                          Autor
+                        </th>
                         <th className="border-0 text-center">
                           <i className="bi bi-gear me-1"></i>
                           Acciones
@@ -252,7 +262,7 @@ const DocumentosCategoriaList: FC<Props> = ({
                             <div className="d-flex align-items-center">
                               <div className="symbol symbol-35px me-3">
                                 <div className="symbol-label bg-light-gray-200">
-                                  <i className={`bi ${getFileIcon(documento.original_file_name)} fs-4`}></i>
+                                  <i className={`bi ${getFileIcon(documento.original_file_name || '')} fs-4`}></i>
                                 </div>
                               </div>
                               <div>
@@ -261,6 +271,12 @@ const DocumentosCategoriaList: FC<Props> = ({
                                 </div>
                               </div>
                             </div>
+                          </td>
+                          <td className="align-middle">
+                            {documento.fecha_creacion ? new Date(documento.fecha_creacion).toLocaleString() : '-'}
+                          </td>
+                          <td className="align-middle">
+                            {documento.autor || '-'}
                           </td>
 
                           <td className="text-center">
@@ -318,214 +334,125 @@ const DocumentosCategoriaList: FC<Props> = ({
         </div>
       </Modal.Footer>
 
-      {showDeleteConfirm && documentoToDelete && (
-        <div
-          className="modal fade show d-block"
-          tabIndex={-1}
+      <Modal
+        show={showDeleteConfirm}
+        onHide={handleDeleteCancel}
+        centered
+        backdrop="static"
+        style={{ zIndex: 10001 }}
+      >
+        <Modal.Header
           style={{
-            background: 'rgba(0, 80, 92, 0.5)',
-            zIndex: 10000,
-            backdropFilter: 'blur(2px)'
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px 12px 0 0',
+            padding: '20px 24px'
           }}
         >
-          <div className="modal-dialog modal-dialog-centered">
+          <Modal.Title
+            style={{
+              fontFamily: atisaStyles.fonts.primary,
+              fontWeight: 'bold',
+              color: 'white',
+              fontSize: '1.3rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}
+          >
+            <i className="bi bi-trash-fill" style={{ color: 'white' }}></i>
+            Confirmar eliminación
+          </Modal.Title>
+          <div
+            className='btn btn-icon btn-sm'
+            onClick={handleDeleteCancel}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <i className="bi bi-x text-white"></i>
+          </div>
+        </Modal.Header>
+        <Modal.Body style={{ padding: '28px 24px' }}>
+          <div className="d-flex align-items-start gap-3">
             <div
-              className="modal-content"
               style={{
-                borderRadius: '16px',
-                border: `2px solid ${atisaStyles.colors.light}`,
-                boxShadow: '0 12px 40px rgba(0, 80, 92, 0.4)',
-                fontFamily: atisaStyles.fonts.secondary,
-                overflow: 'hidden'
+                backgroundColor: '#f8d7da',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
               }}
             >
-              <div
-                className="modal-header"
+              <i className="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+            </div>
+            <div>
+              <p
                 style={{
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  borderRadius: '14px 14px 0 0',
-                  border: 'none',
-                  padding: '20px 24px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: atisaStyles.colors.dark,
+                  margin: 0,
+                  lineHeight: '1.6',
+                  fontSize: '15px'
                 }}
               >
-                <h5
-                  className="modal-title"
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    margin: 0,
-                    fontSize: '1.3rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}
-                >
-                  <i className="bi bi-trash-fill" style={{ color: 'white', fontSize: '1.5rem' }}></i>
-                  Confirmar eliminación
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white"
-                  onClick={handleDeleteCancel}
-                  style={{
-                    filter: 'invert(1)',
-                    opacity: 0.8,
-                    transition: 'opacity 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.8'
-                  }}
-                ></button>
-              </div>
-              <div
-                className="modal-body"
-                style={{
-                  padding: '28px 24px',
-                  backgroundColor: 'white'
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '16px',
-                    marginBottom: '20px'
-                  }}
-                >
-                  <div
-                    style={{
-                      backgroundColor: '#f8d7da',
-                      borderRadius: '50%',
-                      width: '48px',
-                      height: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}
-                  >
-                    <i className="bi bi-exclamation-triangle-fill" style={{ color: '#dc3545', fontSize: '24px' }}></i>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p
-                      style={{
-                        fontFamily: atisaStyles.fonts.secondary,
-                        color: atisaStyles.colors.dark,
-                        margin: 0,
-                        lineHeight: '1.8',
-                        fontSize: '15px'
-                      }}
-                    >
-                      ¿Estás seguro de que quieres eliminar el documento <strong>"{documentoToDelete.original_file_name}"</strong>?
-                      <br />
-                      <br />
-                      <strong style={{ color: '#dc3545' }}>
-                        Esta acción no se puede deshacer.
-                      </strong>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="modal-footer"
-                style={{
-                  border: 'none',
-                  padding: '20px 24px',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '0 0 14px 14px',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: '12px'
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleDeleteCancel}
-                  style={{
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontFamily: atisaStyles.fonts.secondary,
-                    fontWeight: '600',
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 2px 8px rgba(108, 117, 125, 0.2)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#5a6268'
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.3)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#6c757d'
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(108, 117, 125, 0.2)'
-                  }}
-                >
-                  <i className="bi bi-x-circle me-2"></i>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleDeleteConfirm}
-                  disabled={deletingId === documentoToDelete.id}
-                  style={{
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontFamily: atisaStyles.fonts.secondary,
-                    fontWeight: '600',
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 2px 8px rgba(220, 53, 69, 0.3)',
-                    opacity: deletingId === documentoToDelete.id ? 0.6 : 1,
-                    cursor: deletingId === documentoToDelete.id ? 'not-allowed' : 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (deletingId !== documentoToDelete.id) {
-                      e.currentTarget.style.backgroundColor = '#c82333'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.4)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (deletingId !== documentoToDelete.id) {
-                      e.currentTarget.style.backgroundColor = '#dc3545'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 53, 69, 0.3)'
-                    }
-                  }}
-                >
-                  {deletingId === documentoToDelete.id ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Eliminando...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-trash me-2"></i>
-                      Eliminar
-                    </>
-                  )}
-                </button>
-              </div>
+                ¿Estás seguro de que quieres eliminar el documento <strong>"{documentoToDelete?.original_file_name}"</strong>?
+                <br /><br />
+                <span className="text-danger fw-bold">Esta acción no se puede deshacer.</span>
+              </p>
             </div>
           </div>
-        </div>
-      )}
+        </Modal.Body>
+        <Modal.Footer
+          style={{
+            border: 'none',
+            padding: '20px 24px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '0 0 12px 12px',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '12px'
+          }}
+        >
+          <Button
+            variant="secondary"
+            onClick={handleDeleteCancel}
+            disabled={deletingId !== null}
+            style={{ borderRadius: '8px' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleDeleteConfirm}
+            disabled={deletingId !== null}
+            style={{ borderRadius: '8px' }}
+          >
+            {deletingId !== null ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-2" />
+                Eliminando...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-trash me-2"></i>
+                Eliminar
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Custom Toast */}
       <CustomToast

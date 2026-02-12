@@ -1,4 +1,5 @@
 import { FC, useEffect, useState, useMemo } from 'react'
+import Select from 'react-select'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import { atisaStyles, getSecondaryButtonStyles } from '../../../../styles/atisaStyles'
@@ -47,7 +48,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     const [hitos, setHitos] = useState<Hito[]>([])
     const [procesos, setProcesos] = useState<Proceso[]>([])
     const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
-    const [selectedDepartamento, setSelectedDepartamento] = useState('')
+    const [selectedDepartamentos, setSelectedDepartamentos] = useState<string[]>([])
     const [showFilters, setShowFilters] = useState(false)
     const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
     const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento'>('fecha_creacion')
@@ -302,7 +303,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         setSearchTerm('')
         setSelectedHito('')
         setSelectedProceso('')
-        setSelectedDepartamento('')
+        setSelectedDepartamentos([])
         setFechaDesde('')
         setFechaHasta('')
         setTipoFiltroFecha('cumplimiento')
@@ -447,7 +448,8 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
             const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
             const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
-            const matchesDepartamento = !selectedDepartamento || cumplimiento.codSubDepar === selectedDepartamento
+            const matchesDepartamento = selectedDepartamentos.length === 0 || (cumplimiento.codSubDepar && selectedDepartamentos.includes(cumplimiento.codSubDepar))
+
 
             let matchesFecha = true
             if (fechaDesde || fechaHasta) {
@@ -486,7 +488,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
         // Aplicar ordenamiento
         return sortCumplimientos(filtrados)
-    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, selectedDepartamento, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
+    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, selectedDepartamentos, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
 
     return (
         <div
@@ -674,7 +676,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
 
                         <div className="row g-3">
                             {/* Filtro Hito */}
-                            <div className="col-md-3">
+                            <div className="col-md-4">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Hito</label>
                                 <select
                                     className="form-select form-select-sm"
@@ -695,7 +697,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             </div>
 
                             {/* Filtro Proceso */}
-                            <div className="col-md-3">
+                            <div className="col-md-4">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Proceso</label>
                                 <select
                                     className="form-select form-select-sm"
@@ -715,31 +717,104 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 </select>
                             </div>
 
-                            {/* Filtro Departamento */}
-                            <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubo</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedDepartamento}
-                                    onChange={(e) => setSelectedDepartamento(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
+                            {/* Filtro Departamento (Cubos) */}
+                            <div className="col-md-4">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubos</label>
+                                <Select
+                                    isMulti
+                                    options={subdepartamentos.map((subdep) => ({
+                                        value: subdep.codSubDepar || '',
+                                        label: `${subdep.codSubDepar?.substring(4)} - ${subdep.nombre}`
+                                    }))}
+                                    value={subdepartamentos
+                                        .filter((subdep) => selectedDepartamentos.includes(subdep.codSubDepar || ''))
+                                        .map((subdep) => ({
+                                            value: subdep.codSubDepar || '',
+                                            label: `${subdep.codSubDepar?.substring(4)} - ${subdep.nombre}`
+                                        }))}
+                                    onChange={(newValue) => {
+                                        setSelectedDepartamentos(newValue.map((option) => option.value))
                                     }}
-                                >
-                                    <option value="" style={{ color: 'black' }}>Todos los departamentos</option>
-                                    {subdepartamentos.map((subdep) => (
-                                        <option key={subdep.id} value={subdep.codSubDepar || ''} style={{ color: 'black' }}>
-                                            {subdep.codSubDepar?.substring(4)} - {subdep.nombre}
-                                        </option>
-                                    ))}
-                                </select>
+                                    placeholder="Seleccionar cubos..."
+                                    noOptionsMessage={() => "No hay opciones"}
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                            color: 'white',
+                                            minHeight: '31px',
+                                            borderRadius: '6px'
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            backgroundColor: 'white',
+                                            zIndex: 9999
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
+                                            color: atisaStyles.colors.dark,
+                                            cursor: 'pointer',
+                                            ':active': {
+                                                backgroundColor: atisaStyles.colors.secondary
+                                            }
+                                        }),
+                                        multiValue: (base) => ({
+                                            ...base,
+                                            backgroundColor: atisaStyles.colors.secondary,
+                                            borderRadius: '4px',
+                                        }),
+                                        multiValueLabel: (base) => ({
+                                            ...base,
+                                            color: 'white',
+                                            fontSize: '12px'
+                                        }),
+                                        multiValueRemove: (base) => ({
+                                            ...base,
+                                            color: 'white',
+                                            ':hover': {
+                                                backgroundColor: '#d32f2f',
+                                                color: 'white',
+                                            },
+                                        }),
+                                        placeholder: (base) => ({
+                                            ...base,
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            fontSize: '14px'
+                                        }),
+                                        input: (base) => ({
+                                            ...base,
+                                            color: 'white'
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: 'white'
+                                        }),
+                                        indicatorSeparator: (base) => ({
+                                            ...base,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                                        }),
+                                        dropdownIndicator: (base) => ({
+                                            ...base,
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            ':hover': {
+                                                color: 'white'
+                                            }
+                                        }),
+                                        clearIndicator: (base) => ({
+                                            ...base,
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            ':hover': {
+                                                color: 'white'
+                                            }
+                                        })
+                                    }}
+                                />
                             </div>
 
                             {/* Filtro Tipo Fecha */}
-                            <div className="col-md-2">
+                            <div className="col-md-4">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Tipo Fecha</label>
                                 <select
                                     className="form-select form-select-sm"
@@ -759,7 +834,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             </div>
 
                             {/* Fecha Desde */}
-                            <div className="col-md-2">
+                            <div className="col-md-4">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Desde</label>
                                 <input
                                     type="date"
@@ -776,7 +851,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             </div>
 
                             {/* Fecha Hasta */}
-                            <div className="col-md-2">
+                            <div className="col-md-4">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Hasta</label>
                                 <input
                                     type="date"
@@ -885,30 +960,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                             e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                         }}
                                     >
-                                        Fecha Cumplimiento {getSortIcon('fecha_cumplimiento')}
-                                    </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('hora_cumplimiento')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
-                                    >
-                                        Hora Cumplimiento {getSortIcon('hora_cumplimiento')}
+                                        Fecha / Hora Cumplimiento {getSortIcon('fecha_cumplimiento')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -931,7 +983,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                             e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                         }}
                                     >
-                                        Fecha Límite Hito {getSortIcon('fecha_limite')}
+                                        Fecha Límite {getSortIcon('fecha_limite')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -954,7 +1006,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                             e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                         }}
                                     >
-                                        Hora Límite Hito {getSortIcon('hora_limite')}
+                                        Hora Límite {getSortIcon('hora_limite')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1001,7 +1053,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                             e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                         }}
                                     >
-                                        Cubo {getSortIcon('departamento')}
+                                        Cubos {getSortIcon('departamento')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1116,7 +1168,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={10}
+                                            colSpan={9}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1150,7 +1202,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 ) : cumplimientosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={10}
+                                            colSpan={9}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1194,17 +1246,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                     verticalAlign: 'middle'
                                                 }}
                                             >
-                                                {formatDate(cumplimiento.fecha)}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {formatTime(cumplimiento.hora)}
+                                                {formatDate(cumplimiento.fecha)}, {formatTime(cumplimiento.hora)}
                                             </td>
                                             <td
                                                 style={{
@@ -1496,7 +1538,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
 

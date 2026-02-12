@@ -1,15 +1,16 @@
-import {FC, useState, useEffect, useRef, useMemo} from 'react'
-import {createPortal} from 'react-dom'
-import {useNavigate} from 'react-router-dom'
-import {KTCard, KTCardBody} from '../../../_metronic/helpers'
+import { FC, useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
+import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import CustomToast from '../../components/ui/CustomToast'
 import ProcesoModal from './components/ProcesoModal'
+import DocumentalCarpetaProcesoModal from './components/DocumentalCarpetaProcesoModal'
 import ProcesoHitosMaestroModal from './components/ProcesoHitosMaestroModal'
-import {Proceso, getAllProcesos, createProceso, updateProceso, deleteProceso} from '../../api/procesos'
-import {ProcesoHitos, getAllProcesoHitosMaestro, createProcesoHitosMaestro} from '../../api/procesoHitosMaestro'
-import {Hito, getAllHitos} from '../../api/hitos'
+import { Proceso, getAllProcesos, createProceso, updateProceso, deleteProceso } from '../../api/procesos'
+import { ProcesoHitos, getAllProcesoHitosMaestro, createProcesoHitosMaestro } from '../../api/procesoHitosMaestro'
+import { Hito, getAllHitos } from '../../api/hitos'
 import SharedPagination from '../../components/pagination/SharedPagination'
-import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles} from '../../styles/atisaStyles'
+import { atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles } from '../../styles/atisaStyles'
 
 const ProcesosList: FC = () => {
   const navigate = useNavigate()
@@ -31,6 +32,8 @@ const ProcesosList: FC = () => {
   const [procesoHitos, setProcesoHitos] = useState<ProcesoHitos[]>([])
   const [showHitosModal, setShowHitosModal] = useState(false)
   const [selectedProcesoForHitos, setSelectedProcesoForHitos] = useState<Proceso | null>(null)
+  const [showCarpetasModal, setShowCarpetasModal] = useState(false)
+  const [selectedProcesoForCarpetas, setSelectedProcesoForCarpetas] = useState<Proceso | null>(null)
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
@@ -327,16 +330,21 @@ const ProcesosList: FC = () => {
     }
     const hito = hitos.find(h => h.id === ph.hito_id)
     if (hito) {
-      groups[ph.proceso_id].push({...ph, hitoData: hito})
+      groups[ph.proceso_id].push({ ...ph, hitoData: hito })
     }
     return groups
-  }, {} as Record<number, Array<ProcesoHitos & {hitoData: Hito}>>)
+  }, {} as Record<number, Array<ProcesoHitos & { hitoData: Hito }>>)
 
   const handleAddHitos = (proceso: Proceso) => {
     // Filtrar los hitos actuales del proceso seleccionado
     const hitosActualesProceso = procesoHitos.filter(ph => ph.proceso_id === proceso.id)
     setSelectedProcesoForHitos(proceso)
     setShowHitosModal(true)
+  }
+
+  const handleConfigurarCarpetas = (proceso: Proceso) => {
+    setSelectedProcesoForCarpetas(proceso)
+    setShowCarpetasModal(true)
   }
 
   return (
@@ -845,8 +853,46 @@ const ProcesosList: FC = () => {
                   e.currentTarget.style.color = atisaStyles.colors.primary
                 }}
               >
-                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: atisaStyles.colors.primary }}></i>
                 Editar
+              </button>
+
+              <button
+                onClick={() => {
+                  const proceso = filteredProcesos.find(p => p.id === activeDropdown)
+                  if (proceso) {
+                    handleConfigurarCarpetas(proceso)
+                  }
+                  setActiveDropdown(null)
+                  setDropdownPosition(null)
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '12px 16px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: atisaStyles.colors.primary,
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderRadius: '0'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                  e.currentTarget.style.color = atisaStyles.colors.accent
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = atisaStyles.colors.primary
+                }}
+              >
+                <i className="bi bi-folder2-open me-3" style={{ fontSize: '16px', color: atisaStyles.colors.primary }}></i>
+                Configurar Carpetas
               </button>
 
               <div style={{
@@ -909,6 +955,12 @@ const ProcesosList: FC = () => {
           hitoMaestro={null}
           hitosActuales={procesoHitos}
           selectedProcesoId={selectedProcesoForHitos?.id || 0}
+        />
+
+        <DocumentalCarpetaProcesoModal
+          show={showCarpetasModal}
+          onHide={() => setShowCarpetasModal(false)}
+          proceso={selectedProcesoForCarpetas}
         />
 
         {/* Custom Toast */}

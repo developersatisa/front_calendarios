@@ -672,7 +672,7 @@ const ConfigAvisosPage: FC = () => {
                                                                         <table className="table table-sm table-bordered bg-white align-middle">
                                                                             <thead className="bg-light">
                                                                                 <tr className="fw-bold text-gray-600">
-                                                                                    <th className="min-w-150px">Cubo</th>
+                                                                                    <th className="min-w-150px">Cubos</th>
                                                                                     <th className="min-w-400px">Configuración de Avisos</th>
                                                                                 </tr>
                                                                             </thead>

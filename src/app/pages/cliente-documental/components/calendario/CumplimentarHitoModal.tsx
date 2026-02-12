@@ -56,22 +56,23 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
     setShowToast(true)
   }
 
-  // Función para obtener el username del usuario actual
+  // Función para obtener el identificador del usuario actual (numeross o username)
   const getCurrentUsername = (): string => {
-    // Primero intentar obtener del currentUser
-    if (currentUser?.username) {
-      return currentUser.username
-    }
-
-    // Si no hay currentUser, intentar extraer del token JWT
+    // Intentar extraer numeross del token JWT (prioridad según requerimiento)
     if (auth?.api_token) {
       try {
-        // Decodificar el JWT (solo la parte del payload)
         const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
-        return payload.username || payload.sub || 'usuario'
+        if (payload.numeross) return payload.numeross
+        if (payload.username) return payload.username
+        if (payload.sub) return payload.sub
       } catch (error) {
         console.warn('Error decodificando token JWT:', error)
       }
+    }
+
+    // Fallback al currentUser
+    if (currentUser?.username) {
+      return currentUser.username
     }
 
     // Fallback por defecto
@@ -294,7 +295,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
           )
 
           try {
-            await subirDocumentoCumplimiento(cumplimientoCreado.id, fileName, file)
+            await subirDocumentoCumplimiento(cumplimientoCreado.id, fileName, file, getCurrentUsername())
             uploadedFiles++
 
             // Marcar como exitoso

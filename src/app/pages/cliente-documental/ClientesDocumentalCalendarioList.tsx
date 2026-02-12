@@ -1,6 +1,7 @@
 import { FC, useState, useEffect, useMemo } from 'react'
 import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import { Cliente, getAllClientes, getClientesUsuario } from '../../api/clientes'
+import { getClienteProcesosByCliente } from '../../api/clienteProcesos'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import { useNavigate } from 'react-router-dom'
 import { atisaStyles } from '../../styles/atisaStyles'
@@ -23,6 +24,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const [allClientes, setAllClientes] = useState<Cliente[]>([])
   const [sortField, setSortField] = useState<string>('idcliente')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [clientesConProcesos, setClientesConProcesos] = useState<Set<string>>(new Set())
 
   const [showMasivoModal, setShowMasivoModal] = useState(false)
   const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({
@@ -109,11 +111,52 @@ const ClientesDocumentalCalendarioList: FC = () => {
       }
       setClientes(response.clientes || [])
       setTotal(response.total || 0)
+
+      // Verificar qué clientes tienen procesos asignados
+      if (response.clientes && response.clientes.length > 0) {
+        await verificarProcesosDeClientes(response.clientes)
+      }
     } catch (error) {
       setError('Error al cargar las empresas')
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const verificarProcesosDeClientes = async (clientesList: Cliente[]) => {
+    try {
+      const procesosPromises = clientesList.map(async (cliente) => {
+        try {
+          const response = await getClienteProcesosByCliente(cliente.idcliente)
+          return {
+            clienteId: cliente.idcliente,
+            tieneProcesos: (response.clienteProcesos || []).length > 0
+          }
+        } catch (error) {
+          console.error(`Error al verificar procesos del cliente ${cliente.idcliente}:`, error)
+          return {
+            clienteId: cliente.idcliente,
+            tieneProcesos: false
+          }
+        }
+      })
+
+      const resultados = await Promise.all(procesosPromises)
+
+      setClientesConProcesos(prev => {
+        const actualizado = new Set(prev)
+        resultados.forEach((resultado) => {
+          if (resultado.tieneProcesos) {
+            actualizado.add(resultado.clienteId)
+          } else {
+            actualizado.delete(resultado.clienteId)
+          }
+        })
+        return actualizado
+      })
+    } catch (error) {
+      console.error('Error al verificar procesos de clientes:', error)
     }
   }
 
@@ -188,6 +231,16 @@ const ClientesDocumentalCalendarioList: FC = () => {
     const endIndex = startIndex + limit
     return filteredClientes.slice(startIndex, endIndex)
   }, [filteredClientes, page, limit, debouncedSearchTerm])
+
+  // Verificar procesos para los clientes visibles en la página actual (solo cuando hay búsqueda)
+  useEffect(() => {
+    if (debouncedSearchTerm.trim() && paginatedClientes.length > 0) {
+      // Verificar procesos solo para los clientes visibles en la página actual
+      // Esto asegura que los botones "Ver Calendario" aparezcan correctamente durante la búsqueda
+      verificarProcesosDeClientes(paginatedClientes)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginatedClientes, debouncedSearchTerm])
 
   // Calcular el total para la paginación
   const totalForPagination = useMemo(() => {
@@ -557,64 +610,66 @@ const ClientesDocumentalCalendarioList: FC = () => {
                       }}
                     >
                       {/* Botón Calendario */}
-                      <div style={{ position: 'relative' }}>
-                        <button
-                          className='btn btn-icon'
-                          title='Ver Calendario'
-                          onClick={() => handleCalendarClick(cliente.idcliente)}
-                          style={{
-                            backgroundColor: atisaStyles.colors.secondary,
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '10px',
-                            width: '42px',
-                            height: '42px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.3s ease',
-                            fontFamily: atisaStyles.fonts.secondary,
-                            boxShadow: '0 2px 8px rgba(156, 186, 57, 0.3)',
-                            position: 'relative',
-                            overflow: 'hidden'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                            e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)'
-                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 161, 222, 0.4)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                            e.currentTarget.style.transform = 'translateY(0) scale(1)'
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(156, 186, 57, 0.3)'
-                          }}
-                        >
-                          <i className='bi bi-calendar3' style={{ fontSize: '18px', color: 'white' }}></i>
-                        </button>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            bottom: '-25px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            backgroundColor: atisaStyles.colors.primary,
-                            color: 'white',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '10px',
-                            fontFamily: atisaStyles.fonts.secondary,
-                            fontWeight: '600',
-                            whiteSpace: 'nowrap',
-                            opacity: 0,
-                            transition: 'opacity 0.3s ease',
-                            pointerEvents: 'none',
-                            zIndex: 1000
-                          }}
-                          className="tooltip-text"
-                        >
-                          Calendario
+                      {clientesConProcesos.has(cliente.idcliente) && (
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            className='btn btn-icon'
+                            title='Ver Calendario'
+                            onClick={() => handleCalendarClick(cliente.idcliente)}
+                            style={{
+                              backgroundColor: atisaStyles.colors.secondary,
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '10px',
+                              width: '42px',
+                              height: '42px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.3s ease',
+                              fontFamily: atisaStyles.fonts.secondary,
+                              boxShadow: '0 2px 8px rgba(156, 186, 57, 0.3)',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)'
+                              e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 161, 222, 0.4)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                              e.currentTarget.style.transform = 'translateY(0) scale(1)'
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(156, 186, 57, 0.3)'
+                            }}
+                          >
+                            <i className='bi bi-calendar3' style={{ fontSize: '18px', color: 'white' }}></i>
+                          </button>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              bottom: '-25px',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              backgroundColor: atisaStyles.colors.primary,
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontFamily: atisaStyles.fonts.secondary,
+                              fontWeight: '600',
+                              whiteSpace: 'nowrap',
+                              opacity: 0,
+                              transition: 'opacity 0.3s ease',
+                              pointerEvents: 'none',
+                              zIndex: 1000
+                            }}
+                            className="tooltip-text"
+                          >
+                            Calendario
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Botón Gestor Documental */}
                       <div style={{ position: 'relative' }}>

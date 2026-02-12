@@ -12,12 +12,14 @@ export interface DocumentoCumplimientoResponse {
 export const subirDocumentoCumplimiento = async (
   cumplimientoId: number,
   nombreDocumento: string,
-  file: File
+  file: File,
+  autor: string
 ) => {
   const formData = new FormData()
   formData.append('cumplimiento_id', cumplimientoId.toString())
   formData.append('nombre_documento', nombreDocumento)
   formData.append('file', file)
+  formData.append('autor', autor)
 
   const response = await api.post<DocumentoCumplimientoResponse>('/documentos-cumplimiento', formData, {
     headers: {

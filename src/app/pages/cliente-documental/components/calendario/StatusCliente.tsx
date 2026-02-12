@@ -1107,7 +1107,7 @@ const StatusCliente: FC<Props> = ({ clienteId }) => {
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        Fecha Estado {getSortIcon('fecha_estado')}
+                                        Fecha Actualización {getSortIcon('fecha_estado')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"

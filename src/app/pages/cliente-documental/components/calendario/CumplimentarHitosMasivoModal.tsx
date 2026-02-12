@@ -55,15 +55,17 @@ const CumplimentarHitosMasivoModal: FC<Props> = ({ show, onHide, ids, onSuccess 
     }
 
     const getCurrentUsername = (): string => {
-        if (currentUser?.username) return currentUser.username
         if (auth?.api_token) {
             try {
                 const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
-                return payload.username || payload.sub || 'usuario'
+                if (payload.numeross) return payload.numeross
+                if (payload.username) return payload.username
+                if (payload.sub) return payload.sub
             } catch (error) {
                 console.warn('Error decodificando token JWT:', error)
             }
         }
+        if (currentUser?.username) return currentUser.username
         return 'usuario'
     }
 
@@ -211,7 +213,7 @@ const CumplimentarHitosMasivoModal: FC<Props> = ({ show, onHide, ids, onSuccess 
                     if (incluirDocumento && files.length > 0 && cumplimiento.id) {
                         for (const file of files) {
                             try {
-                                await subirDocumentoCumplimiento(cumplimiento.id, file.name, file)
+                                await subirDocumentoCumplimiento(cumplimiento.id, file.name, file, getCurrentUsername())
                             } catch (errFile) {
                                 console.error(`Error subiendo archivo ${file.name} para hito ${hitoId}`, errFile)
                                 // No contamos como fallo total del cumplimiento si solo fallan archivos, o quizás si?

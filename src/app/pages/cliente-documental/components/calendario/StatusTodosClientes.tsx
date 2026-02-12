@@ -151,6 +151,18 @@ const StatusTodosClientes: FC = () => {
         return time
     }
 
+    const formatDateTime = (dateTime: string | null) => {
+        if (!dateTime) return '-'
+        const d = new Date(dateTime)
+        return d.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    }
+
     // Determinar estado temporal del hito respecto a hoy (UTC)
     const getEstadoVencimiento = (fechaLimite?: string | null, estado?: string) => {
         if (!fechaLimite) return 'sin_fecha'
@@ -1094,7 +1106,7 @@ const StatusTodosClientes: FC = () => {
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        Fecha Estado {getSortIcon('fecha_estado')}
+                                        Fecha Actualización {getSortIcon('fecha_estado')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1291,7 +1303,7 @@ const StatusTodosClientes: FC = () => {
                                                         verticalAlign: 'middle'
                                                     }}
                                                 >
-                                                    {hito.fecha_estado ? formatDate(hito.fecha_estado) : '-'}
+                                                    {formatDateTime(hito.fecha_estado)}
                                                 </td>
                                                 <td
                                                     style={{

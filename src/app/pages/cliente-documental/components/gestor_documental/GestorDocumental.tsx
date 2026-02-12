@@ -1,10 +1,10 @@
 import React, { FC, useEffect, useState } from 'react'
 import { KTCard, KTCardBody } from '../../../../../_metronic/helpers'
-import { DocumentalCategoria, getDocumentalCategoriasByClienteId } from '../../../../api/documentalCategorias'
+import { DocumentalCarpetaCliente, getDocumentalCarpetaClienteByClienteId } from '../../../../api/documentalCarpetaCliente'
 import { Cliente, getClienteById } from '../../../../api/clientes'
-import CategorizarDocumentoModal from './CategorizarDocumentoModal'
+import SubirDocumentosModal from './SubirDocumentosModal'
 import DocumentosCategoriaList from './DocumentosCategoriaList'
-import CrearCategoriaModal from './CrearCategoriaModal'
+import CustomToast from '../../../../components/ui/CustomToast'
 import { atisaStyles } from '../../../../styles/atisaStyles'
 import { useNavigate } from 'react-router-dom'
 
@@ -14,17 +14,21 @@ interface Props {
 
 const GestorDocumental: FC<Props> = ({ clienteId }) => {
   const navigate = useNavigate()
-  const [categorias, setCategorias] = useState<DocumentalCategoria[]>([])
+  const [carpetas, setCarpetas] = useState<DocumentalCarpetaCliente[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
-  const [showCategorizarModal, setShowCategorizarModal] = useState<boolean>(false)
+  const [showSubirModal, setShowSubirModal] = useState<boolean>(false)
   const [showDocumentosModal, setShowDocumentosModal] = useState<boolean>(false)
-  const [showCrearCategoriaModal, setShowCrearCategoriaModal] = useState<boolean>(false)
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<DocumentalCategoria | null>(null)
+  const [carpetaSeleccionada, setCarpetaSeleccionada] = useState<DocumentalCarpetaCliente | null>(null)
+
+  // Toast state
+  const [showToast, setShowToast] = useState<boolean>(false)
+  const [toastMessage, setToastMessage] = useState<string>('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
 
   useEffect(() => {
-    loadCategorias()
+    loadCarpetas()
     loadCliente()
   }, [clienteId])
 
@@ -37,54 +41,48 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
     }
   }
 
-  const loadCategorias = async () => {
+  const loadCarpetas = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getDocumentalCategoriasByClienteId(clienteId)
-      setCategorias(data.documental_categorias)
+      const response = await getDocumentalCarpetaClienteByClienteId(clienteId)
+      setCarpetas(response.carpetas || [])
     } catch (err) {
-      console.error('Error al cargar categorías de documentos:', err)
-      setError('Error al cargar las categorías de documentos')
+      console.error('Error al cargar carpetas del cliente:', err)
+      setError('Error al cargar las carpetas del cliente')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAñadirDocumento = (categoriaId: number) => {
-    const categoria = categorias.find(cat => cat.id === categoriaId)
-    if (categoria) {
-      setCategoriaSeleccionada(categoria)
-      setShowCategorizarModal(true)
+  const handleAñadirDocumento = (carpetaId: number) => {
+    const carpeta = carpetas.find(carp => carp.id === carpetaId)
+    if (carpeta) {
+      setCarpetaSeleccionada(carpeta)
+      setShowSubirModal(true)
     }
   }
 
-  const handleVerDocumentos = (categoria: DocumentalCategoria) => {
-    setCategoriaSeleccionada(categoria)
+  const handleVerDocumentos = (carpeta: DocumentalCarpetaCliente) => {
+    setCarpetaSeleccionada(carpeta)
     setShowDocumentosModal(true)
   }
 
-  const handleCloseCategorizarModal = () => {
-    setShowCategorizarModal(false)
-    setCategoriaSeleccionada(null)
+  const handleCloseSubirModal = () => {
+    setShowSubirModal(false)
+    setCarpetaSeleccionada(null)
   }
 
   const handleCloseDocumentosModal = () => {
     setShowDocumentosModal(false)
-    setCategoriaSeleccionada(null)
-  }
-
-  const handleCloseCrearCategoriaModal = () => {
-    setShowCrearCategoriaModal(false)
-  }
-
-  const handleCategoriaCreated = () => {
-    // Recargar las categorías después de crear una nueva
-    loadCategorias()
+    setCarpetaSeleccionada(null)
   }
 
   const handleUploadSuccess = () => {
-    // Aquí puedes agregar lógica adicional como recargar datos, mostrar notificación, etc.
+    setToastMessage('Documentos subidos correctamente')
+    setToastType('success')
+    setShowToast(true)
+    loadCarpetas() // Opcional: recargar carpetas si fuera necesario
   }
 
   const handleVolver = () => {
@@ -166,7 +164,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
         <div style={{ textAlign: 'center' }}>
           <button
             className="btn"
-            onClick={loadCategorias}
+            onClick={loadCarpetas}
             style={{
               backgroundColor: atisaStyles.colors.primary,
               color: 'white',
@@ -282,45 +280,12 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
           marginBottom: '2rem'
         }}
       >
-        {/* Botón para agregar nueva categoría cuando ya existen categorías */}
-        {categorias.length > 0 && (
-          <div className="d-flex justify-content-end mb-6">
-            <button
-              className="btn"
-              onClick={() => setShowCrearCategoriaModal(true)}
-              style={{
-                backgroundColor: atisaStyles.colors.secondary,
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontFamily: atisaStyles.fonts.secondary,
-                fontWeight: '600',
-                padding: '10px 20px',
-                fontSize: '14px',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 12px rgba(156, 186, 57, 0.3)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 161, 222, 0.4)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(156, 186, 57, 0.3)'
-              }}
-            >
-              <i className="bi bi-folder-plus fs-6 me-2" style={{ color: 'white' }}></i>
-              Nueva Categoría
-            </button>
-          </div>
-        )}
+        {/* Botón para agregar nueva categoría cuando ya existen categorías - ELIMINADO */}
 
         {/* Lista de categorías */}
         <div className="d-flex flex-column gap-4">
-          {categorias.map((categoria, index) => (
-            <div key={categoria.id}>
+          {carpetas.map((carpeta, index) => (
+            <div key={carpeta.id}>
               {/* Fila de categoría */}
               <div
                 className="d-flex align-items-center justify-content-between py-4 px-4 rounded"
@@ -369,7 +334,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                         margin: 0
                       }}
                     >
-                      {categoria.nombre}
+                      {carpeta.nombre_carpeta}
                     </h3>
                   </div>
                 </div>
@@ -377,7 +342,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                 <div className='d-flex gap-3'>
                   <button
                     className="btn"
-                    onClick={() => handleAñadirDocumento(categoria.id)}
+                    onClick={() => handleAñadirDocumento(carpeta.id)}
                     style={{
                       backgroundColor: atisaStyles.colors.accent,
                       color: 'white',
@@ -406,7 +371,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                   </button>
                   <button
                     className="btn"
-                    onClick={() => handleVerDocumentos(categoria)}
+                    onClick={() => handleVerDocumentos(carpeta)}
                     style={{
                       backgroundColor: atisaStyles.colors.secondary,
                       color: 'white',
@@ -437,7 +402,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
               </div>
 
               {/* Separador entre elementos */}
-              {index < categorias.length - 1 && (
+              {index < carpetas.length - 1 && (
                 <div
                   style={{
                     height: '1px',
@@ -451,7 +416,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
         </div>
 
         {/* Mensaje cuando no hay categorías */}
-        {categorias.length === 0 && (
+        {carpetas.length === 0 && (
           <div
             className="text-center py-10"
             style={{
@@ -490,41 +455,12 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                 margin: '0 0 24px 0'
               }}
             >
-              No se encontraron categorías de documentos para mostrar.
+              No se encontraron carpetas configuradas para este cliente.
             </p>
             <div className="d-flex gap-3 justify-content-center">
               <button
                 className="btn"
-                onClick={() => setShowCrearCategoriaModal(true)}
-                style={{
-                  backgroundColor: atisaStyles.colors.secondary,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '12px 24px',
-                  fontSize: '14px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(156, 186, 57, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 161, 222, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(156, 186, 57, 0.3)'
-                }}
-              >
-                <i className="bi bi-folder-plus fs-6 me-2" style={{ color: 'white' }}></i>
-                Crear Nueva Categoría
-              </button>
-              <button
-                className="btn"
-                onClick={loadCategorias}
+                onClick={loadCarpetas}
                 style={{
                   backgroundColor: 'transparent',
                   color: atisaStyles.colors.dark,
@@ -554,34 +490,33 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
       </div>
 
       {/* Modal para categorizar documentos */}
-      {categoriaSeleccionada && (
-        <CategorizarDocumentoModal
-          show={showCategorizarModal}
-          onHide={handleCloseCategorizarModal}
-          categoriaId={categoriaSeleccionada.id}
-          categoriaNombre={categoriaSeleccionada.nombre}
+      {carpetaSeleccionada && (
+        <SubirDocumentosModal
+          show={showSubirModal}
+          onHide={handleCloseSubirModal}
+          carpetaId={carpetaSeleccionada.carpeta_id}
+          carpetaNombre={carpetaSeleccionada.nombre_carpeta}
           clienteId={clienteId}
           onUploadSuccess={handleUploadSuccess}
         />
       )}
 
       {/* Modal para mostrar lista de documentos */}
-      {categoriaSeleccionada && (
+      {carpetaSeleccionada && (
         <DocumentosCategoriaList
           show={showDocumentosModal}
           onHide={handleCloseDocumentosModal}
-          categoriaId={categoriaSeleccionada.id}
-          categoriaNombre={categoriaSeleccionada.nombre}
+          carpetaId={carpetaSeleccionada.carpeta_id}
+          carpetaNombre={carpetaSeleccionada.nombre_carpeta}
           clienteId={clienteId}
         />
       )}
 
-      {/* Modal para crear nueva categoría */}
-      <CrearCategoriaModal
-        show={showCrearCategoriaModal}
-        onHide={handleCloseCrearCategoriaModal}
-        clienteId={clienteId}
-        onSuccess={handleCategoriaCreated}
+      <CustomToast
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
       />
     </div>
   )
