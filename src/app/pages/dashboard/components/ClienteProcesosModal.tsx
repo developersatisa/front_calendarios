@@ -1,13 +1,13 @@
-import React, {FC, useState, useEffect} from 'react'
-import {Modal} from 'react-bootstrap'
-import {Cliente} from '../../../api/clientes'
-import {Plantilla} from '../../../api/plantillas'
-import {GenerarCalendarioParams} from '../../../api/clienteProcesos'
+import React, { FC, useState, useEffect } from 'react'
+import { Modal } from 'react-bootstrap'
+import { Cliente } from '../../../api/clientes'
+import { Plantilla } from '../../../api/plantillas'
+import { GenerarCalendarioParams } from '../../../api/clienteProcesos'
 import Select from 'react-select'
-import {getProcesosByPlantilla} from '../../../api/plantillaProcesos'
-import {Proceso} from '../../../api/procesos'
-import {KTSVG} from '../../../../_metronic/helpers'
-import {atisaStyles} from '../../../styles/atisaStyles'
+import { getProcesosByPlantilla } from '../../../api/plantillaProcesos'
+import { Proceso } from '../../../api/procesos'
+import { KTSVG } from '../../../../_metronic/helpers'
+import { atisaStyles } from '../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
@@ -32,6 +32,7 @@ const ClienteProcesosModal: FC<Props> = ({
   })
   const [procesos, setProcesos] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
+  const [plantillaError, setPlantillaError] = useState('')
 
   // Resetear formulario al cerrar el modal
   useEffect(() => {
@@ -41,25 +42,36 @@ const ClienteProcesosModal: FC<Props> = ({
         fecha_inicio: new Date().toISOString().split('T')[0],
       })
       setProcesos([])
+      setProcesos([])
       setLoading(false)
+      setPlantillaError('')
     }
   }, [show])
 
   const handlePlantillaChange = async (option: any) => {
-    setFormData({...formData, plantillaId: option?.value || ''})
+    setFormData({ ...formData, plantillaId: option?.value || '' })
     if (option?.value) {
       try {
         setLoading(true)
         const procesosDePlantilla = await getProcesosByPlantilla(option.value)
-        setProcesos(procesosDePlantilla.map(p => p.proceso_id))
+        const procesoIds = procesosDePlantilla.map(p => p.proceso_id)
+        setProcesos(procesoIds)
+
+        if (procesoIds.length === 0) {
+          setPlantillaError('La plantilla seleccionada no tiene procesos asignados.')
+        } else {
+          setPlantillaError('')
+        }
       } catch (error) {
         console.error('Error al cargar los procesos:', error)
         setProcesos([])
+        setPlantillaError('Error al cargar los procesos de la plantilla.')
       } finally {
         setLoading(false)
       }
     } else {
       setProcesos([])
+      setPlantillaError('')
     }
   }
 
@@ -236,6 +248,23 @@ const ClienteProcesosModal: FC<Props> = ({
                   })
                 }}
               />
+              {plantillaError && (
+                <div className="alert alert-danger mt-3" style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '14px',
+                  padding: '12px 16px',
+                  marginBottom: '0',
+                  borderRadius: '8px',
+                  border: '1px solid #f5c6cb',
+                  backgroundColor: '#f8d7da',
+                  color: '#721c24',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <i className="bi bi-exclamation-triangle-fill me-2" style={{ fontSize: '1.2rem', color: '#721c24' }}></i>
+                  {plantillaError}
+                </div>
+              )}
               {loading && (
                 <div
                   className="text-muted mt-2"
@@ -370,7 +399,7 @@ const ClienteProcesosModal: FC<Props> = ({
           type='button'
           className='btn'
           onClick={handleSubmit}
-          disabled={!selectedCliente || !formData.plantillaId || !formData.fecha_inicio}
+          disabled={!selectedCliente || !formData.plantillaId || !formData.fecha_inicio || procesos.length === 0}
           style={{
             backgroundColor: atisaStyles.colors.secondary,
             border: `2px solid ${atisaStyles.colors.secondary}`,
@@ -383,7 +412,7 @@ const ClienteProcesosModal: FC<Props> = ({
             transition: 'all 0.3s ease',
             marginLeft: '12px',
             boxShadow: '0 4px 15px rgba(156, 186, 57, 0.3)',
-            opacity: (!selectedCliente || !formData.plantillaId || !formData.fecha_inicio) ? 0.6 : 1
+            opacity: (!selectedCliente || !formData.plantillaId || !formData.fecha_inicio || procesos.length === 0) ? 0.6 : 1
           }}
           onMouseEnter={(e) => {
             if (!e.currentTarget.disabled) {

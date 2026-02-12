@@ -9,7 +9,8 @@ import ClienteProcesosModal from './components/ClienteProcesosModal'
 import { GenerarCalendarioParams } from '../../api/clienteProcesos'
 import { getAllProcesos, Proceso } from '../../api/procesos'
 import { generarCalendarioClienteProceso, getClienteProcesosByCliente } from '../../api/clienteProcesos'
-import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getActionsButtonStyles} from '../../styles/atisaStyles'
+import { atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getActionsButtonStyles } from '../../styles/atisaStyles'
+import CustomToast from '../../components/ui/CustomToast'
 
 const ClientesList: FC = () => {
   const navigate = useNavigate()
@@ -32,6 +33,9 @@ const ClientesList: FC = () => {
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
   const [clientesConProcesos, setClientesConProcesos] = useState<Set<string>>(new Set())
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
   const limit = 10
 
   useEffect(() => {
@@ -338,8 +342,24 @@ const ClientesList: FC = () => {
 
       handleCloseModal()
       loadClientes() // Recargar la lista después de guardar
-    } catch (error) {
+
+      // Mostrar éxito
+      setToastMessage('Calendario generado correctamente')
+      setToastType('success')
+      setShowToast(true)
+
+    } catch (error: any) {
       console.error('Error al guardar los procesos:', error)
+      const detail = error.response?.data?.detail
+      if (detail) {
+        setToastMessage(detail)
+        setToastType('error')
+        setShowToast(true)
+      } else {
+        setToastMessage('Error al generar el calendario. Por favor, inténtelo de nuevo.')
+        setToastType('error')
+        setShowToast(true)
+      }
     }
   }
 
@@ -852,16 +872,23 @@ const ClientesList: FC = () => {
             </>
           )}
         </KTCardBody>
-
-        <ClienteProcesosModal
-          show={showModal}
-          onHide={handleCloseModal}
-          onSave={handleSaveClienteProceso}
-          plantillas={plantillas}
-          selectedCliente={selectedCliente}
-          procesosList={procesosList}
-        />
       </KTCard>
+
+      <ClienteProcesosModal
+        show={showModal}
+        onHide={handleCloseModal}
+        onSave={handleSaveClienteProceso}
+        plantillas={plantillas}
+        selectedCliente={selectedCliente}
+        procesosList={procesosList}
+      />
+
+      <CustomToast
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+      />
     </div>
   )
 }
