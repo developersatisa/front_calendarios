@@ -3674,9 +3674,47 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 </div>
 
                 {procesosSeleccionados.size > 0 && (
-                  <div className="alert alert-info" style={{ marginBottom: '0' }}>
-                    <i className="bi bi-info-circle me-2"></i>
-                    <strong>{procesosSeleccionados.size} proceso(s) seleccionado(s)</strong>
+                  <div className="mt-3">
+                    <h6 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: atisaStyles.colors.primary,
+                      marginBottom: '8px'
+                    }}>
+                      <i className="bi bi-check-circle me-2"></i>
+                      Procesos seleccionados ({procesosSeleccionados.size})
+                    </h6>
+                    <div
+                      style={{
+                        maxHeight: '150px',
+                        overflowY: 'auto',
+                        border: `1px solid ${atisaStyles.colors.light}`,
+                        borderRadius: '6px',
+                        backgroundColor: '#f8f9fa'
+                      }}
+                    >
+                      {Array.from(procesosSeleccionados).map(procesoId => {
+                        const proceso = procesosDisponibles.find(p => p.id === procesoId)
+                        if (!proceso) return null
+                        return (
+                          <div
+                            key={proceso.id}
+                            className="d-flex align-items-center justify-content-between p-2"
+                            style={{ borderBottom: '1px solid #e9ecef' }}
+                          >
+                            <span style={{ fontSize: '13px', fontFamily: atisaStyles.fonts.secondary }}>
+                              {proceso.nombre}
+                            </span>
+                            <i
+                              className="bi bi-x-circle text-danger"
+                              style={{ cursor: 'pointer', fontSize: '14px' }}
+                              onClick={() => toggleSeleccionProceso(proceso.id)}
+                              title="Desmarcar proceso"
+                            ></i>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
