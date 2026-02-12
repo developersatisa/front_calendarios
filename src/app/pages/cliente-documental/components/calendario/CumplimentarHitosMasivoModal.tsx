@@ -213,7 +213,7 @@ const CumplimentarHitosMasivoModal: FC<Props> = ({ show, onHide, ids, onSuccess 
                     if (incluirDocumento && files.length > 0 && cumplimiento.id) {
                         for (const file of files) {
                             try {
-                                await subirDocumentoCumplimiento(cumplimiento.id, file.name, file, getCurrentUsername())
+                                await subirDocumentoCumplimiento(cumplimiento.id, file.name, file, getCurrentUsername(), getCurrentCodSubDepar())
                             } catch (errFile) {
                                 console.error(`Error subiendo archivo ${file.name} para hito ${hitoId}`, errFile)
                                 // No contamos como fallo total del cumplimiento si solo fallan archivos, o quizás si?

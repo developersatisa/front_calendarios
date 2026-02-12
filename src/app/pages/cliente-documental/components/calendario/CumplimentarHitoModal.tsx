@@ -295,7 +295,7 @@ const CumplimentarHitoModal: FC<Props> = ({ show, onHide, idClienteProcesoHito, 
           )
 
           try {
-            await subirDocumentoCumplimiento(cumplimientoCreado.id, fileName, file, getCurrentUsername())
+            await subirDocumentoCumplimiento(cumplimientoCreado.id, fileName, file, getCurrentUsername(), getCurrentCodSubDepar())
             uploadedFiles++
 
             // Marcar como exitoso

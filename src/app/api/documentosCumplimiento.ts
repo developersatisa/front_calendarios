@@ -13,13 +13,18 @@ export const subirDocumentoCumplimiento = async (
   cumplimientoId: number,
   nombreDocumento: string,
   file: File,
-  autor: string
+  autor: string,
+  codSubDepar?: string
 ) => {
   const formData = new FormData()
+  // Asegurarnos de usar las claves correctas que espera el backend
   formData.append('cumplimiento_id', cumplimientoId.toString())
   formData.append('nombre_documento', nombreDocumento)
   formData.append('file', file)
   formData.append('autor', autor)
+  if (codSubDepar) {
+    formData.append('codSubDepar', codSubDepar)
+  }
 
   const response = await api.post<DocumentoCumplimientoResponse>('/documentos-cumplimiento', formData, {
     headers: {
