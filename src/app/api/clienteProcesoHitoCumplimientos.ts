@@ -11,6 +11,19 @@ export interface ClienteProcesoHitoCumplimiento {
   num_documentos?: number
   codSubDepar?: string
   departamento?: string
+  // Process information fields
+  proceso_id?: number
+  proceso?: string
+  hito_id?: number
+  hito?: string
+  fecha_limite?: string
+  hora_limite?: string
+  // New process fields
+  cliente_proceso_id?: number
+  proceso_fecha_inicio?: string | null
+  proceso_fecha_fin?: string | null
+  proceso_periodo?: string
+  proceso_estado?: 'Finalizado' | 'En proceso'
 }
 
 export interface ClienteProcesoHitoCumplimientosResponse {

@@ -13,15 +13,8 @@ import { getClienteProcesoHitoById, ClienteProcesoHito } from '../../../../api/c
 import { getClienteProcesosByCliente } from '../../../../api/clienteProcesos'
 import { getAllSubdepartamentos, Subdepartamento } from '../../../../api/subdepartamentos'
 
-// Extendemos la interfaz para incluir los campos adicionales que devuelve el endpoint
-interface CumplimientoHistorico extends ClienteProcesoHitoCumplimiento {
-    proceso?: string
-    hito?: string
-    fecha_limite?: string
-    hora_limite?: string
-    proceso_id?: number
-    hito_id?: number
-}
+// Type alias for better readability
+type CumplimientoHistorico = ClienteProcesoHitoCumplimiento
 
 interface Props {
     clienteId: string
@@ -49,6 +42,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     const [procesos, setProcesos] = useState<Proceso[]>([])
     const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
     const [selectedDepartamentos, setSelectedDepartamentos] = useState<string[]>([])
+    const [selectedEstadoProceso, setSelectedEstadoProceso] = useState<'todos' | 'Finalizado' | 'En proceso'>('todos')
     const [showFilters, setShowFilters] = useState(false)
     const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
     const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento'>('fecha_creacion')
@@ -62,8 +56,8 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 clienteId,
                 page,
                 itemsPerPage,
-                'fecha',
-                'desc'
+                sortField === 'fecha_cumplimiento' ? 'fecha' : sortField,
+                sortDirection
             )
             const cumplimientosData = response.cumplimientos || []
             setCumplimientos(cumplimientosData)
@@ -304,6 +298,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
         setSelectedHito('')
         setSelectedProceso('')
         setSelectedDepartamentos([])
+        setSelectedEstadoProceso('todos')
         setFechaDesde('')
         setFechaHasta('')
         setTipoFiltroFecha('cumplimiento')
@@ -449,6 +444,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
             const matchesHito = !selectedHito || cumplimiento.hito_id?.toString() === selectedHito
             const matchesProceso = !selectedProceso || cumplimiento.proceso_id?.toString() === selectedProceso
             const matchesDepartamento = selectedDepartamentos.length === 0 || (cumplimiento.codSubDepar && selectedDepartamentos.includes(cumplimiento.codSubDepar))
+            const matchesEstadoProceso = selectedEstadoProceso === 'todos' || cumplimiento.proceso_estado === selectedEstadoProceso
 
 
             let matchesFecha = true
@@ -483,12 +479,12 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 }
             }
 
-            return matchesSearch && matchesHito && matchesProceso && matchesFecha && matchesDepartamento
+            return matchesSearch && matchesHito && matchesProceso && matchesFecha && matchesDepartamento && matchesEstadoProceso
         })
 
         // Aplicar ordenamiento
         return sortCumplimientos(filtrados)
-    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, selectedDepartamentos, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
+    }, [cumplimientos, debouncedSearchTerm, selectedHito, selectedProceso, selectedDepartamentos, selectedEstadoProceso, fechaDesde, fechaHasta, tipoFiltroFecha, sortField, sortDirection])
 
     return (
         <div
@@ -717,8 +713,31 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 </select>
                             </div>
 
-                            {/* Filtro Departamento (Cubos) */}
+                            {/* Filtro Estado del Proceso */}
                             <div className="col-md-4">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Estado Proceso</label>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={selectedEstadoProceso}
+                                    onChange={(e) => setSelectedEstadoProceso(e.target.value as any)}
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'white',
+                                        borderRadius: '6px'
+                                    }}
+                                >
+                                    <option value="todos" style={{ color: 'black' }}>Todos</option>
+                                    <option value="Finalizado" style={{ color: 'black' }}>Finalizado</option>
+                                    <option value="En proceso" style={{ color: 'black' }}>En proceso</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Segunda fila: Cubos */}
+                        <div className="row g-3 mt-2">
+                            {/* Filtro Departamento (Cubos) */}
+                            <div className="col-md-12">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubos</label>
                                 <Select
                                     isMulti
@@ -812,7 +831,10 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     }}
                                 />
                             </div>
+                        </div>
 
+                        {/* Tercera fila: Filtros de Fecha */}
+                        <div className="row g-3 mt-2">
                             {/* Filtro Tipo Fecha */}
                             <div className="col-md-4">
                                 <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Tipo Fecha</label>
@@ -1079,6 +1101,33 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         Proceso {getSortIcon('proceso')}
                                     </th>
                                     <th
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                        }}
+                                    >
+                                        Período Proceso
+                                    </th>
+                                    <th
+                                        style={{
+                                            fontFamily: atisaStyles.fonts.primary,
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            padding: '16px 12px',
+                                            border: 'none',
+                                            color: 'white',
+                                            backgroundColor: atisaStyles.colors.primary,
+                                            textAlign: 'center'
+                                        }}
+                                    >
+                                        Estado Proceso
+                                    </th>
+                                    <th
                                         className="cursor-pointer user-select-none"
                                         onClick={() => handleSort('hito')}
                                         style={{
@@ -1168,7 +1217,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={9}
+                                            colSpan={11}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1202,7 +1251,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 ) : cumplimientosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={9}
+                                            colSpan={11}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1340,6 +1389,43 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                 <span title={cumplimiento.proceso || 'No disponible'}>
                                                     {cumplimiento.proceso || 'No disponible'}
                                                 </span>
+                                            </td>
+                                            <td
+                                                style={{
+                                                    fontFamily: atisaStyles.fonts.secondary,
+                                                    color: atisaStyles.colors.dark,
+                                                    padding: '16px 12px',
+                                                    verticalAlign: 'middle',
+                                                    fontSize: '13px'
+                                                }}
+                                            >
+                                                {cumplimiento.proceso_periodo || '-'}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    fontFamily: atisaStyles.fonts.secondary,
+                                                    color: atisaStyles.colors.dark,
+                                                    padding: '16px 12px',
+                                                    verticalAlign: 'middle',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                {cumplimiento.proceso_estado && (
+                                                    <span
+                                                        style={{
+                                                            backgroundColor: cumplimiento.proceso_estado === 'Finalizado' ? '#e8f5e9' : '#e3f2fd',
+                                                            color: cumplimiento.proceso_estado === 'Finalizado' ? '#2e7d32' : '#1976d2',
+                                                            padding: '4px 12px',
+                                                            borderRadius: '12px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            border: `1px solid ${cumplimiento.proceso_estado === 'Finalizado' ? '#c8e6c9' : '#90caf9'}`,
+                                                            display: 'inline-block'
+                                                        }}
+                                                    >
+                                                        {cumplimiento.proceso_estado}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td
                                                 style={{
