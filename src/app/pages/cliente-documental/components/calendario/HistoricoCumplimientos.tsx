@@ -1005,30 +1005,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                             e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                         }}
                                     >
-                                        Fecha Límite {getSortIcon('fecha_limite')}
-                                    </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('hora_limite')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
-                                    >
-                                        Hora Límite {getSortIcon('hora_limite')}
+                                        Fecha / Hora Límite {getSortIcon('fecha_limite')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1217,7 +1194,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={11}
+                                            colSpan={10}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1251,7 +1228,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                 ) : cumplimientosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={11}
+                                            colSpan={10}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1317,33 +1294,10 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                                         border: '1px solid #c8e6c9',
                                                         boxShadow: '0 1px 3px rgba(46, 125, 50, 0.1)'
                                                     }}
-                                                    title={cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
+                                                    title={cumplimiento.fecha_limite ? `${formatDate(cumplimiento.fecha_limite)} ${cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : ''}` : 'No disponible'}
                                                 >
                                                     {cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        backgroundColor: '#fff3e0',
-                                                        color: '#f57c00',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500',
-                                                        border: '1px solid #ffcc02',
-                                                        boxShadow: '0 1px 3px rgba(245, 124, 0, 0.1)'
-                                                    }}
-                                                    title={cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : 'No disponible'}
-                                                >
-                                                    {cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : 'No disponible'}
+                                                    {cumplimiento.hora_limite && `, ${formatTime(cumplimiento.hora_limite)}`}
                                                 </span>
                                             </td>
                                             <td

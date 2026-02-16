@@ -1391,30 +1391,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                   e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                                 }}
                               >
-                                Fecha Límite {getSortIcon('fecha_limite')}
-                              </th>
-                              <th
-                                className="cursor-pointer user-select-none"
-                                onClick={() => handleSort('hora_limite')}
-                                style={{
-                                  fontFamily: atisaStyles.fonts.primary,
-                                  fontWeight: 'bold',
-                                  fontSize: '14px',
-                                  padding: '16px 12px',
-                                  border: 'none',
-                                  color: 'white',
-                                  backgroundColor: atisaStyles.colors.primary,
-                                  transition: 'background-color 0.2s ease',
-                                  cursor: 'pointer'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                }}
-                              >
-                                Hora Límite {getSortIcon('hora_limite')}
+                                Fecha / Hora Límite {getSortIcon('fecha_limite')}
                               </th>
                               <th
                                 className="cursor-pointer user-select-none"
@@ -1481,7 +1458,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                             {loadingHitos ? (
                               <tr>
                                 <td
-                                  colSpan={9}
+                                  colSpan={8}
                                   className="text-center py-4"
                                   style={{
                                     backgroundColor: '#f8f9fa',
@@ -1535,7 +1512,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                       }}
                                     >
                                       <td
-                                        colSpan={8}
+                                        colSpan={7}
                                         className="text-center py-3"
                                         style={{
                                           color: atisaStyles.colors.dark,
@@ -1571,6 +1548,27 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         : estadoVenc === 'hoy'
                                           ? '#fff0c2'
                                           : (hitoIndex % 2 === 0 ? 'white' : '#f8f9fa'))
+
+                                  // Estilos para el badge de fecha límite
+                                  let badgeColors = { bg: '#f5f5f5', color: '#616161', border: '#e0e0e0' }
+
+                                  if (isFinalized) {
+                                    if (finalizadoFuera) {
+                                      badgeColors = { bg: '#fff3e0', color: '#ef6c00', border: '#ffe0b2' } // Naranja (Finalizado fuera de plazo)
+                                    } else {
+                                      badgeColors = { bg: '#e8f5e8', color: '#2e7d32', border: '#c8e6c9' } // Verde (Finalizado en plazo)
+                                    }
+                                  } else {
+                                    if (venceHoy) {
+                                      badgeColors = { bg: '#fff8e1', color: '#f9a825', border: '#ffecb3' } // Amarillo (Vence hoy)
+                                    } else if (estadoVenc === 'vencido') {
+                                      badgeColors = { bg: '#ffebee', color: '#c62828', border: '#ffcdd2' } // Rojo (Vencido)
+                                    } else if (estadoVenc === 'sin_fecha') {
+                                      badgeColors = { bg: '#f5f5f5', color: '#616161', border: '#e0e0e0' } // Gris (Sin fecha)
+                                    } else {
+                                      badgeColors = { bg: '#e0f2f1', color: '#00695c', border: '#b2dfdb' } // Teal (En plazo)
+                                    }
+                                  }
                                   // Sin barra lateral
 
                                   return (
@@ -1650,16 +1648,23 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                           padding: '16px 12px'
                                         }}
                                       >
-                                        <span title={hito.fecha_limite || ''}>{hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}</span>
-                                      </td>
-                                      <td
-                                        style={{
-                                          fontFamily: atisaStyles.fonts.secondary,
-                                          color: atisaStyles.colors.dark,
-                                          padding: '16px 12px'
-                                        }}
-                                      >
-                                        <span title={hito.hora_limite || ''}>{hito.hora_limite ? formatTime(hito.hora_limite) : '-'}</span>
+                                        <span
+                                          style={{
+                                            backgroundColor: badgeColors.bg,
+                                            color: badgeColors.color,
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            border: `1px solid ${badgeColors.border}`,
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                            display: 'inline-block'
+                                          }}
+                                          title={hito.fecha_limite ? `${formatDate(hito.fecha_limite)} ${hito.hora_limite ? formatTime(hito.hora_limite) : ''}` : ''}
+                                        >
+                                          {hito.fecha_limite ? formatDate(hito.fecha_limite) : 'No disponible'}
+                                          {hito.hora_limite && `, ${formatTime(hito.hora_limite)}`}
+                                        </span>
                                       </td>
                                       <td
                                         style={{

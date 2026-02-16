@@ -1072,24 +1072,7 @@ const StatusTodosClientes: FC = () => {
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        Fecha Límite {getSortIcon('fecha_limite')}
-                                    </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('hora_limite')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        Hora Límite {getSortIcon('hora_limite')}
+                                        Fecha / Hora Límite {getSortIcon('fecha_limite')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
@@ -1131,7 +1114,7 @@ const StatusTodosClientes: FC = () => {
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
+                                            colSpan={7}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1165,7 +1148,7 @@ const StatusTodosClientes: FC = () => {
                                 ) : hitosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
+                                            colSpan={7}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1188,6 +1171,27 @@ const StatusTodosClientes: FC = () => {
                                         const estadoVenc = getEstadoVencimiento(hito.fecha_limite, hito.estado)
                                         const finalizadoFuera = isFinalizadoFueraDePlazo(hito)
                                         const venceHoy = isNuevo && estadoVenc === 'hoy'
+
+                                        // Estilos para el badge de fecha límite
+                                        let badgeColors = { bg: '#f5f5f5', color: '#616161', border: '#e0e0e0' }
+
+                                        if (isFinalized) {
+                                            if (finalizadoFuera) {
+                                                badgeColors = { bg: '#fff3e0', color: '#ef6c00', border: '#ffe0b2' } // Naranja (Finalizado fuera de plazo)
+                                            } else {
+                                                badgeColors = { bg: '#e8f5e8', color: '#2e7d32', border: '#c8e6c9' } // Verde (Finalizado en plazo)
+                                            }
+                                        } else {
+                                            if (venceHoy) {
+                                                badgeColors = { bg: '#fff8e1', color: '#f9a825', border: '#ffecb3' } // Amarillo (Vence hoy)
+                                            } else if (estadoVenc === 'vencido') {
+                                                badgeColors = { bg: '#ffebee', color: '#c62828', border: '#ffcdd2' } // Rojo (Vencido)
+                                            } else if (estadoVenc === 'sin_fecha') {
+                                                badgeColors = { bg: '#f5f5f5', color: '#616161', border: '#e0e0e0' } // Gris (Sin fecha)
+                                            } else {
+                                                badgeColors = { bg: '#e0f2f1', color: '#00695c', border: '#b2dfdb' } // Teal (En plazo)
+                                            }
+                                        }
 
                                         return (
                                             <tr
@@ -1283,17 +1287,23 @@ const StatusTodosClientes: FC = () => {
                                                         verticalAlign: 'middle'
                                                     }}
                                                 >
-                                                    {hito.fecha_limite ? formatDate(hito.fecha_limite) : '-'}
-                                                </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.dark,
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    {formatTime(hito.hora_limite)}
+                                                    <span
+                                                        style={{
+                                                            backgroundColor: badgeColors.bg,
+                                                            color: badgeColors.color,
+                                                            padding: '6px 12px',
+                                                            borderRadius: '6px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            border: `1px solid ${badgeColors.border}`,
+                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                            display: 'inline-block'
+                                                        }}
+                                                        title={hito.fecha_limite ? `${formatDate(hito.fecha_limite)} ${hito.hora_limite ? formatTime(hito.hora_limite) : ''}` : ''}
+                                                    >
+                                                        {hito.fecha_limite ? formatDate(hito.fecha_limite) : 'No disponible'}
+                                                        {hito.hora_limite && `, ${formatTime(hito.hora_limite)}`}
+                                                    </span>
                                                 </td>
                                                 <td
                                                     style={{
