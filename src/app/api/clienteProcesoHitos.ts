@@ -10,6 +10,8 @@ export interface ClienteProcesoHito {
   hora_limite: string | null
   tipo: string
   habilitado: number | boolean
+  obligatorio: number | boolean
+  critico: number | boolean
 }
 
 export interface ClienteProcesoHitoUpdate {

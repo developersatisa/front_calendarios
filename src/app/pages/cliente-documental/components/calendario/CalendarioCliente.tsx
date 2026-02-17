@@ -1600,9 +1600,82 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                           padding: '16px 12px'
                                         }}
                                       >
-                                        <span title={getNombreHito(hito.hito_id)}>
-                                          {getNombreHito(hito.hito_id)}
-                                        </span>
+                                        <div
+                                          className="d-flex align-items-center gap-3"
+                                          style={{
+                                            position: 'relative',
+                                            paddingLeft: (Boolean(hito.critico) || Boolean(hito.obligatorio)) ? '12px' : '0'
+                                          }}
+                                        >
+                                          {/* Barra lateral de estado */}
+                                          {Boolean(hito.critico) && (
+                                            <div style={{
+                                              position: 'absolute',
+                                              left: '-12px',
+                                              top: '-16px',
+                                              bottom: '-16px',
+                                              width: '6px',
+                                              backgroundColor: atisaStyles.colors.error,
+                                              borderRadius: '0 4px 4px 0'
+                                            }} />
+                                          )}
+                                          {!Boolean(hito.critico) && Boolean(hito.obligatorio) && (
+                                            <div style={{
+                                              position: 'absolute',
+                                              left: '-12px',
+                                              top: '-16px',
+                                              bottom: '-16px',
+                                              width: '6px',
+                                              backgroundColor: atisaStyles.colors.accent,
+                                              borderRadius: '0 4px 4px 0'
+                                            }} />
+                                          )}
+
+                                          <span
+                                            title={getNombreHito(hito.hito_id)}
+                                            style={{
+                                              fontWeight: Boolean(hito.critico) ? '800' : '600',
+                                              fontSize: '14px'
+                                            }}
+                                          >
+                                            {getNombreHito(hito.hito_id)}
+                                          </span>
+
+                                          <div className="d-flex gap-2 align-items-center">
+                                            {Boolean(hito.obligatorio) && (
+                                              <div
+                                                className="d-flex align-items-center justify-content-center"
+                                                style={{
+                                                  backgroundColor: atisaStyles.colors.accent,
+                                                  width: '24px',
+                                                  height: '24px',
+                                                  borderRadius: '4px',
+                                                  boxShadow: '0 2px 4px rgba(0, 161, 222, 0.3)',
+                                                  flexShrink: 0
+                                                }}
+                                                title="Obligatorio"
+                                              >
+                                                <i className="bi bi-asterisk" style={{ fontSize: '14px', color: '#ffffff', lineHeight: 1 }}></i>
+                                              </div>
+                                            )}
+                                            {Boolean(hito.critico) && (
+                                              <div
+                                                className="d-flex align-items-center justify-content-center"
+                                                style={{
+                                                  backgroundColor: atisaStyles.colors.error,
+                                                  width: '24px',
+                                                  height: '24px',
+                                                  borderRadius: '4px',
+                                                  boxShadow: '0 2px 6px rgba(217, 33, 78, 0.4)',
+                                                  flexShrink: 0
+                                                }}
+                                                title="Crítico"
+                                              >
+                                                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '14px', color: '#ffffff', lineHeight: 1 }}></i>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
                                       </td>
                                       <td style={{ padding: '16px 12px' }}>
                                         {isFinalized ? (

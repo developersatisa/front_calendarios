@@ -12,6 +12,8 @@ export interface HitoCompletoConInfo {
   hora_limite: string | null
   tipo: string
   habilitado: number | boolean
+  obligatorio: number | boolean
+  critico: number | boolean
 
   // Información adicional del cliente
   cliente_id: string

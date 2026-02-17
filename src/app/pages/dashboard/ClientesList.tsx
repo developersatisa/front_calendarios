@@ -30,7 +30,7 @@ const ClientesList: FC = () => {
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
   const [procesosList, setProcesosList] = useState<Proceso[]>([])
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
   const [clientesConProcesos, setClientesConProcesos] = useState<Set<string>>(new Set())
   const [showToast, setShowToast] = useState(false)
@@ -122,9 +122,15 @@ const ClientesList: FC = () => {
   // Función para calcular la posición del dropdown
   const calculateDropdownPosition = (buttonElement: HTMLButtonElement) => {
     const rect = buttonElement.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const dropdownHeight = 250 // Estimación razonable
+
+    const showAbove = rect.bottom + dropdownHeight > viewportHeight
+
     return {
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.left + window.scrollX
+      top: showAbove ? rect.top + window.scrollY - 4 : rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      placement: showAbove ? 'top' as const : 'bottom' as const
     }
   }
 

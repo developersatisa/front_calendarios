@@ -9,6 +9,7 @@ export interface Hito {
   obligatorio: number
   tipo: string
   habilitado: number
+  critico: boolean | number
 }
 
 export interface HitosResponse {

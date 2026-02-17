@@ -31,11 +31,13 @@ const PlantillasList: FC = () => {
   const [showProcesosModal, setShowProcesosModal] = useState(false)
   const [selectedPlantillaForProcesos, setSelectedPlantillaForProcesos] = useState<Plantilla | null>(null)
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info')
+  const [showEliminarModal, setShowEliminarModal] = useState(false)
+  const [plantillaAEliminar, setPlantillaAEliminar] = useState<Plantilla | null>(null)
   const limit = 10
 
   // Función auxiliar para mostrar toasts
@@ -124,9 +126,15 @@ const PlantillasList: FC = () => {
   // Función para calcular la posición del dropdown
   const calculateDropdownPosition = (buttonElement: HTMLButtonElement) => {
     const rect = buttonElement.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const dropdownHeight = 250 // Estimación razonable
+
+    const showAbove = rect.bottom + dropdownHeight > viewportHeight
+
     return {
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.left + window.scrollX
+      top: showAbove ? rect.top + window.scrollY - 4 : rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      placement: showAbove ? 'top' as const : 'bottom' as const
     }
   }
 
@@ -240,27 +248,45 @@ const PlantillasList: FC = () => {
     }
   }
 
-  const handleEliminar = async (id: number) => {
-    if (confirm('¿Estás seguro de que deseas eliminar esta plantilla?')) {
-      try {
-        await deletePlantilla(id)
-        if (debouncedSearchTerm.trim()) {
-          await loadAllPlantillas()
-        } else {
-          setPlantillas(plantillas.filter((plantilla) => plantilla.id !== id))
-          await loadAll()
-        }
-      } catch (error: any) {
-        // Extraer el mensaje de error del backend
-        let errorMessage = 'Error al eliminar la plantilla'
-        if (error?.response?.data?.detail) {
-          errorMessage = error.response.data.detail
-        } else if (error?.message) {
-          errorMessage = error.message
-        }
-        showToastMessage(errorMessage, 'error')
-      }
+  const handleEliminar = (id: number) => {
+    const plantilla = plantillas.find(p => p.id === id) || filteredPlantillas.find(p => p.id === id)
+    if (plantilla) {
+      setPlantillaAEliminar(plantilla)
+      setShowEliminarModal(true)
+      setActiveDropdown(null)
+      setDropdownPosition(null)
     }
+  }
+
+  const confirmarEliminar = async () => {
+    if (!plantillaAEliminar) return
+
+    try {
+      await deletePlantilla(plantillaAEliminar.id)
+      if (debouncedSearchTerm.trim()) {
+        await loadAllPlantillas()
+      } else {
+        await loadAll()
+      }
+      showToastMessage('Plantilla eliminada correctamente', 'success')
+    } catch (error: any) {
+      // Extraer el mensaje de error del backend
+      let errorMessage = 'Error al eliminar la plantilla'
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      showToastMessage(errorMessage, 'error')
+    } finally {
+      setShowEliminarModal(false)
+      setPlantillaAEliminar(null)
+    }
+  }
+
+  const cancelarEliminar = () => {
+    setShowEliminarModal(false)
+    setPlantillaAEliminar(null)
   }
 
   const handleSaveProcesos = async (newRelations: Omit<PlantillaProcesos, 'id'>[]) => {
@@ -784,6 +810,7 @@ const PlantillasList: FC = () => {
               position: 'absolute',
               top: dropdownPosition.top,
               left: dropdownPosition.left,
+              transform: dropdownPosition.placement === 'top' ? 'translateY(-100%)' : 'none',
               backgroundColor: 'white',
               border: `2px solid ${atisaStyles.colors.light}`,
               borderRadius: '8px',
@@ -834,7 +861,7 @@ const PlantillasList: FC = () => {
                   e.currentTarget.style.color = atisaStyles.colors.primary
                 }}
               >
-                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'inherit' }}></i>
                 Editar
               </button>
 
@@ -847,8 +874,6 @@ const PlantillasList: FC = () => {
               <button
                 onClick={() => {
                   handleEliminar(activeDropdown)
-                  setActiveDropdown(null)
-                  setDropdownPosition(null)
                 }}
                 style={{
                   width: '100%',
@@ -875,7 +900,7 @@ const PlantillasList: FC = () => {
                   e.currentTarget.style.color = '#dc3545'
                 }}
               >
-                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'inherit' }}></i>
                 Eliminar
               </button>
             </div>
@@ -906,8 +931,223 @@ const PlantillasList: FC = () => {
           onClose={() => setShowToast(false)}
           message={toastMessage}
           type={toastType}
-          delay={5000}
         />
+
+        {/* Modal de confirmación para eliminar */}
+        {showEliminarModal && plantillaAEliminar && (
+          <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            style={{
+              background: 'rgba(0, 80, 92, 0.5)',
+              zIndex: 10000,
+              backdropFilter: 'blur(2px)'
+            }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div
+                className="modal-content"
+                style={{
+                  borderRadius: '16px',
+                  border: `2px solid ${atisaStyles.colors.light}`,
+                  boxShadow: '0 12px 40px rgba(0, 80, 92, 0.4)',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  overflow: 'hidden'
+                }}
+              >
+                <div
+                  className="modal-header"
+                  style={{
+                    backgroundColor: atisaStyles.colors.error,
+                    color: 'white',
+                    borderRadius: '14px 14px 0 0',
+                    border: 'none',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <h5
+                    className="modal-title"
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      margin: 0,
+                      fontSize: '1.3rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                  >
+                    <i className="bi bi-trash3-fill" style={{ color: 'white', fontSize: '1.5rem' }}></i>
+                    Confirmar Eliminación
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={cancelarEliminar}
+                    style={{
+                      filter: 'invert(1)',
+                      opacity: 0.8,
+                      transition: 'opacity 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0.8'
+                    }}
+                  ></button>
+                </div>
+                <div
+                  className="modal-body"
+                  style={{
+                    padding: '28px 24px',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '16px',
+                      marginBottom: '20px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: '#fee2e2',
+                        borderRadius: '50%',
+                        width: '48px',
+                        height: '48px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <i className="bi bi-exclamation-octagon-fill" style={{ color: atisaStyles.colors.error, fontSize: '24px' }}></i>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4
+                        style={{
+                          color: atisaStyles.colors.primary,
+                          marginBottom: '16px',
+                          fontFamily: atisaStyles.fonts.primary,
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem'
+                        }}
+                      >
+                        ¿Está seguro de eliminar esta plantilla?
+                      </h4>
+                      <div
+                        style={{
+                          backgroundColor: '#f8f9fa',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          border: `1px solid ${atisaStyles.colors.light}`
+                        }}
+                      >
+                        <p style={{ color: atisaStyles.colors.dark, marginBottom: '0', fontFamily: atisaStyles.fonts.secondary }}>
+                          <strong>Plantilla:</strong> {plantillaAEliminar.nombre}
+                        </p>
+                      </div>
+                      <div
+                        className="alert"
+                        style={{
+                          backgroundColor: '#fee2e2',
+                          border: '1px solid #fecaca',
+                          color: '#b91c1c',
+                          borderRadius: '8px',
+                          marginBottom: '0',
+                          fontFamily: atisaStyles.fonts.secondary
+                        }}
+                      >
+                        <i className="bi bi-info-circle me-2"></i>
+                        <strong>Esta acción eliminará la plantilla permanentemente y no se puede deshacer.</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="modal-footer"
+                  style={{
+                    border: 'none',
+                    padding: '20px 24px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '0 0 14px 14px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '12px'
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={cancelarEliminar}
+                    style={{
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(108, 117, 125, 0.2)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#5a6268'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6c757d'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(108, 117, 125, 0.2)'
+                    }}
+                  >
+                    <i className="bi bi-x-circle me-2"></i>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={confirmarEliminar}
+                    style={{
+                      backgroundColor: atisaStyles.colors.error,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: `0 2px 8px ${atisaStyles.colors.error}4D`
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.filter = 'brightness(0.9)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${atisaStyles.colors.error}66`
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.filter = 'none'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = `0 2px 8px ${atisaStyles.colors.error}4D`
+                    }}
+                  >
+                    <i className="bi bi-trash3 me-2"></i>
+                    Confirmar Eliminación
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </KTCard>
     </div>
   )

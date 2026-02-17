@@ -18,7 +18,8 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
     fecha_limite: new Date().toISOString().split('T')[0],
     hora_limite: '00:00',
     obligatorio: 0,
-    tipo: 'Atisa' // Valor por defecto válido ya que es requerido
+    tipo: 'Atisa', // Valor por defecto válido ya que es requerido
+    critico: 0
   }
 
   const [formData, setFormData] = useState<Omit<Hito, 'id' | 'habilitado'>>(initialFormState)
@@ -31,7 +32,8 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
         fecha_limite: hito.fecha_limite,
         hora_limite: hito.hora_limite,
         obligatorio: hito.obligatorio,
-        tipo: hito.tipo
+        tipo: hito.tipo,
+        critico: hito.critico
       })
     } else {
       setFormData(initialFormState)
@@ -335,6 +337,35 @@ const HitoModal: FC<Props> = ({ show, onHide, onSave, hito }) => {
             </div>
           </div>
 
+          <div className='fv-row mb-4'>
+            <div className='form-check form-switch'>
+              <input
+                className='form-check-input'
+                type='checkbox'
+                checked={formData.critico === 1}
+                onChange={(e) => setFormData({ ...formData, critico: e.target.checked ? 1 : 0 })}
+                id='critico'
+                style={{
+                  width: '48px',
+                  height: '24px'
+                }}
+              />
+              <label
+                className='form-check-label'
+                htmlFor='critico'
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  color: atisaStyles.colors.dark,
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  marginLeft: '8px'
+                }}
+              >
+                <i className="bi bi-exclamation-octagon me-2"></i>
+                Crítico
+              </label>
+            </div>
+          </div>
         </Modal.Body>
 
         <Modal.Footer

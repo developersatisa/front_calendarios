@@ -27,7 +27,7 @@ const HitosList: FC = () => {
   const [sortField, setSortField] = useState<string>('id')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -38,6 +38,8 @@ const HitosList: FC = () => {
   const [showConfirmarDeshabilitar, setShowConfirmarDeshabilitar] = useState(false)
   const [showMassUpdateModal, setShowMassUpdateModal] = useState(false)
   const [hitoMassUpdate, setHitoMassUpdate] = useState<Hito | null>(null)
+  const [showEliminarModal, setShowEliminarModal] = useState(false)
+  const [hitoAEliminar, setHitoAEliminar] = useState<Hito | null>(null)
 
   // Función auxiliar para mostrar toasts
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
@@ -86,9 +88,15 @@ const HitosList: FC = () => {
   // Función para calcular la posición del dropdown
   const calculateDropdownPosition = (buttonElement: HTMLButtonElement) => {
     const rect = buttonElement.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const dropdownHeight = 250 // Estimación amortiguada del menú
+
+    const showAbove = rect.bottom + dropdownHeight > viewportHeight
+
     return {
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.left + window.scrollX
+      top: showAbove ? rect.top + window.scrollY - 4 : rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      placement: showAbove ? 'top' as const : 'bottom' as const
     }
   }
 
@@ -225,25 +233,44 @@ const HitosList: FC = () => {
     }
   }
 
-  const handleEliminar = async (id: number) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este hito?')) {
-      try {
-        await deleteHito(id)
-        setHitos(hitos.filter((hito) => hito.id !== id))
-        if (debouncedSearchTerm.trim()) {
-          setAllHitos(allHitos.filter((hito) => hito.id !== id))
-        }
-      } catch (error: any) {
-        // Extraer el mensaje de error del backend
-        let errorMessage = 'Error al eliminar el hito'
-        if (error?.response?.data?.detail) {
-          errorMessage = error.response.data.detail
-        } else if (error?.message) {
-          errorMessage = error.message
-        }
-        showToastMessage(errorMessage, 'error')
-      }
+  const handleEliminar = (id: number) => {
+    const hito = hitos.find(h => h.id === id) || allHitos.find(h => h.id === id)
+    if (hito) {
+      setHitoAEliminar(hito)
+      setShowEliminarModal(true)
+      setActiveDropdown(null)
+      setDropdownPosition(null)
     }
+  }
+
+  const confirmarEliminar = async () => {
+    if (!hitoAEliminar) return
+
+    try {
+      await deleteHito(hitoAEliminar.id)
+      setHitos(hitos.filter((hito) => hito.id !== hitoAEliminar.id))
+      if (debouncedSearchTerm.trim()) {
+        setAllHitos(allHitos.filter((hito) => hito.id !== hitoAEliminar.id))
+      }
+      showToastMessage('Hito eliminado correctamente', 'success')
+    } catch (error: any) {
+      // Extraer el mensaje de error del backend
+      let errorMessage = 'Error al eliminar el hito'
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      showToastMessage(errorMessage, 'error')
+    } finally {
+      setShowEliminarModal(false)
+      setHitoAEliminar(null)
+    }
+  }
+
+  const cancelarEliminar = () => {
+    setShowEliminarModal(false)
+    setHitoAEliminar(null)
   }
 
   // Funciones para deshabilitar hito
@@ -840,6 +867,29 @@ const HitosList: FC = () => {
                         </th>
                         <th
                           className='cursor-pointer user-select-none'
+                          onClick={() => handleSort('critico')}
+                          style={{
+                            transition: 'all 0.2s',
+                            padding: '16px 8px',
+                            borderBottom: `3px solid ${atisaStyles.colors.primary}`,
+                            fontFamily: atisaStyles.fonts.primary,
+                            fontWeight: 'bold',
+                            borderLeft: 'none',
+                            borderRight: 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                            e.currentTarget.style.color = 'white'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                            e.currentTarget.style.color = atisaStyles.colors.primary
+                          }}
+                        >
+                          Crítico {getSortIcon('critico')}
+                        </th>
+                        <th
+                          className='cursor-pointer user-select-none'
                           onClick={() => handleSort('tipo')}
                           style={{
                             transition: 'all 0.2s',
@@ -995,6 +1045,23 @@ const HitosList: FC = () => {
                           </td>
                           <td style={{
                             padding: '12px 8px',
+                            borderBottom: `1px solid ${atisaStyles.colors.light}`,
+                            borderLeft: 'none',
+                            borderRight: 'none',
+                            textAlign: 'center'
+                          }}>
+                            <span className={`badge ${hito.critico ? 'badge-light-danger' : 'badge-light-info'}`} style={{
+                              fontFamily: atisaStyles.fonts.secondary,
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              padding: '6px 10px',
+                              borderRadius: '6px'
+                            }}>
+                              {hito.critico ? 'SÍ' : 'NO'}
+                            </span>
+                          </td>
+                          <td style={{
+                            padding: '12px 8px',
                             color: atisaStyles.colors.dark,
                             borderBottom: `1px solid ${atisaStyles.colors.light}`,
                             borderLeft: 'none',
@@ -1094,6 +1161,7 @@ const HitosList: FC = () => {
               position: 'absolute',
               top: dropdownPosition.top,
               left: dropdownPosition.left,
+              transform: dropdownPosition.placement === 'top' ? 'translateY(-100%)' : 'none',
               backgroundColor: 'white',
               border: `2px solid ${atisaStyles.colors.light}`,
               borderRadius: '8px',
@@ -1144,7 +1212,7 @@ const HitosList: FC = () => {
                   e.currentTarget.style.color = atisaStyles.colors.primary
                 }}
               >
-                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px', color: 'inherit' }}></i>
                 Editar
               </button>
 
@@ -1189,7 +1257,7 @@ const HitosList: FC = () => {
                   e.currentTarget.style.color = atisaStyles.colors.primary
                 }}
               >
-                <i className="bi bi-calendar-range me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+                <i className="bi bi-calendar-range me-3" style={{ fontSize: '16px', color: 'inherit' }}></i>
                 Actualizar Fecha Límite
               </button>
 
@@ -1246,7 +1314,7 @@ const HitosList: FC = () => {
               >
                 <i
                   className={`bi ${filteredHitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'bi-slash-circle' : 'bi-check-circle'} me-3`}
-                  style={{ fontSize: '16px', color: 'white' }}
+                  style={{ fontSize: '16px', color: 'inherit' }}
                 ></i>
                 {filteredHitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'Deshabilitar' : 'Habilitar'}
               </button>
@@ -1288,7 +1356,7 @@ const HitosList: FC = () => {
                   e.currentTarget.style.color = '#dc3545'
                 }}
               >
-                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'white' }}></i>
+                <i className="bi bi-trash3 me-3" style={{ fontSize: '16px', color: 'inherit' }}></i>
                 Eliminar
               </button>
             </div>
@@ -1629,6 +1697,223 @@ const HitosList: FC = () => {
             </div>
           </div>
         )}
+
+        {/* Modal de confirmación para eliminar */}
+        {showEliminarModal && hitoAEliminar && (
+          <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            style={{
+              background: 'rgba(0, 80, 92, 0.5)',
+              zIndex: 10000,
+              backdropFilter: 'blur(2px)'
+            }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div
+                className="modal-content"
+                style={{
+                  borderRadius: '16px',
+                  border: `2px solid ${atisaStyles.colors.light}`,
+                  boxShadow: '0 12px 40px rgba(0, 80, 92, 0.4)',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  overflow: 'hidden'
+                }}
+              >
+                <div
+                  className="modal-header"
+                  style={{
+                    backgroundColor: atisaStyles.colors.error,
+                    color: 'white',
+                    borderRadius: '14px 14px 0 0',
+                    border: 'none',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <h5
+                    className="modal-title"
+                    style={{
+                      fontFamily: atisaStyles.fonts.primary,
+                      fontWeight: 'bold',
+                      margin: 0,
+                      fontSize: '1.3rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                  >
+                    <i className="bi bi-trash3-fill" style={{ color: 'white', fontSize: '1.5rem' }}></i>
+                    Confirmar Eliminación
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={cancelarEliminar}
+                    style={{
+                      filter: 'invert(1)',
+                      opacity: 0.8,
+                      transition: 'opacity 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0.8'
+                    }}
+                  ></button>
+                </div>
+                <div
+                  className="modal-body"
+                  style={{
+                    padding: '28px 24px',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '16px',
+                      marginBottom: '20px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: '#fee2e2',
+                        borderRadius: '50%',
+                        width: '48px',
+                        height: '48px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <i className="bi bi-exclamation-octagon-fill" style={{ color: atisaStyles.colors.error, fontSize: '24px' }}></i>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4
+                        style={{
+                          color: atisaStyles.colors.primary,
+                          marginBottom: '16px',
+                          fontFamily: atisaStyles.fonts.primary,
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem'
+                        }}
+                      >
+                        ¿Está seguro de eliminar este hito?
+                      </h4>
+                      <div
+                        style={{
+                          backgroundColor: '#f8f9fa',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          border: `1px solid ${atisaStyles.colors.light}`
+                        }}
+                      >
+                        <p style={{ color: atisaStyles.colors.dark, marginBottom: '0', fontFamily: atisaStyles.fonts.secondary }}>
+                          <strong>Hito:</strong> {hitoAEliminar.nombre}
+                        </p>
+                      </div>
+                      <div
+                        className="alert"
+                        style={{
+                          backgroundColor: '#fee2e2',
+                          border: '1px solid #fecaca',
+                          color: '#b91c1c',
+                          borderRadius: '8px',
+                          marginBottom: '0',
+                          fontFamily: atisaStyles.fonts.secondary
+                        }}
+                      >
+                        <i className="bi bi-info-circle me-2"></i>
+                        <strong>Esta acción eliminará el hito permanentemente y no se puede deshacer.</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="modal-footer"
+                  style={{
+                    border: 'none',
+                    padding: '20px 24px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '0 0 14px 14px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '12px'
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={cancelarEliminar}
+                    style={{
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(108, 117, 125, 0.2)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#5a6268'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6c757d'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(108, 117, 125, 0.2)'
+                    }}
+                  >
+                    <i className="bi bi-x-circle me-2"></i>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={confirmarEliminar}
+                    style={{
+                      backgroundColor: atisaStyles.colors.error,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontWeight: '600',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: `0 2px 8px ${atisaStyles.colors.error}4D`
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.filter = 'brightness(0.9)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${atisaStyles.colors.error}66`
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.filter = 'none'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = `0 2px 8px ${atisaStyles.colors.error}4D`
+                    }}
+                  >
+                    <i className="bi bi-trash3 me-2"></i>
+                    Confirmar Eliminación
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* Custom Toast */}
         <CustomToast
