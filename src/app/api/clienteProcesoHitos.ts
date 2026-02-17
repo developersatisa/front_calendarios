@@ -25,6 +25,46 @@ export interface ClienteProcesoHitosResponse {
   total: number
 }
 
+export interface MassUpdatePayload {
+  hito_id: number
+  empresa_ids: string[]
+  nueva_fecha: string
+  nueva_hora?: string
+  fecha_desde: string
+}
+
+export interface ClienteProcesoHitoResumido {
+  id: number;
+  fecha_limite: string;
+  cliente: string;
+  hito: string;
+  proceso: string;
+  proceso_id: number;
+  hito_id: number;
+  estado: string;
+  hora_limite: string | null;
+}
+
+export interface ClienteProcesoHitosFechaResponse {
+  anio: number;
+  mes: number;
+  total: number;
+  items: ClienteProcesoHitoResumido[];
+}
+
+export interface FiltrosResponse {
+  procesos: { id: number; nombre: string }[];
+  hitos: { id: number; nombre: string }[];
+}
+
+export interface CumplimientoMasivoPayload {
+  ids: number[]
+  fecha: string
+  hora: string
+  observacion?: string
+  usuario?: string
+}
+
 export const getAllClienteProcesoHitos = async (page?: number, limit?: number) => {
   const params = new URLSearchParams()
   if (page) params.append('page', page.toString())
@@ -68,14 +108,6 @@ export const deshabilitarHitosPorHitoDesde = async (hitoId: number, fechaDesde: 
   return response.data
 }
 
-
-export interface MassUpdatePayload {
-  hito_id: number
-  empresa_ids: string[]
-  nueva_fecha: string
-  fecha_desde: string
-}
-
 export const updateMasivoHitos = async (payload: MassUpdatePayload) => {
   const response = await api.put('/cliente-proceso-hitos/update-masivo', payload)
   return response.data
@@ -83,30 +115,6 @@ export const updateMasivoHitos = async (payload: MassUpdatePayload) => {
 
 export const deleteProcesoHitosByHito = async (hitoId: number) => {
   return await api.delete(`/proceso-hitos/hito/${hitoId}`)
-}
-
-export interface ClienteProcesoHitoResumido {
-  id: number;
-  fecha_limite: string;
-  cliente: string;
-  hito: string;
-  proceso: string;
-  proceso_id: number;
-  hito_id: number;
-  estado: string;
-  hora_limite: string | null;
-}
-
-export interface ClienteProcesoHitosFechaResponse {
-  anio: number;
-  mes: number;
-  total: number;
-  items: ClienteProcesoHitoResumido[];
-}
-
-export interface FiltrosResponse {
-  procesos: { id: number; nombre: string }[];
-  hitos: { id: number; nombre: string }[];
 }
 
 export const getFiltrosClienteProcesoHitos = async (
@@ -151,14 +159,6 @@ export const getClienteProcesoHitosPorFecha = async (
   }
   const response = await api.get<ClienteProcesoHitosFechaResponse>(`/cliente-proceso-hitos/fecha?${params.toString()}`);
   return response.data;
-}
-
-export interface CumplimientoMasivoPayload {
-  ids: number[]
-  fecha: string
-  hora: string
-  observacion?: string
-  usuario?: string
 }
 
 export const cumplimientoMasivo = async (payload: CumplimientoMasivoPayload) => {

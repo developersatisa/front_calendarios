@@ -7,7 +7,7 @@ export const atisaStyles = {
     light: '#80E0D3',        // Verde claro secundario (Pantone 3245 C)
     dark: '#007C92',         // Verde oscuro secundario (Pantone 3145 C)
     warning: '#F1E800',      // Amarillo (Pantone 3945 C)
-    error: '#FF6D22',        // Naranja (Pantone 1585 C)
+    error: '#D9214E',        // Rojo (Pantone 1795 C aprox)
     info: '#00A1DE',         // Azul (Pantone 299 C)
     success: '#9CBA39',      // Verde claro (Pantone 375 C)
   },
@@ -23,8 +23,8 @@ export const atisaStyles = {
       iconColor: '#00505C',
     },
     error: {
-      background: '#FF6D22',
-      borderLeft: '#e55a1a',
+      background: '#D9214E',
+      borderLeft: '#B11B40',
       textColor: '#ffffff',
       iconColor: '#ffffff',
     },

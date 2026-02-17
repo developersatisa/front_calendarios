@@ -1,11 +1,11 @@
-import { FC, useState, useEffect } from 'react'
+import { FC, useState, useEffect, useMemo } from 'react'
 import { Modal } from 'react-bootstrap'
 import { useFormik } from 'formik'
 import * as Yup from 'yup'
 import { Hito } from '../../../api/hitos'
 import { getClientesPorHito, Cliente } from '../../../api/clientes'
 import { updateMasivoHitos } from '../../../api/clienteProcesoHitos'
-import { atisaStyles } from '../../../styles/atisaStyles'
+import { atisaStyles, getTableHeaderStyles, getTableCellStyles } from '../../../styles/atisaStyles'
 import SharedPagination from '../../../components/pagination/SharedPagination'
 
 type Props = {
@@ -19,28 +19,30 @@ type Props = {
 const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, onError }) => {
     const [loading, setLoading] = useState(false)
     const [loadingClientes, setLoadingClientes] = useState(false)
-    const [clientes, setClientes] = useState<Cliente[]>([])
-    const [selectedClientes, setSelectedClientes] = useState<string[]>([]) // IDs de api_clientes
+    const [allClientes, setAllClientes] = useState<Cliente[]>([])
+    const [selectedClientes, setSelectedClientes] = useState<string[]>([])
     const [searchTerm, setSearchTerm] = useState('')
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(5)
-    const [totalItems, setTotalItems] = useState(0)
 
     // Ordenación
     const [sortField, setSortField] = useState<string>('razsoc')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
+    // Formulario
     const formik = useFormik({
         initialValues: {
             fecha_desde: '',
             fecha_hasta: '',
             nueva_fecha: '',
+            nueva_hora: '',
         },
         validationSchema: Yup.object({
             fecha_desde: Yup.string().required('La fecha de corte desde es obligatoria'),
             fecha_hasta: Yup.string(),
             nueva_fecha: Yup.string().required('La nueva fecha límite es obligatoria'),
+            nueva_hora: Yup.string(),
         }),
         onSubmit: async (values) => {
             if (!hito) return
@@ -56,7 +58,8 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
                     empresa_ids: selectedClientes,
                     fecha_desde: values.fecha_desde,
                     fecha_hasta: values.fecha_hasta,
-                    nueva_fecha: values.nueva_fecha
+                    nueva_fecha: values.nueva_fecha,
+                    nueva_hora: values.nueva_hora || undefined
                 }
 
                 await updateMasivoHitos(payload)
@@ -81,19 +84,18 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
         return () => clearTimeout(timer)
     }, [searchTerm])
 
-    // Reset pagination and selection when search changes
+    // Reset pagination when search changes
     useEffect(() => {
         setCurrentPage(1)
-        setSelectedClientes([])
     }, [debouncedSearchTerm])
 
-    // Load clients on show or params change
+    // Load clients on show
     useEffect(() => {
         if (show) {
-            loadClientes()
+            loadAllClientes()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [show, currentPage, debouncedSearchTerm, sortField, sortDirection])
+    }, [show])
 
     // Reset when opening/closing modal
     useEffect(() => {
@@ -104,46 +106,75 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
             setSearchTerm('')
             setDebouncedSearchTerm('')
             setCurrentPage(1)
-            setClientes([])
-            setTotalItems(0)
+            setAllClientes([])
             setSortField('razsoc')
             setSortDirection('asc')
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [show])
 
-    const loadClientes = async () => {
+    const loadAllClientes = async () => {
         if (!hito) return
 
         try {
             setLoadingClientes(true)
+            // Cargar TODOS los clientes (limit alto) para gestión cliente-side
             const response = await getClientesPorHito(
                 hito.id,
-                currentPage,
-                itemsPerPage,
-                debouncedSearchTerm,
-                sortField,
-                sortDirection
+                1,
+                10000,
+                '',
+                'razsoc',
+                'asc'
             )
-            setClientes(response.clientes || [])
-            setTotalItems(response.total || 0)
+            setAllClientes(response.clientes || [])
+
         } catch (error) {
             console.error('Error al cargar clientes:', error)
             onError('Error al cargar listado de empresas')
-            setClientes([])
-            setTotalItems(0)
+            setAllClientes([])
         } finally {
             setLoadingClientes(false)
         }
     }
 
-    // Paginación server-side
-    // 'clientes' ya contiene solo la página actual
-    const currentClientes = clientes
-    // totalItems se actualiza en loadClientes
+    // Lógica Cliente-Side: Filtrado, Ordenación y Paginación
 
-    // Lógica para "Seleccionar todo en la página"
-    const allCurrentSelected = currentClientes.length > 0 && currentClientes.every(c => selectedClientes.includes(c.idcliente))
+    // 1. Filtrado
+    const filteredClientes = useMemo(() => {
+        if (!debouncedSearchTerm.trim()) return allClientes
+
+        const lowerSearch = debouncedSearchTerm.toLowerCase()
+        return allClientes.filter(c =>
+            (c.razsoc && c.razsoc.toLowerCase().includes(lowerSearch)) ||
+            (c.cif && c.cif.toLowerCase().includes(lowerSearch))
+        )
+    }, [allClientes, debouncedSearchTerm])
+
+    // 2. Ordenación
+    const sortedClientes = useMemo(() => {
+        return [...filteredClientes].sort((a: any, b: any) => {
+            const aVal = a[sortField] || ''
+            const bVal = b[sortField] || ''
+
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+            return 0
+        })
+    }, [filteredClientes, sortField, sortDirection])
+
+    // 3. Paginación
+    const totalItems = sortedClientes.length
+    const currentClientes = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage
+        const end = start + itemsPerPage
+        return sortedClientes.slice(start, end)
+    }, [sortedClientes, currentPage, itemsPerPage])
+
+    // Selección
+    const allCurrentPageSelected = currentClientes.length > 0 && currentClientes.every(c => selectedClientes.includes(c.idcliente))
+    // Verificar si TODOS los filtrados están seleccionados (para el botón Select All global)
+    // const allFilteredSelected = filteredClientes.length > 0 && filteredClientes.every(c => selectedClientes.includes(c.idcliente))
 
     const handleSelectCurrentPage = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -160,6 +191,17 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
             const idsToRemove = currentClientes.map(c => c.idcliente)
             setSelectedClientes(selectedClientes.filter(id => !idsToRemove.includes(id)))
         }
+    }
+
+    const handleSelectAllFiltered = () => {
+        // Seleccionar todos los que coinciden con el filtro
+        const allIds = filteredClientes.map(c => c.idcliente)
+        // Combinar con los que ya estaban seleccionados (uvas de otra busqueda si existieran, aunque aqui reemplazamos lógica)
+        // La lógica "Select All" suele ser "Select visible set".
+        // Vamos a reemplazar la selección con "todos los filtrados", o mergear?
+        // Mergear es más seguro si el usuario quiere acumular selecciones de diferentes búsquedas.
+        const newSelected = [...new Set([...selectedClientes, ...allIds])]
+        setSelectedClientes(newSelected)
     }
 
     const handleClearSelection = () => {
@@ -185,13 +227,30 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
 
     const getSortIcon = (field: string) => {
         if (sortField !== field) {
-            return <i className='bi bi-arrow-down-up ms-1' style={{ fontSize: '12px', opacity: 0.5 }}></i>
+            return (
+                <span className='ms-1'>
+                    <i
+                        className='bi bi-arrow-down-up'
+                        style={{
+                            fontSize: '12px',
+                            color: atisaStyles.colors.primary,
+                            opacity: 0.6
+                        }}
+                    ></i>
+                </span>
+            )
         }
         return (
-            <i
-                className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'} ms-1`}
-                style={{ fontSize: '12px', color: 'white' }}
-            ></i>
+            <span className='ms-1'>
+                <i
+                    className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`}
+                    style={{
+                        fontSize: '12px',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }}
+                ></i>
+            </span>
         )
     }
 
@@ -200,351 +259,445 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
             show={show}
             onHide={onHide}
             aria-labelledby='kt_modal_actualiza_masiva'
-            dialogClassName='modal-dialog modal-dialog-centered mw-850px'
+            dialogClassName='modal-dialog modal-dialog-centered mw-900px'
+            backdrop="static"
+            keyboard={false}
+            contentClassName='shadow-lg'
             style={{
                 fontFamily: atisaStyles.fonts.secondary
             }}
         >
-            <form onSubmit={formik.handleSubmit} className='form'>
-                <Modal.Header
-                    className='modal-header'
+            <form onSubmit={formik.handleSubmit} className='form d-flex flex-column h-100'>
+                {/* Header */}
+                <div
+                    className='d-flex justify-content-between align-items-center p-5 border-bottom'
                     style={{
-                        backgroundColor: atisaStyles.colors.primary,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '12px 12px 0 0'
+                        background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
+                        borderRadius: '12px 12px 0 0',
                     }}
                 >
-                    <Modal.Title
-                        className='fw-bolder'
-                        style={{
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            color: 'white',
-                            fontSize: '1.5rem'
-                        }}
-                    >
-                        <i className="bi bi-calendar-range-fill me-2" style={{ color: 'white' }}></i>
-                        Actualización Masiva: {hito?.nombre}
-                    </Modal.Title>
+                    <div className="d-flex flex-column">
+                        <h2
+                            style={{
+                                fontFamily: atisaStyles.fonts.primary,
+                                fontWeight: 'bold',
+                                color: 'white',
+                                margin: 0,
+                                fontSize: '1.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <i className="bi bi-calendar-range-fill fs-2 text-white opacity-75"></i>
+                            Actualización Masiva de Hitos
+                        </h2>
+                        {hito && (
+                            <span className="text-white opacity-75 ms-10 mt-1 fs-7">
+                                Hito: <strong>{hito?.nombre}</strong>
+                            </span>
+                        )}
+                    </div>
+
                     <div
-                        className='btn btn-icon btn-sm'
+                        className='btn btn-icon btn-sm btn-active-color-primary btn-color-white bg-white bg-opacity-10 bg-hover-opacity-20'
                         onClick={onHide}
                         style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                            border: 'none',
-                            borderRadius: '8px',
                             width: '32px',
                             height: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-                            e.currentTarget.style.transform = 'scale(1.1)'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-                            e.currentTarget.style.transform = 'scale(1)'
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer'
                         }}
                     >
-                        <i className="bi bi-x" style={{ color: 'white', fontSize: '16px' }}></i>
+                        <i className="bi bi-x fs-2"></i>
                     </div>
-                </Modal.Header>
+                </div>
 
-                <Modal.Body
-                    className='modal-body scroll-y mx-5 mx-xl-15 my-7'
-                    style={{
-                        backgroundColor: 'white',
-                        padding: '24px'
-                    }}
-                >
-                    <div className='row mb-5'>
-                        <div className='col-md-4 fv-row mb-4'>
-                            <label
-                                className='required fw-bold fs-6 mb-2'
-                                style={{
-                                    fontFamily: atisaStyles.fonts.primary,
-                                    color: atisaStyles.colors.primary,
-                                    fontSize: '16px'
-                                }}
-                            >
-                                <i className="bi bi-calendar-event me-2"></i>
-                                F. Corte Desde
-                            </label>
-                            <input
-                                type='date'
-                                className='form-control form-control-solid'
-                                placeholder='Seleccionar fecha...'
-                                value={formik.values.fecha_desde}
-                                onChange={formik.handleChange}
-                                name="fecha_desde"
-                                style={{
-                                    border: `2px solid ${atisaStyles.colors.light}`,
-                                    borderRadius: '8px',
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    fontSize: '14px',
-                                    height: '48px',
-                                    transition: 'all 0.3s ease'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = atisaStyles.colors.accent
-                                    e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = atisaStyles.colors.light
-                                    e.target.style.boxShadow = 'none'
-                                    formik.handleBlur(e)
-                                }}
-                            />
-                            {formik.touched.fecha_desde && formik.errors.fecha_desde && (
-                                <div className='text-danger mt-1'>{formik.errors.fecha_desde}</div>
-                            )}
-                        </div>
+                <div className='modal-body scroll-y px-8 py-6' style={{ maxHeight: '70vh' }}>
 
-                        <div className='col-md-4 fv-row mb-4'>
-                            <label
-                                className='fw-bold fs-6 mb-2'
-                                style={{
-                                    fontFamily: atisaStyles.fonts.primary,
-                                    color: atisaStyles.colors.primary,
-                                    fontSize: '16px'
-                                }}
-                            >
-                                <i className="bi bi-calendar-event me-2"></i>
-                                F. Corte Hasta
-                            </label>
-                            <input
-                                type='date'
-                                className='form-control form-control-solid'
-                                placeholder='Seleccionar fecha...'
-                                value={formik.values.fecha_hasta}
-                                onChange={formik.handleChange}
-                                name="fecha_hasta"
-                                style={{
-                                    border: `2px solid ${atisaStyles.colors.light}`,
-                                    borderRadius: '8px',
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    fontSize: '14px',
-                                    height: '48px',
-                                    transition: 'all 0.3s ease'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = atisaStyles.colors.accent
-                                    e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = atisaStyles.colors.light
-                                    e.target.style.boxShadow = 'none'
-                                    formik.handleBlur(e)
-                                }}
-                            />
-                            {formik.touched.fecha_hasta && formik.errors.fecha_hasta && (
-                                <div className='text-danger mt-1'>{formik.errors.fecha_hasta}</div>
-                            )}
-                        </div>
+                    {/* Sección de Fechas */}
+                    <div className="card shadow-sm border border-gray-200 mb-8" style={{ backgroundColor: '#f8f9fa' }}>
+                        <div className="card-body p-6">
+                            <h5 className="fw-bold mb-5 d-flex align-items-center" style={{ color: atisaStyles.colors.primary, fontFamily: atisaStyles.fonts.primary }}>
+                                <span
+                                    className="badge me-3 flex-shrink-0"
+                                    style={{ backgroundColor: atisaStyles.colors.light, color: atisaStyles.colors.primary }}
+                                >
+                                    1
+                                </span>
+                                Configuración de Fechas
+                            </h5>
 
-                        <div className='col-md-4 fv-row mb-4'>
-                            <label
-                                className='required fw-bold fs-6 mb-2'
-                                style={{
-                                    fontFamily: atisaStyles.fonts.primary,
-                                    color: atisaStyles.colors.primary,
-                                    fontSize: '16px'
-                                }}
-                            >
-                                <i className="bi bi-calendar-check me-2"></i>
-                                Nueva Fecha Límite
-                            </label>
-                            <input
-                                type='date'
-                                className='form-control form-control-solid'
-                                placeholder='Seleccionar fecha...'
-                                value={formik.values.nueva_fecha}
-                                onChange={formik.handleChange}
-                                name="nueva_fecha"
-                                style={{
-                                    border: `2px solid ${atisaStyles.colors.light}`,
-                                    borderRadius: '8px',
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    fontSize: '14px',
-                                    height: '48px',
-                                    transition: 'all 0.3s ease'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = atisaStyles.colors.accent
-                                    e.target.style.boxShadow = `0 0 0 3px rgba(0, 161, 222, 0.1)`
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = atisaStyles.colors.light
-                                    e.target.style.boxShadow = 'none'
-                                    formik.handleBlur(e)
-                                }}
-                            />
-                            {formik.touched.nueva_fecha && formik.errors.nueva_fecha && (
-                                <div className='text-danger mt-1'>{formik.errors.nueva_fecha}</div>
-                            )}
+                            <div className='row g-5 mb-5'>
+                                <div className='col-md-6 fv-row'>
+                                    <label
+                                        className='required fw-bold fs-6 mb-2'
+                                        style={{ fontFamily: atisaStyles.fonts.primary, color: atisaStyles.colors.primary }}
+                                    >
+                                        F. Corte Desde
+                                    </label>
+                                    <div className="position-relative">
+                                        <i className="bi bi-calendar-event position-absolute top-50 start-0 translate-middle-y ms-3" style={{ color: atisaStyles.colors.primary }}></i>
+                                        <input
+                                            type='date'
+                                            className='form-control form-control-solid ps-10'
+                                            placeholder='Seleccionar fecha...'
+                                            value={formik.values.fecha_desde}
+                                            onChange={formik.handleChange}
+                                            name="fecha_desde"
+                                            style={{
+                                                height: '42px',
+                                                borderColor: formik.errors.fecha_desde && formik.touched.fecha_desde ? atisaStyles.colors.error : undefined,
+                                                borderRadius: '8px'
+                                            }}
+                                        />
+                                    </div>
+                                    {formik.touched.fecha_desde && formik.errors.fecha_desde && (
+                                        <div className='mt-1 fs-7' style={{ color: atisaStyles.colors.error }}>{formik.errors.fecha_desde}</div>
+                                    )}
+                                </div>
+
+                                <div className='col-md-6 fv-row'>
+                                    <label
+                                        className='fw-bold fs-6 mb-2'
+                                        style={{ fontFamily: atisaStyles.fonts.primary, color: atisaStyles.colors.primary }}
+                                    >
+                                        F. Corte Hasta <span className="text-muted fw-normal fs-7">(Opcional)</span>
+                                    </label>
+                                    <div className="position-relative">
+                                        <i className="bi bi-calendar-event position-absolute top-50 start-0 translate-middle-y ms-3" style={{ color: atisaStyles.colors.primary }}></i>
+                                        <input
+                                            type='date'
+                                            className='form-control form-control-solid ps-10'
+                                            placeholder='Seleccionar fecha...'
+                                            value={formik.values.fecha_hasta}
+                                            onChange={formik.handleChange}
+                                            name="fecha_hasta"
+                                            style={{ height: '42px', borderRadius: '8px' }}
+                                        />
+                                    </div>
+                                    {formik.touched.fecha_hasta && formik.errors.fecha_hasta && (
+                                        <div className='mt-1 fs-7' style={{ color: atisaStyles.colors.error }}>{formik.errors.fecha_hasta}</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="separator separator-dashed my-5"></div>
+
+                            <div className='row g-5'>
+                                <div className='col-md-6 fv-row'>
+                                    <label
+                                        className='required fw-bold fs-6 mb-2'
+                                        style={{ fontFamily: atisaStyles.fonts.primary, color: atisaStyles.colors.primary }}
+                                    >
+                                        Nueva Fecha Límite
+                                    </label>
+                                    <div className="position-relative">
+                                        <i className="bi bi-calendar-check position-absolute top-50 start-0 translate-middle-y ms-3" style={{ color: atisaStyles.colors.secondary }}></i>
+                                        <input
+                                            type='date'
+                                            className='form-control form-control-solid ps-10'
+                                            placeholder='Seleccionar fecha...'
+                                            value={formik.values.nueva_fecha}
+                                            onChange={formik.handleChange}
+                                            name="nueva_fecha"
+                                            style={{ height: '42px', borderRadius: '8px', border: `1px solid ${atisaStyles.colors.secondary}` }}
+                                        />
+                                    </div>
+                                    {formik.touched.nueva_fecha && formik.errors.nueva_fecha && (
+                                        <div className='mt-1 fs-7' style={{ color: atisaStyles.colors.error }}>{formik.errors.nueva_fecha}</div>
+                                    )}
+                                </div>
+
+                                <div className='col-md-6 fv-row'>
+                                    <label
+                                        className='fw-bold fs-6 mb-2'
+                                        style={{ fontFamily: atisaStyles.fonts.primary, color: atisaStyles.colors.primary }}
+                                    >
+                                        Nueva Hora Límite
+                                    </label>
+                                    <div className="position-relative">
+                                        <i className="bi bi-clock position-absolute top-50 start-0 translate-middle-y ms-3" style={{ color: atisaStyles.colors.secondary }}></i>
+                                        <input
+                                            type='time'
+                                            className='form-control form-control-solid ps-10'
+                                            placeholder='Seleccionar hora...'
+                                            value={formik.values.nueva_hora}
+                                            onChange={formik.handleChange}
+                                            name="nueva_hora"
+                                            style={{ height: '42px', borderRadius: '8px', border: `1px solid ${atisaStyles.colors.secondary}` }}
+                                        />
+                                    </div>
+                                    {formik.touched.nueva_hora && formik.errors.nueva_hora && (
+                                        <div className='mt-1 fs-7' style={{ color: atisaStyles.colors.error }}>{formik.errors.nueva_hora}</div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className='mb-3'>
+                    {/* Sección de Selección de Empresas */}
+                    <div className="d-flex flex-column">
+                        <h5 className="fw-bold mb-4 d-flex align-items-center" style={{ color: atisaStyles.colors.primary, fontFamily: atisaStyles.fonts.primary }}>
+                            <span
+                                className="badge me-3 flex-shrink-0"
+                                style={{ backgroundColor: atisaStyles.colors.light, color: atisaStyles.colors.primary }}
+                            >
+                                2
+                            </span>
+                            Selección de Empresas
+                        </h5>
+
+                        <div className='d-flex align-items-center mb-4 gap-3'>
+                            <div className="position-relative flex-grow-1">
+                                <span className="position-absolute top-50 translate-middle-y ms-3">
+                                    <i className="bi bi-search" style={{ color: atisaStyles.colors.light }}></i>
+                                </span>
+                                <input
+                                    type='text'
+                                    className='form-control form-control-solid ps-10'
+                                    placeholder='Buscar por Razón Social o CIF...'
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    style={{
+                                        border: `2px solid ${atisaStyles.colors.light}`,
+                                        borderRadius: '8px',
+                                        fontSize: '14px',
+                                        fontFamily: atisaStyles.fonts.secondary
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Barra de Selección (Contador y Acciones masivas) */}
                         <div
                             style={{
                                 backgroundColor: atisaStyles.colors.light,
                                 padding: '12px 16px',
                                 borderRadius: '8px',
                                 marginBottom: '16px',
-                                border: `1px solid ${atisaStyles.colors.accent}`,
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
+                                border: `1px solid ${atisaStyles.colors.accent}`
                             }}
                         >
-                            <span
-                                style={{
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    color: atisaStyles.colors.primary,
-                                    fontWeight: '600',
-                                    fontSize: '14px'
-                                }}
-                            >
-                                <i className="bi bi-building me-2"></i>
-                                Empresas seleccionadas: {selectedClientes.length}
-                            </span>
-                            <div className="d-flex gap-2">
-                                {selectedClientes.length > 0 && (
-                                    <button
-                                        type="button"
-                                        className="btn btn-sm"
-                                        onClick={handleClearSelection}
+                            <div className="d-flex justify-content-between align-items-center">
+                                <div className="d-flex align-items-center">
+                                    <span
                                         style={{
-                                            backgroundColor: 'transparent',
-                                            color: atisaStyles.colors.dark,
-                                            border: `1px solid ${atisaStyles.colors.dark}`,
-                                            borderRadius: '4px',
-                                            fontSize: '12px',
-                                            padding: '4px 8px',
+                                            fontFamily: atisaStyles.fonts.secondary,
+                                            color: atisaStyles.colors.primary,
+                                            fontWeight: '600',
+                                            fontSize: '14px',
+                                            marginRight: '16px'
                                         }}
                                     >
-                                        <i className="bi bi-x me-1"></i>
-                                        Limpiar
-                                    </button>
-                                )}
+                                        <i className="bi bi-check-circle me-2"></i>
+                                        Empresas seleccionadas: {selectedClientes.length}
+                                    </span>
+                                    {filteredClientes.length > 0 && (
+                                        <span
+                                            style={{
+                                                fontFamily: atisaStyles.fonts.secondary,
+                                                color: atisaStyles.colors.dark,
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            de {filteredClientes.length} empresas disponibles
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="d-flex gap-2">
+                                    {filteredClientes.length > 0 && selectedClientes.length < filteredClientes.length && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm"
+                                            onClick={handleSelectAllFiltered}
+                                            style={{
+                                                backgroundColor: atisaStyles.colors.accent,
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                fontSize: '12px',
+                                                padding: '4px 8px',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                                                e.currentTarget.style.transform = 'translateY(-1px)'
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                                                e.currentTarget.style.transform = 'translateY(0)'
+                                            }}
+                                        >
+                                            <i className="bi bi-check-all me-1"></i>
+                                            Seleccionar todas
+                                        </button>
+                                    )}
+                                    {selectedClientes.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm"
+                                            onClick={handleClearSelection}
+                                            style={{
+                                                backgroundColor: 'transparent',
+                                                color: atisaStyles.colors.dark,
+                                                border: `1px solid ${atisaStyles.colors.dark}`,
+                                                borderRadius: '4px',
+                                                fontSize: '12px',
+                                                padding: '4px 8px',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = atisaStyles.colors.dark
+                                                e.currentTarget.style.color = 'white'
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent'
+                                                e.currentTarget.style.color = atisaStyles.colors.dark
+                                            }}
+                                        >
+                                            <i className="bi bi-x me-1"></i>
+                                            Limpiar
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        <div className='d-flex justify-content-between align-items-center mb-3 gap-2'>
-                            <div className="position-relative w-50">
-                                <span className="position-absolute top-50 translate-middle-y ms-3">
-                                    <i className="bi bi-search text-gray-500"></i>
-                                </span>
-                                <input
-                                    type='text'
-                                    className='form-control form-control-solid ps-10'
-                                    placeholder='Buscar empresa...'
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    style={{
-                                        border: `2px solid ${atisaStyles.colors.light}`,
-                                        borderRadius: '8px',
-                                        fontSize: '14px'
-                                    }}
-                                />
-                            </div>
-                        </div>
 
-                        <div className='table-responsive' style={{ border: `1px solid ${atisaStyles.colors.light}`, borderRadius: '12px', overflow: 'hidden' }}>
+                        <div className='table-responsive border rounded-3 position-relative' style={{ borderColor: atisaStyles.colors.light }}>
                             {loadingClientes ? (
-                                <div className='d-flex justify-content-center p-10'>
-                                    <div className='spinner-border text-primary' role='status'></div>
+                                <div className='d-flex justify-content-center align-items-center py-10'>
+                                    <div
+                                        className='spinner-border mb-3'
+                                        role='status'
+                                        style={{ width: '3rem', height: '3rem', color: atisaStyles.colors.primary }}
+                                    ></div>
+                                    <div className="fw-semibold ms-3" style={{ color: atisaStyles.colors.primary }}>Cargando empresas...</div>
                                 </div>
                             ) : (
-                                <table className='table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3 mb-0'>
-                                    <thead className="" style={{ backgroundColor: atisaStyles.colors.primary, color: 'white' }}>
-                                        <tr className="fw-bolder fs-6 border-bottom border-gray-200">
-                                            <th className="ps-4 w-40px py-3">
-                                                <div className='form-check form-check-custom form-check-solid'>
+                                <table className='table table-hover align-middle gs-0 gy-3 mb-0' style={{ width: '100%' }}>
+                                    <thead className="sticky-top" style={{ zIndex: 1 }}>
+                                        <tr className="fw-bold fs-6">
+                                            <th className="ps-4 w-50px py-3" style={getTableHeaderStyles()}>
+                                                <div className='form-check form-check-sm form-check-custom form-check-solid'>
                                                     <input
-                                                        className='form-check-input'
+                                                        className='form-check-input cursor-pointer'
                                                         type='checkbox'
-                                                        checked={allCurrentSelected}
+                                                        checked={allCurrentPageSelected}
                                                         onChange={handleSelectCurrentPage}
                                                         style={{
-                                                            borderColor: 'white',
-                                                            backgroundColor: allCurrentSelected ? atisaStyles.colors.secondary : 'transparent'
+                                                            border: `1px solid ${atisaStyles.colors.primary}`,
+                                                            backgroundColor: allCurrentPageSelected ? atisaStyles.colors.secondary : 'transparent'
                                                         }}
                                                     />
                                                 </div>
                                             </th>
                                             <th
-                                                className="py-3 text-white cursor-pointer"
+                                                className="py-3 cursor-pointer"
                                                 onClick={() => handleSort('razsoc')}
+                                                style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                                                    e.currentTarget.style.color = 'white'
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                                                    e.currentTarget.style.color = atisaStyles.colors.primary
+                                                }}
                                             >
                                                 Empresa {getSortIcon('razsoc')}
                                             </th>
                                             <th
-                                                className="py-3 text-white cursor-pointer"
+                                                className="py-3 cursor-pointer"
                                                 onClick={() => handleSort('cif')}
+                                                style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                                                    e.currentTarget.style.color = 'white'
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                                                    e.currentTarget.style.color = atisaStyles.colors.primary
+                                                }}
                                             >
                                                 CIF {getSortIcon('cif')}
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {currentClientes.map((cliente) => (
-                                            <tr
-                                                key={cliente.idcliente}
-                                                style={{
-                                                    backgroundColor: selectedClientes.includes(cliente.idcliente) ? 'rgba(156, 186, 57, 0.15)' : 'transparent',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s ease'
-                                                }}
-                                                className="border-bottom"
-                                                onClick={(e) => {
-                                                    if ((e.target as HTMLElement).tagName !== 'INPUT') {
-                                                        handleSelectClient(cliente.idcliente)
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!selectedClientes.includes(cliente.idcliente)) {
-                                                        e.currentTarget.style.backgroundColor = '#f8f9fa'
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (!selectedClientes.includes(cliente.idcliente)) {
-                                                        e.currentTarget.style.backgroundColor = 'transparent'
-                                                    }
-                                                }}
-                                            >
-                                                <td className='ps-4'>
-                                                    <div className='form-check form-check-custom form-check-solid'>
-                                                        <input
-                                                            className='form-check-input'
-                                                            type='checkbox'
-                                                            checked={selectedClientes.includes(cliente.idcliente)}
-                                                            onChange={() => handleSelectClient(cliente.idcliente)}
-                                                            style={{
-                                                                borderColor: atisaStyles.colors.primary,
-                                                                backgroundColor: selectedClientes.includes(cliente.idcliente) ? atisaStyles.colors.secondary : 'transparent'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span className='text-gray-900 fw-bold fs-6'>{cliente.razsoc}</span>
-                                                </td>
-                                                <td>
-                                                    <span className='text-muted fw-bold fs-7'>{cliente.cif || '-'}</span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {currentClientes.length === 0 && (
+                                        {currentClientes.length > 0 ? (
+                                            currentClientes.map((cliente, index) => {
+                                                const isSelected = selectedClientes.includes(cliente.idcliente);
+                                                return (
+                                                    <tr
+                                                        key={cliente.idcliente}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            backgroundColor: isSelected ? 'rgba(156, 186, 57, 0.15)' : (index % 2 === 0 ? 'white' : '#f8f9fa'),
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                        onClick={(e) => {
+                                                            if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                                                                handleSelectClient(cliente.idcliente)
+                                                            }
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (!isSelected) {
+                                                                e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                                                                e.currentTarget.style.transform = 'translateY(-1px)'
+                                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                                                            }
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            if (!isSelected) {
+                                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                                                                e.currentTarget.style.transform = 'translateY(0)'
+                                                                e.currentTarget.style.boxShadow = 'none'
+                                                            }
+                                                        }}
+                                                    >
+                                                        <td className='ps-4' style={{ ...getTableCellStyles(), borderBottom: `1px solid ${atisaStyles.colors.light}` }}>
+                                                            <div className='form-check form-check-sm form-check-custom form-check-solid'>
+                                                                <input
+                                                                    className='form-check-input'
+                                                                    type='checkbox'
+                                                                    checked={isSelected}
+                                                                    onChange={() => handleSelectClient(cliente.idcliente)}
+                                                                    style={{
+                                                                        border: `1px solid ${atisaStyles.colors.primary}`,
+                                                                        backgroundColor: isSelected ? atisaStyles.colors.secondary : 'transparent'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ ...getTableCellStyles(), borderBottom: `1px solid ${atisaStyles.colors.light}` }}>
+                                                            <div className="d-flex flex-column">
+                                                                <span
+                                                                    className={`fw-bold fs-6`}
+                                                                    style={{ color: isSelected ? atisaStyles.colors.secondary : atisaStyles.colors.primary }}
+                                                                >
+                                                                    {cliente.razsoc}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ ...getTableCellStyles(), borderBottom: `1px solid ${atisaStyles.colors.light}` }}>
+                                                            <span className='fw-bold fs-7' style={{ color: atisaStyles.colors.dark }}>
+                                                                {cliente.cif || '-'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })
+                                        ) : (
                                             <tr>
-                                                <td colSpan={3} className='text-center text-muted p-10 fs-6'>
-                                                    <i className="bi bi-search fs-1 d-block mb-3 text-gray-400"></i>
-                                                    No se encontraron empresas.
+                                                <td colSpan={3} className='text-center py-10' style={{ backgroundColor: 'white' }}>
+                                                    <div className="d-flex flex-column align-items-center">
+                                                        <i className="bi bi-search fs-3x mb-3" style={{ color: atisaStyles.colors.light }}></i>
+                                                        <span className='fs-6 fw-semibold' style={{ color: atisaStyles.colors.primary }}>
+                                                            {debouncedSearchTerm ? 'No se encontraron empresas coincidentes.' : 'No hay empresas disponibles.'}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )}
@@ -554,7 +707,10 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
                         </div>
 
                         {/* Paginación */}
-                        <div className="mt-4">
+                        <div className="mt-4 d-flex justify-content-between align-items-center flex-wrap">
+                            <div className="text-gray-600 fs-7" style={{ fontFamily: atisaStyles.fonts.secondary }}>
+                                Mostrando <span className="fw-bold text-dark">{((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="fw-bold text-dark">{Math.min(currentPage * itemsPerPage, totalItems)}</span> de <span className="fw-bold text-dark">{totalItems}</span> registros
+                            </div>
                             <SharedPagination
                                 currentPage={currentPage}
                                 totalItems={totalItems}
@@ -563,75 +719,42 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
                             />
                         </div>
                     </div>
-                </Modal.Body>
+                </div>
 
                 <Modal.Footer
-                    className='modal-footer'
+                    className='py-4 px-8 border-top'
                     style={{
-                        backgroundColor: '#f8f9fa',
-                        border: 'none',
                         borderRadius: '0 0 12px 12px',
-                        padding: '20px 24px'
+                        backgroundColor: '#f8f9fa'
                     }}
                 >
                     <button
                         type='button'
-                        className='btn'
+                        className='btn me-3'
                         onClick={onHide}
                         disabled={loading}
                         style={{
-                            backgroundColor: 'transparent',
-                            color: atisaStyles.colors.dark,
-                            border: `2px solid ${atisaStyles.colors.light}`,
+                            backgroundColor: 'white',
+                            color: atisaStyles.colors.primary,
+                            border: `2px solid ${atisaStyles.colors.primary}`,
                             borderRadius: '8px',
-                            fontFamily: atisaStyles.fonts.secondary,
-                            fontWeight: '600',
-                            padding: '10px 20px',
-                            fontSize: '14px',
-                            transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                            e.currentTarget.style.color = atisaStyles.colors.primary
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                            e.currentTarget.style.color = atisaStyles.colors.dark
+                            fontWeight: '600'
                         }}
                     >
-                        <i className="bi bi-x-circle me-2"></i>
                         Cancelar
                     </button>
+
                     <button
                         type='submit'
                         className='btn'
                         disabled={loading || selectedClientes.length === 0}
                         style={{
                             backgroundColor: selectedClientes.length === 0 ? '#6c757d' : atisaStyles.colors.secondary,
-                            border: 'none',
                             color: 'white',
-                            fontFamily: atisaStyles.fonts.secondary,
-                            fontWeight: '600',
+                            border: 'none',
                             borderRadius: '8px',
-                            padding: '10px 20px',
-                            fontSize: '14px',
-                            transition: 'all 0.3s ease',
-                            marginLeft: '12px',
-                            boxShadow: '0 4px 15px rgba(156, 186, 57, 0.3)'
-                        }}
-                        onMouseEnter={(e) => {
-                            if (selectedClientes.length > 0) {
-                                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                e.currentTarget.style.transform = 'translateY(-2px)'
-                                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 161, 222, 0.4)'
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (selectedClientes.length > 0) {
-                                e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                                e.currentTarget.style.transform = 'translateY(0)'
-                                e.currentTarget.style.boxShadow = '0 4px 15px rgba(156, 186, 57, 0.3)'
-                            }
+                            fontWeight: '600',
+                            boxShadow: selectedClientes.length > 0 ? '0 4px 15px rgba(156, 186, 57, 0.3)' : 'none'
                         }}
                     >
                         {loading ? (
@@ -641,8 +764,8 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
                             </>
                         ) : (
                             <>
-                                <i className="bi bi-check-circle me-2"></i>
-                                Actualizar
+                                <i className="bi bi-check-circle me-2 text-white"></i>
+                                Actualizar {selectedClientes.length > 0 ? `(${selectedClientes.length})` : ''}
                             </>
                         )}
                     </button>

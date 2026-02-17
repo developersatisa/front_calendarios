@@ -15,6 +15,11 @@ export interface DocumentalCarpetaDocumentoResponse {
     message?: string
 }
 
+export interface DocumentalCarpetaDocumentosListResponse {
+    documentos: DocumentalCarpetaDocumentoResponse[]
+    total: number
+}
+
 // Upload multiple documents to a specific folder (carpeta_id)
 export const uploadDocumentalCarpetaDocumentos = async (
     carpetaId: number,
@@ -41,11 +46,6 @@ export const uploadDocumentalCarpetaDocumentos = async (
     )
 
     return response.data
-}
-
-export interface DocumentalCarpetaDocumentosListResponse {
-    documentos: DocumentalCarpetaDocumentoResponse[]
-    total: number
 }
 
 export const getDocumentosByCarpetaId = async (

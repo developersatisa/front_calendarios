@@ -1,30 +1,6 @@
 import api from './axiosConfig'
 import { getAuth } from '../modules/auth/core/AuthHelpers'
 
-/**
- * Obtiene el email/usuario del usuario logueado desde el token JWT
- * @returns El email o username del usuario, o null si no se puede obtener
- */
-const getCurrentUserEmail = (): string | null => {
-  try {
-    const auth = getAuth()
-
-    if (!auth?.api_token) {
-      return null
-    }
-
-    // Decodificar el JWT (solo la parte del payload)
-    const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
-
-    // Intentar obtener el email o username del payload
-    // El backend puede incluir 'email', 'username', 'sub', o 'preferred_username'
-    return payload.email || payload.username || payload.sub || payload.preferred_username || null
-  } catch (error) {
-    console.warn('Error obteniendo usuario del token JWT:', error)
-    return null
-  }
-}
-
 // Interfaces para las respuestas de métricas
 export interface CumplimientoHitosResponse {
   porcentajeGeneral: number
@@ -94,6 +70,30 @@ export interface ResumenMetricasResponse {
   hitosPendientes: MetricaResumen
   hitosVencidos: MetricaResumen
   clientesInactivos: MetricaResumen
+}
+
+/**
+ * Obtiene el email/usuario del usuario logueado desde el token JWT
+ * @returns El email o username del usuario, o null si no se puede obtener
+ */
+const getCurrentUserEmail = (): string | null => {
+  try {
+    const auth = getAuth()
+
+    if (!auth?.api_token) {
+      return null
+    }
+
+    // Decodificar el JWT (solo la parte del payload)
+    const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+
+    // Intentar obtener el email o username del payload
+    // El backend puede incluir 'email', 'username', 'sub', o 'preferred_username'
+    return payload.email || payload.username || payload.sub || payload.preferred_username || null
+  } catch (error) {
+    console.warn('Error obteniendo usuario del token JWT:', error)
+    return null
+  }
 }
 
 // Funciones de API

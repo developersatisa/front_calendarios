@@ -66,3 +66,16 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Global overrides for form validation */
+.required:after {
+  color: #D9214E !important;
+}
+
+.form-control.is-invalid {
+  border-color: #D9214E !important;
+}
+
+.invalid-feedback {
+  color: #D9214E !important;
+}

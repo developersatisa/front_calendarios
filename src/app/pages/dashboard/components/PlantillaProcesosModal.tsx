@@ -6,7 +6,7 @@ import { Plantilla } from '../../../api/plantillas'
 import { Proceso } from '../../../api/procesos'
 import SharedPagination from '../../../components/pagination/SharedPagination'
 import { deletePlantillaProcesos } from '../../../api/plantillaProcesos'
-import { atisaStyles } from '../../../styles/atisaStyles'
+import { atisaStyles, getTableHeaderStyles, getTableCellStyles } from '../../../styles/atisaStyles'
 
 interface Props {
   show: boolean
@@ -170,7 +170,7 @@ const PlantillaProcesosModal: FC<Props> = ({
     >
       <Modal.Header
         style={{
-          backgroundColor: atisaStyles.colors.primary,
+          background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
           color: 'white',
           border: 'none',
           borderRadius: '12px 12px 0 0',
@@ -268,11 +268,11 @@ const PlantillaProcesosModal: FC<Props> = ({
         <div className='mb-4'>
           <div
             style={{
-              backgroundColor: atisaStyles.colors.light,
-              border: `2px solid ${atisaStyles.colors.primary}`,
+              backgroundColor: '#f8f9fa',
+              padding: '16px 20px',
               borderRadius: '8px',
-              padding: '16px',
-              fontFamily: atisaStyles.fonts.secondary
+              border: `1px solid ${atisaStyles.colors.light}`,
+              marginBottom: '20px'
             }}
           >
             <div className='d-flex align-items-center'>
@@ -367,12 +367,10 @@ const PlantillaProcesosModal: FC<Props> = ({
         </div>
 
         <div
-          className='table-responsive'
+          className='table-responsive border rounded-3 position-relative'
           style={{
-            backgroundColor: 'white',
             borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
-            border: `1px solid ${atisaStyles.colors.light}`,
+            borderColor: atisaStyles.colors.light,
             overflow: 'hidden'
           }}
         >
@@ -380,28 +378,18 @@ const PlantillaProcesosModal: FC<Props> = ({
             className='table align-middle table-row-dashed fs-6 gy-5'
             style={{
               fontFamily: atisaStyles.fonts.secondary,
-              margin: 0
+              margin: 0,
+              width: '100%'
             }}
             role="table"
             aria-label="Lista de procesos disponibles"
           >
             <thead>
               <tr
-                style={{
-                  backgroundColor: atisaStyles.colors.primary,
-                  color: 'white'
-                }}
+                className="fw-bold fs-6"
               >
                 <th
-                  style={{
-                    width: '50px',
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
+                  className="ps-4 w-50px py-3" style={getTableHeaderStyles()}
                   scope="col"
                 >
                   <div className='form-check form-check-sm form-check-custom form-check-solid'>
@@ -411,36 +399,21 @@ const PlantillaProcesosModal: FC<Props> = ({
                       checked={currentProcesos.length > 0 && currentProcesos.every(p => selectedProcesos.includes(p.id))}
                       onChange={(e) => handleSelectAll(e.target.checked)}
                       style={{
-                        borderColor: 'white',
-                        backgroundColor: 'transparent'
+                        border: `1px solid ${atisaStyles.colors.primary}`
                       }}
                       aria-label="Seleccionar todos los procesos de esta página"
                     />
                   </div>
                 </th>
                 <th
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
                   scope="col"
+                  className="py-3" style={getTableHeaderStyles()}
                 >
                   Proceso
                 </th>
                 <th
-                  style={{
-                    fontFamily: atisaStyles.fonts.primary,
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    padding: '16px 12px',
-                    border: 'none',
-                    color: 'white'
-                  }}
                   scope="col"
+                  className="py-3" style={getTableHeaderStyles()}
                 >
                   Descripción
                 </th>
@@ -448,60 +421,65 @@ const PlantillaProcesosModal: FC<Props> = ({
             </thead>
             <tbody>
               {currentProcesos.length > 0 ? (
-                currentProcesos.map((proceso, index) => (
-                  <tr
-                    key={proceso.id}
-                    style={{
-                      backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                      e.currentTarget.style.transform = 'translateY(-1px)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    <td style={{ padding: '16px 12px' }}>
-                      <div className='form-check form-check-sm form-check-custom form-check-solid'>
-                        <input
-                          className='form-check-input'
-                          type='checkbox'
-                          checked={selectedProcesos.includes(proceso.id)}
-                          onChange={(e) => handleProcessToggle(proceso.id, e.target.checked)}
-                          style={{
-                            borderColor: atisaStyles.colors.primary,
-                            backgroundColor: selectedProcesos.includes(proceso.id) ? atisaStyles.colors.secondary : 'transparent'
-                          }}
-                          aria-label={`Seleccionar proceso ${proceso.nombre}`}
-                        />
-                      </div>
-                    </td>
-                    <td
+                currentProcesos.map((proceso, index) => {
+                  const isSelected = selectedProcesos.includes(proceso.id);
+                  return (
+                    <tr
+                      key={proceso.id}
                       style={{
-                        fontFamily: atisaStyles.fonts.secondary,
-                        color: atisaStyles.colors.primary,
-                        fontWeight: '600',
-                        padding: '16px 12px'
+                        cursor: 'pointer',
+                        backgroundColor: isSelected ? 'rgba(156, 186, 57, 0.15)' : (index % 2 === 0 ? 'white' : '#f8f9fa'),
+                        transition: 'all 0.2s ease'
+                      }}
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                          handleProcessToggle(proceso.id, !isSelected)
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                          e.currentTarget.style.transform = 'translateY(-1px)'
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                          e.currentTarget.style.transform = 'translateY(0)'
+                          e.currentTarget.style.boxShadow = 'none'
+                        }
                       }}
                     >
-                      {proceso.nombre}
-                    </td>
-                    <td
-                      style={{
-                        fontFamily: atisaStyles.fonts.secondary,
-                        color: atisaStyles.colors.dark,
-                        padding: '16px 12px'
-                      }}
-                    >
-                      {proceso.descripcion || '-'}
-                    </td>
-                  </tr>
-                ))
+                      <td className='ps-4' style={{ ...getTableCellStyles(), borderBottom: `1px solid ${atisaStyles.colors.light}` }}>
+                        <div className='form-check form-check-sm form-check-custom form-check-solid'>
+                          <input
+                            className='form-check-input'
+                            type='checkbox'
+                            checked={selectedProcesos.includes(proceso.id)}
+                            onChange={(e) => handleProcessToggle(proceso.id, e.target.checked)}
+                            aria-label={`Seleccionar proceso ${proceso.nombre}`}
+                          />
+                        </div>
+                      </td>
+                      <td
+                        style={{ ...getTableCellStyles(), borderBottom: `1px solid ${atisaStyles.colors.light}` }}
+                      >
+                        <span
+                          className={`fw-bold fs-6`}
+                          style={{ color: isSelected ? atisaStyles.colors.secondary : atisaStyles.colors.primary }}
+                        >
+                          {proceso.nombre}
+                        </span>
+                      </td>
+                      <td
+                        style={{ ...getTableCellStyles(), borderBottom: `1px solid ${atisaStyles.colors.light}` }}
+                      >
+                        {proceso.descripcion || '-'}
+                      </td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr>
                   <td
@@ -524,13 +502,12 @@ const PlantillaProcesosModal: FC<Props> = ({
         </div>
 
         <div
-          style={{
-            backgroundColor: '#f8f9fa',
-            padding: '16px 20px',
-            borderRadius: '8px',
-            marginTop: '20px'
-          }}
+          className="mt-4 d-flex justify-content-between align-items-center flex-wrap"
         >
+          <div className="text-gray-600 fs-7" style={{ fontFamily: atisaStyles.fonts.secondary }}>
+            Mostrando <span className="fw-bold text-dark">{((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="fw-bold text-dark">{Math.min(currentPage * itemsPerPage, totalItems)}</span> de <span className="fw-bold text-dark">{totalItems}</span> registros
+          </div>
+
           <SharedPagination
             currentPage={currentPage}
             totalItems={totalItems}
@@ -547,16 +524,16 @@ const PlantillaProcesosModal: FC<Props> = ({
           padding: '20px 24px'
         }}
       >
-        <div className="d-flex flex-column flex-sm-row gap-2 w-100">
+        <div className="d-flex flex-column flex-sm-row gap-2 w-100 justify-content-end">
           <button
             type='button'
-            className='btn flex-fill flex-sm-grow-0'
+            className='btn me-3'
             onClick={onHide}
             disabled={isLoading}
             style={{
-              backgroundColor: 'transparent',
-              color: atisaStyles.colors.dark,
-              border: `2px solid ${atisaStyles.colors.light}`,
+              backgroundColor: 'white',
+              color: atisaStyles.colors.primary,
+              border: `2px solid ${atisaStyles.colors.primary}`,
               borderRadius: '8px',
               fontFamily: atisaStyles.fonts.secondary,
               fontWeight: '600',
@@ -566,26 +543,13 @@ const PlantillaProcesosModal: FC<Props> = ({
               opacity: isLoading ? 0.6 : 1,
               minWidth: '120px'
             }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                e.currentTarget.style.color = atisaStyles.colors.primary
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.color = atisaStyles.colors.dark
-              }
-            }}
             aria-label="Cancelar y cerrar modal"
           >
-            <i className="bi bi-x-circle me-2"></i>
             Cancelar
           </button>
           <button
             type='button'
-            className='btn flex-fill flex-sm-grow-0'
+            className='btn'
             onClick={handleSubmit}
             disabled={!selectedPlantillaId || selectedProcesos.length === 0 || isLoading}
             style={{
@@ -599,19 +563,8 @@ const PlantillaProcesosModal: FC<Props> = ({
               fontSize: '14px',
               transition: 'all 0.3s ease',
               position: 'relative',
-              minWidth: '120px'
-            }}
-            onMouseEnter={(e) => {
-              if (selectedProcesos.length > 0 && selectedPlantillaId && !isLoading) {
-                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                e.currentTarget.style.transform = 'translateY(-2px)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (selectedProcesos.length > 0 && selectedPlantillaId && !isLoading) {
-                e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                e.currentTarget.style.transform = 'translateY(0)'
-              }
+              minWidth: '120px',
+              boxShadow: selectedProcesos.length > 0 ? '0 4px 15px rgba(156, 186, 57, 0.3)' : 'none'
             }}
             aria-label={isLoading ? 'Guardando...' : (selectedPlantillaId ? 'Actualizar procesos' : 'Guardar procesos')}
           >
@@ -630,7 +583,7 @@ const PlantillaProcesosModal: FC<Props> = ({
             ) : (
               <>
                 <i className="bi bi-check-circle me-2"></i>
-                {selectedPlantillaId ? 'Actualizar' : 'Guardar'}
+                {selectedPlantillaId ? 'Actualizar' : 'Guardar'} {selectedProcesos.length > 0 ? `(${selectedProcesos.length})` : ''}
               </>
             )}
           </button>
