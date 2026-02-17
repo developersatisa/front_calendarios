@@ -267,7 +267,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           setShowDeshabilitarDesdeModal(false)
           return
         }
-        await Promise.all(ids.map(id => deshabilitarHitosPorHitoDesde(id, fechaDesdeDeshabilitar)))
+        await Promise.all(ids.map(id => deshabilitarHitosPorHitoDesde(id, fechaDesdeDeshabilitar, clienteId)))
       } else {
         const procesoIds = Array.from(selectedProcesos)
         if (procesoIds.length === 0) {
@@ -296,7 +296,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
         }
 
         // Usar deshabilitarHitosPorHitoDesde para cada hito individual
-        await Promise.all(hitoIds.map(hitoId => deshabilitarHitosPorHitoDesde(hitoId, fechaDesdeDeshabilitar)))
+        await Promise.all(hitoIds.map(hitoId => deshabilitarHitosPorHitoDesde(hitoId, fechaDesdeDeshabilitar, clienteId)))
       }
       setShowDeshabilitarDesdeModal(false)
       setSelectedHitosMaestro(new Set())

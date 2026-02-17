@@ -105,8 +105,10 @@ export const getClienteProcesoHitosHabilitadosByProceso = async (idClienteProces
   return response.data
 }
 
-export const deshabilitarHitosPorHitoDesde = async (hitoId: number, fechaDesde: string) => {
-  const response = await api.put(`/cliente-proceso-hitos/hito/${hitoId}/deshabilitar-desde`, { fecha_desde: fechaDesde })
+export const deshabilitarHitosPorHitoDesde = async (hitoId: number, fechaDesde: string, clienteId?: string) => {
+  const payload: any = { fecha_desde: fechaDesde }
+  if (clienteId) payload.cliente_id = clienteId
+  const response = await api.put(`/cliente-proceso-hitos/hito/${hitoId}/deshabilitar-desde`, payload)
   return response.data
 }
 
