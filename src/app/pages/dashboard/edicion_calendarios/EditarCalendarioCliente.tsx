@@ -72,7 +72,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [selectedHitosMaestro, setSelectedHitosMaestro] = useState<Set<number>>(new Set())
   const [selectedProcesos, setSelectedProcesos] = useState<Set<number>>(new Set())
   const [showDeshabilitarDesdeModal, setShowDeshabilitarDesdeModal] = useState(false)
-  const [fechaDesdeDeshabilitar, setFechaDesdeDeshabilitar] = useState('')
+  const [fechaDesdeDeshabilitar, setFechaDesdeDeshabilitar] = useState(new Date().toISOString().split('T')[0])
   const [busquedaHitosModal, setBusquedaHitosModal] = useState('')
   const [busquedaProcesosModal, setBusquedaProcesosModal] = useState('')
   const [modoDeshabilitar, setModoDeshabilitar] = useState<'hitos' | 'procesos'>('hitos')
@@ -246,7 +246,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   }
 
   const abrirModalDeshabilitarDesde = () => {
-    setFechaDesdeDeshabilitar('')
+    setFechaDesdeDeshabilitar(new Date().toISOString().split('T')[0])
     setSelectedHitosMaestro(new Set())
     setSelectedProcesos(new Set())
     setBusquedaHitosModal('')

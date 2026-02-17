@@ -7,6 +7,7 @@ import { Proceso, getAllProcesos } from '../../../../api/procesos'
 import { getClienteProcesoHitosByProceso, getClienteProcesoHitosHabilitadosByProceso, ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { Hito, getAllHitos } from '../../../../api/hitos'
 import { getClienteProcesoHitoCumplimientosByHito, ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
+import { descargarDocumentosCumplimiento } from '../../../../api/documentosCumplimiento'
 import CumplimentarHitoModal from './CumplimentarHitoModal'
 import { atisaStyles, getSecondaryButtonStyles } from '../../../../styles/atisaStyles'
 
@@ -69,15 +70,14 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [showConfirmacionModal1, setShowConfirmacionModal1] = useState(false)
   const [busquedaNombre, setBusquedaNombre] = useState('')
   const [debouncedBusqueda, setDebouncedBusqueda] = useState('')
-  const [filtroVencimiento, setFiltroVencimiento] = useState<'todos' | 'vencido' | 'hoy' | 'en_plazo' | 'sin_fecha' | 'mañana'>('todos')
-  const [filtrosActivos, setFiltrosActivos] = useState<Set<'vencido' | 'hoy' | 'mañana' | 'en_plazo'>>(new Set())
-  const [filtroCumplimiento, setFiltroCumplimiento] = useState<'todos' | 'cumplimentado' | 'no_cumplimentado'>('todos')
+  const [filtrosActivos, setFiltrosActivos] = useState<Set<'vencido' | 'hoy' | 'mañana' | 'en_plazo' | 'cumplido_plazo' | 'cumplido_fuera'>>(new Set())
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
   const [sortField, setSortField] = useState<'hito' | 'estado' | 'fecha_actualizacion' | 'fecha_limite' | 'hora_limite' | 'responsable' | 'fecha_cumplimiento'>('fecha_limite')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [activeKeys, setActiveKeys] = useState<string[]>([])
   const [todosAbiertos, setTodosAbiertos] = useState(false)
+  const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -174,6 +174,36 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     const id = setTimeout(() => setDebouncedBusqueda(normalizeText(busquedaNombre)), 300)
     return () => clearTimeout(id)
   }, [busquedaNombre])
+
+  // Función para descargar documentos de un cumplimiento
+  const handleDescargarDocumentos = async (cumplimientoId: number) => {
+    try {
+      setDownloadingCumplimientoId(cumplimientoId)
+      const blob = await descargarDocumentosCumplimiento(cumplimientoId)
+
+      // Crear URL del blob
+      const url = window.URL.createObjectURL(blob)
+
+      // Crear enlace temporal para descarga
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `documentos-cumplimiento-${cumplimientoId}.zip`
+      link.style.display = 'none'
+
+      // Agregar al DOM, hacer clic y limpiar
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Liberar la URL del blob
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error al descargar documentos:', error)
+      alert('Error al descargar los documentos. Por favor, inténtalo de nuevo.')
+    } finally {
+      setDownloadingCumplimientoId(null)
+    }
+  }
 
   // Función para cargar todos los hitos de los procesos
   const cargarHitosDeProcesos = async (procesosACarga: ClienteProceso[]) => {
@@ -523,7 +553,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     }
   }
   // Funciones para manejar filtros múltiples
-  const toggleFiltroVencimiento = (filtro: 'vencido' | 'hoy' | 'mañana' | 'en_plazo') => {
+  const toggleFiltroVencimiento = (filtro: 'vencido' | 'hoy' | 'mañana' | 'en_plazo' | 'cumplido_plazo' | 'cumplido_fuera') => {
     const nuevosFiltros = new Set(filtrosActivos)
 
     if (nuevosFiltros.has(filtro)) {
@@ -535,19 +565,10 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
     }
 
     setFiltrosActivos(nuevosFiltros)
-
-    // Si no hay filtros activos, volver a "todos"
-    if (nuevosFiltros.size === 0) {
-      setFiltroVencimiento('todos')
-    } else {
-      // Si hay filtros activos, cambiar a un estado que no sea "todos"
-      setFiltroVencimiento('vencido') // Cualquier valor que no sea 'todos'
-    }
   }
 
   const activarTodos = () => {
     setFiltrosActivos(new Set())
-    setFiltroVencimiento('todos')
   }
 
   // Función para limpiar filtros de fecha
@@ -563,17 +584,23 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
 
     // Verificar si el hito coincide con alguno de los filtros activos
     return Array.from(filtrosActivos).some(filtro => {
+      // Filtros de cumplimiento
+      if (filtro === 'cumplido_plazo') {
+        return h.estado === 'Finalizado' && !isFinalizadoFueraDePlazo(h)
+      }
+      if (filtro === 'cumplido_fuera') {
+        return h.estado === 'Finalizado' && isFinalizadoFueraDePlazo(h)
+      }
+
+      // Filtros de pendientes
+      if (h.estado === 'Finalizado') return false // Si está finalizado y no es uno de los filtros anteriores, no coincide
+
       if (filtro === 'mañana') {
         return h.estado === 'Nuevo' && venceMañana(h.fecha_limite)
       }
       const ev = getEstadoVencimiento(h.fecha_limite, h.estado)
       return ev === filtro
     })
-  }
-  const coincideCumplimiento = (h: ClienteProcesoHito) => {
-    if (filtroCumplimiento === 'todos') return true
-    const tieneCumplimientos = (cumplimientosPorHito[h.id] && cumplimientosPorHito[h.id].length > 0)
-    return filtroCumplimiento === 'cumplimentado' ? tieneCumplimientos : !tieneCumplimientos
   }
 
   // Función para filtrar por fechas límite
@@ -1015,7 +1042,9 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                 { id: 'vencido', label: 'Pendiente fuera de plazo', color: '#ef4444' },
                 { id: 'hoy', label: 'Vence hoy', color: '#f59e0b' },
                 { id: 'mañana', label: 'Vence mañana', color: '#8b5cf6' },
-                { id: 'en_plazo', label: 'Pendiente en plazo', color: '#10b981' }
+                { id: 'en_plazo', label: 'Pendiente en plazo', color: '#10b981' },
+                { id: 'cumplido_plazo', label: 'Cumplimentado en plazo', color: '#16a34a' },
+                { id: 'cumplido_fuera', label: 'Cumplimentado fuera de plazo', color: '#b45309' }
               ].map((estado) => {
                 const isSelected = filtrosActivos.has(estado.id as any)
                 return (
@@ -1042,12 +1071,6 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                   </div>
                 )
               })}
-
-              <div className="vr mx-2 bg-white" style={{ height: 24, opacity: 0.3 }}></div>
-
-              <button className="btn btn-sm" style={{ backgroundColor: filtroCumplimiento === 'todos' ? 'white' : 'rgba(255, 255, 255, 0.1)', color: filtroCumplimiento === 'todos' ? atisaStyles.colors.primary : 'white', border: '1px solid white', borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroCumplimiento('todos')}>Todos</button>
-              <button className="btn btn-sm" style={{ backgroundColor: filtroCumplimiento === 'cumplimentado' ? atisaStyles.colors.accent : 'rgba(255, 255, 255, 0.1)', color: 'white', border: filtroCumplimiento === 'cumplimentado' ? `1px solid ${atisaStyles.colors.accent}` : '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroCumplimiento('cumplimentado')}>Cumplimentados</button>
-              <button className="btn btn-sm" style={{ backgroundColor: filtroCumplimiento === 'no_cumplimentado' ? '#adb5bd' : 'rgba(255, 255, 255, 0.1)', color: 'white', border: filtroCumplimiento === 'no_cumplimentado' ? '1px solid #adb5bd' : '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '20px', padding: '6px 12px', fontWeight: 600 }} onClick={() => setFiltroCumplimiento('no_cumplimentado')}>No cumplimentados</button>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 260 }}>
@@ -1440,6 +1463,20 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                 Fecha / Hora Cumplimiento {getSortIcon('fecha_cumplimiento')}
                               </th>
                               <th
+                                style={{
+                                  fontFamily: atisaStyles.fonts.primary,
+                                  fontWeight: 'bold',
+                                  fontSize: '14px',
+                                  padding: '16px 12px',
+                                  border: 'none',
+                                  color: 'white',
+                                  backgroundColor: atisaStyles.colors.primary,
+                                  textAlign: 'center'
+                                }}
+                              >
+                                Documentos
+                              </th>
+                              <th
                                 className='text-start'
                                 style={{
                                   fontFamily: atisaStyles.fonts.primary,
@@ -1458,7 +1495,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                             {loadingHitos ? (
                               <tr>
                                 <td
-                                  colSpan={8}
+                                  colSpan={9}
                                   className="text-center py-4"
                                   style={{
                                     backgroundColor: '#f8f9fa',
@@ -1491,7 +1528,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                             ) : (
                               periodo.items.map((proceso) => {
                                 const hitosFiltrados = (hitosPorProceso[proceso.id] || [])
-                                  .filter((h) => coincideVencimiento(h) && coincideCumplimiento(h) && coincideFechaLimite(h))
+                                  .filter((h) => coincideVencimiento(h) && coincideFechaLimite(h))
                                   .filter((h) => {
                                     if (!debouncedBusqueda) return true
                                     const nombre = getNombreHito(h.hito_id)
@@ -1758,6 +1795,82 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                                         <span title={ultimaFechaCumplimientoFmt[hito.id] || '-'}>
                                           {ultimaFechaCumplimientoFmt[hito.id] || '-'}
                                         </span>
+                                      </td>
+                                      <td
+                                        style={{
+                                          fontFamily: atisaStyles.fonts.secondary,
+                                          padding: '16px 12px',
+                                          textAlign: 'center',
+                                          verticalAlign: 'middle'
+                                        }}
+                                      >
+                                        {(() => {
+                                          const ultimoCumplimiento = cumplimientosPorHito[hito.id]?.[0]
+                                          if (ultimoCumplimiento?.id && ultimoCumplimiento.num_documentos && ultimoCumplimiento.num_documentos > 0) {
+                                            return (
+                                              <button
+                                                className="btn btn-sm"
+                                                onClick={() => handleDescargarDocumentos(ultimoCumplimiento.id!)}
+                                                disabled={downloadingCumplimientoId === ultimoCumplimiento.id}
+                                                style={{
+                                                  backgroundColor: atisaStyles.colors.accent,
+                                                  color: 'white',
+                                                  border: 'none',
+                                                  borderRadius: '8px',
+                                                  padding: '0',
+                                                  transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: '38px',
+                                                  height: '38px',
+                                                  boxShadow: '0 2px 8px rgba(0, 161, 222, 0.25)',
+                                                  cursor: downloadingCumplimientoId === ultimoCumplimiento.id ? 'not-allowed' : 'pointer',
+                                                  lineHeight: '1',
+                                                  verticalAlign: 'middle'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  if (!e.currentTarget.disabled) {
+                                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 80, 92, 0.35)'
+                                                  }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  if (!e.currentTarget.disabled) {
+                                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 161, 222, 0.25)'
+                                                  }
+                                                }}
+                                                title={`Descargar ${ultimoCumplimiento.num_documentos} documento(s) del último cumplimiento`}
+                                              >
+                                                {downloadingCumplimientoId === ultimoCumplimiento.id ? (
+                                                  <span
+                                                    className="spinner-border spinner-border-sm"
+                                                    style={{
+                                                      width: '20px',
+                                                      height: '20px',
+                                                      borderWidth: '3px',
+                                                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                                                      borderTopColor: 'white'
+                                                    }}
+                                                  ></span>
+                                                ) : (
+                                                  <i className="bi bi-download" style={{ fontSize: '20px', lineHeight: '1', fontWeight: 'bold', color: 'white' }}></i>
+                                                )}
+                                              </button>
+                                            )
+                                          }
+                                          return (
+                                            <i
+                                              className="bi bi-file-earmark-x"
+                                              title="Sin documentos"
+                                              style={{
+                                                color: '#dee2e6',
+                                                fontSize: '20px'
+                                              }}
+                                            ></i>
+                                          )
+                                        })()}
                                       </td>
                                       <td
                                         className='text-start'
