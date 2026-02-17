@@ -290,7 +290,7 @@ const ActualizaMasivaHitosModal: FC<Props> = ({ show, onHide, hito, onSuccess, o
                             }}
                         >
                             <i className="bi bi-calendar-range-fill fs-2 text-white opacity-75"></i>
-                            Actualización Masiva de Hitos
+                            Actualización masiva de fecha / hora límite
                         </h2>
                         {hito && (
                             <span className="text-white opacity-75 ms-10 mt-1 fs-7">

@@ -21,6 +21,8 @@ const AdministradoresPage: FC = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize] = useState(10)
+    const [sortField, setSortField] = useState<string>('admin')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
     // Verificar si el usuario logueado es admin usando el nuevo endpoint
     useEffect(() => {
@@ -57,6 +59,45 @@ const AdministradoresPage: FC = () => {
         loadData()
     }, [])
 
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortField(field)
+            setSortDirection('asc')
+        }
+        setCurrentPage(1)
+    }
+
+    const getSortIcon = (field: string) => {
+        if (sortField !== field) {
+            return (
+                <span className='ms-1'>
+                    <i
+                        className='bi bi-arrow-down-up'
+                        style={{
+                            fontSize: '11px',
+                            color: atisaStyles.colors.primary,
+                            opacity: 0.6
+                        }}
+                    ></i>
+                </span>
+            )
+        }
+        return (
+            <span className='ms-1'>
+                <i
+                    className={`bi ${sortDirection === 'asc' ? 'bi-sort-up' : 'bi-sort-down'}`}
+                    style={{
+                        fontSize: '12px',
+                        color: atisaStyles.colors.primary,
+                        fontWeight: 'bold'
+                    }}
+                ></i>
+            </span>
+        )
+    }
+
     const handleToggleAdmin = async (email: string, isCurrentlyAdmin: boolean, roleId: number | null, fullName: string) => {
         try {
             if (roleId) {
@@ -82,7 +123,7 @@ const AdministradoresPage: FC = () => {
         }
     }
 
-    // Lógica Buscador + Paginación Local
+    // Lógica Buscador + Ordenación + Paginación Local
     const filteredPersonas = personas.filter(p => {
         const term = searchTerm.toLowerCase()
         const nombre = p.Nombre ? p.Nombre.trim().toLowerCase() : ''
@@ -98,6 +139,24 @@ const AdministradoresPage: FC = () => {
         return fullName.includes(term) ||
             email.includes(term) ||
             nif.includes(term)
+    }).sort((a, b) => {
+        let valA: any = ''
+        let valB: any = ''
+
+        if (sortField === 'fullName') {
+            valA = `${a.Nombre || ''} ${a.Apellido1 || ''} ${a.Apellido2 || ''}`.trim().toLowerCase()
+            valB = `${b.Nombre || ''} ${b.Apellido1 || ''} ${b.Apellido2 || ''}`.trim().toLowerCase()
+        } else if (sortField === 'admin') {
+            valA = (a.admin === true || a.admin === 1) ? 1 : 0
+            valB = (b.admin === true || b.admin === 1) ? 1 : 0
+        } else {
+            valA = (a[sortField as keyof Persona] || '').toString().toLowerCase()
+            valB = (b[sortField as keyof Persona] || '').toString().toLowerCase()
+        }
+
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1
+        return 0
     })
 
     const totalItems = filteredPersonas.length
@@ -212,22 +271,50 @@ const AdministradoresPage: FC = () => {
                                             color: atisaStyles.colors.primary
                                         }}
                                     >
-                                        <th className="min-w-150px ps-4" style={{
-                                            padding: '12px 24px',
-                                            borderBottom: `2px solid ${atisaStyles.colors.primary}20`
-                                        }}>Usuario</th>
-                                        <th className="min-w-125px" style={{
-                                            padding: '12px 24px',
-                                            borderBottom: `2px solid ${atisaStyles.colors.primary}20`
-                                        }}>Email</th>
-                                        <th className="min-w-125px" style={{
-                                            padding: '12px 24px',
-                                            borderBottom: `2px solid ${atisaStyles.colors.primary}20`
-                                        }}>NIF</th>
-                                        <th className="text-end min-w-100px pe-4" style={{
-                                            padding: '12px 24px',
-                                            borderBottom: `2px solid ${atisaStyles.colors.primary}20` // Corregido el nombre de la propiedad
-                                        }}>Admin</th>
+                                        <th
+                                            className="min-w-150px ps-4 cursor-pointer"
+                                            onClick={() => handleSort('fullName')}
+                                            style={{
+                                                padding: '12px 24px',
+                                                borderBottom: `2px solid ${atisaStyles.colors.primary}20`,
+                                                userSelect: 'none'
+                                            }}
+                                        >
+                                            Usuario {getSortIcon('fullName')}
+                                        </th>
+                                        <th
+                                            className="min-w-125px cursor-pointer"
+                                            onClick={() => handleSort('email')}
+                                            style={{
+                                                padding: '12px 24px',
+                                                borderBottom: `2px solid ${atisaStyles.colors.primary}20`,
+                                                userSelect: 'none'
+                                            }}
+                                        >
+                                            Email {getSortIcon('email')}
+                                        </th>
+                                        <th
+                                            className="min-w-125px cursor-pointer"
+                                            onClick={() => handleSort('NIF')}
+                                            style={{
+                                                padding: '12px 24px',
+                                                borderBottom: `2px solid ${atisaStyles.colors.primary}20`,
+                                                userSelect: 'none'
+                                            }}
+                                        >
+                                            NIF {getSortIcon('NIF')}
+                                        </th>
+                                        <th
+                                            className="text-end min-w-100px pe-4 cursor-pointer"
+                                            onClick={() => handleSort('admin')}
+                                            style={{
+                                                padding: '12px 24px',
+                                                borderBottom: `2px solid ${atisaStyles.colors.primary}20`,
+                                                userSelect: 'none'
+                                            }}
+                                        >
+                                            Admin {getSortIcon('admin')}
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-gray-600 fw-semibold">
