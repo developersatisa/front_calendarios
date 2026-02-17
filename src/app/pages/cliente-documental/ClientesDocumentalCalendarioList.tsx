@@ -77,10 +77,11 @@ const ClientesDocumentalCalendarioList: FC = () => {
     try {
       setLoading(true)
       setSearching(true)
-      // Cargar todos los clientes sin paginación para búsqueda
+      setSearching(true)
+      // Cargar todos los clientes sin paginación para búsqueda (limit grande para traer todos)
       let response
       if (isAdmin) {
-        response = await getAllClientes()
+        response = await getAllClientes(1, 10000)
       } else if (currentUser?.email) {
         // Usuario normal: endpoint específico
         response = await getClientesUsuario(currentUser.email, undefined, undefined, undefined, 'asc')
@@ -209,15 +210,17 @@ const ClientesDocumentalCalendarioList: FC = () => {
     const searchNormalized = normalizeText(searchTermStr)
 
     return clientesToFilter.filter((cliente) => {
-      const idclienteNormalized = normalizeText(String(cliente.idcliente || ''))
-      const razsocNormalized = normalizeText(cliente.razsoc || '')
-      const cifNormalized = normalizeText(cliente.cif || '')
-      const localidadNormalized = normalizeText(cliente.localidad || '')
+      // Buscar en campos: razsoc y cif
+      const searchFields = [
+        cliente.razsoc,
+        cliente.cif
+      ]
 
-      return idclienteNormalized.includes(searchNormalized) ||
-        razsocNormalized.includes(searchNormalized) ||
-        cifNormalized.includes(searchNormalized) ||
-        localidadNormalized.includes(searchNormalized)
+      return searchFields.some(field => {
+        if (!field) return false
+        const fieldNormalized = normalizeText(field)
+        return fieldNormalized.includes(searchNormalized)
+      })
     })
   }, [clientes, allClientes, debouncedSearchTerm])
 
@@ -406,7 +409,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
             <input
               type='text'
               className='form-control'
-              placeholder='Buscar por ID, razón social, CIF o localidad...'
+              placeholder='Buscar por razón social o CIF...'
               value={searchTerm}
               onChange={handleSearch}
               style={{
@@ -507,7 +510,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
               >
                 <th
                   className='cursor-pointer user-select-none'
-                  onClick={() => handleSort('idcliente')}
+                  onClick={() => handleSort('cif')}
                   style={{
                     transition: 'all 0.2s',
                     fontFamily: atisaStyles.fonts.primary,
@@ -524,7 +527,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
                     e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
                   }}
                 >
-                  ID {getSortIcon('idcliente')}
+                  CIF {getSortIcon('cif')}
                 </th>
                 <th
                   className='cursor-pointer user-select-none'
@@ -589,7 +592,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
                       padding: '16px 12px'
                     }}
                   >
-                    {cliente.idcliente}
+                    {cliente.cif || '-'}
                   </td>
                   <td
                     style={{

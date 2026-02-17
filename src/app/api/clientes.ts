@@ -93,6 +93,11 @@ export const getAllClientes = async (
   return response.data
 }
 
+export const getDropdownClientes = async () => {
+  const response = await api.get<ClientesResponse>('/clientes/con-calendario')
+  return response.data.clientes
+}
+
 export const getClienteById = async (id: string | number) => {
   const response = await api.get<Cliente>(`/clientes/${id}`)
   return response.data

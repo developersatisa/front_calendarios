@@ -209,9 +209,15 @@ const HitosList: FC = () => {
       if (hitoEditando) {
         const updated = await updateHito(hitoEditando.id, hitoData)
         setHitos(hitos.map((h) => (h.id === hitoEditando.id ? updated : h)))
+        if (debouncedSearchTerm.trim()) {
+          setAllHitos(allHitos.map((h) => (h.id === hitoEditando.id ? updated : h)))
+        }
       } else {
         const created = await createHito(hitoData)
         setHitos([...hitos, created])
+        if (debouncedSearchTerm.trim()) {
+          setAllHitos([...allHitos, created])
+        }
       }
       setShowModal(false)
     } catch (error) {
@@ -224,6 +230,9 @@ const HitosList: FC = () => {
       try {
         await deleteHito(id)
         setHitos(hitos.filter((hito) => hito.id !== id))
+        if (debouncedSearchTerm.trim()) {
+          setAllHitos(allHitos.filter((hito) => hito.id !== id))
+        }
       } catch (error: any) {
         // Extraer el mensaje de error del backend
         let errorMessage = 'Error al eliminar el hito'
@@ -287,7 +296,11 @@ const HitosList: FC = () => {
       showToastMessage(`Hito "${hito.nombre}" deshabilitado correctamente`, 'success')
 
       // Recargar la lista de hitos
-      loadHitos()
+      if (debouncedSearchTerm.trim()) {
+        loadAllHitos()
+      } else {
+        loadHitos()
+      }
 
     } catch (error: any) {
       console.error('Error al deshabilitar hito:', error)
@@ -358,7 +371,11 @@ const HitosList: FC = () => {
       cerrarModalDeshabilitar()
 
       // Recargar la lista de hitos
-      loadHitos()
+      if (debouncedSearchTerm.trim()) {
+        loadAllHitos()
+      } else {
+        loadHitos()
+      }
 
     } catch (error: any) {
       console.error('Error al deshabilitar hito:', error)
@@ -384,7 +401,11 @@ const HitosList: FC = () => {
       showToastMessage(`Hito "${hito.nombre}" habilitado correctamente`, 'success')
 
       // Recargar la lista de hitos
-      loadHitos()
+      if (debouncedSearchTerm.trim()) {
+        loadAllHitos()
+      } else {
+        loadHitos()
+      }
 
     } catch (error: any) {
       console.error('Error al habilitar hito:', error)
@@ -1090,7 +1111,7 @@ const HitosList: FC = () => {
             >
               <button
                 onClick={() => {
-                  const hito = hitos.find(h => h.id === activeDropdown)
+                  const hito = filteredHitos.find(h => h.id === activeDropdown)
                   if (hito) {
                     setHitoEditando(hito)
                     setShowModal(true)
@@ -1135,7 +1156,7 @@ const HitosList: FC = () => {
 
               <button
                 onClick={() => {
-                  const hito = hitos.find(h => h.id === activeDropdown)
+                  const hito = filteredHitos.find(h => h.id === activeDropdown)
                   if (hito) {
                     setHitoMassUpdate(hito)
                     setShowMassUpdateModal(true)
@@ -1180,7 +1201,7 @@ const HitosList: FC = () => {
 
               <button
                 onClick={() => {
-                  const hito = hitos.find(h => h.id === activeDropdown)
+                  const hito = filteredHitos.find(h => h.id === activeDropdown)
                   if (hito) {
                     if (hito.habilitado === 1) {
                       abrirModalDeshabilitar(hito)
@@ -1197,7 +1218,7 @@ const HitosList: FC = () => {
                   padding: '12px 16px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: hitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? '#f59e0b' : '#28a745',
+                  color: filteredHitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? '#f59e0b' : '#28a745',
                   fontFamily: atisaStyles.fonts.secondary,
                   fontWeight: '600',
                   fontSize: '14px',
@@ -1208,7 +1229,7 @@ const HitosList: FC = () => {
                   borderRadius: '0'
                 }}
                 onMouseEnter={(e) => {
-                  const hito = hitos.find(h => h.id === activeDropdown)
+                  const hito = filteredHitos.find(h => h.id === activeDropdown)
                   if (hito?.habilitado === 1) {
                     e.currentTarget.style.backgroundColor = '#fef3cd'
                     e.currentTarget.style.color = '#856404'
@@ -1218,16 +1239,16 @@ const HitosList: FC = () => {
                   }
                 }}
                 onMouseLeave={(e) => {
-                  const hito = hitos.find(h => h.id === activeDropdown)
+                  const hito = filteredHitos.find(h => h.id === activeDropdown)
                   e.currentTarget.style.backgroundColor = 'transparent'
                   e.currentTarget.style.color = hito?.habilitado === 1 ? '#f59e0b' : '#28a745'
                 }}
               >
                 <i
-                  className={`bi ${hitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'bi-slash-circle' : 'bi-check-circle'} me-3`}
+                  className={`bi ${filteredHitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'bi-slash-circle' : 'bi-check-circle'} me-3`}
                   style={{ fontSize: '16px', color: 'white' }}
                 ></i>
-                {hitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'Deshabilitar' : 'Habilitar'}
+                {filteredHitos.find(h => h.id === activeDropdown)?.habilitado === 1 ? 'Deshabilitar' : 'Habilitar'}
               </button>
 
               <div style={{

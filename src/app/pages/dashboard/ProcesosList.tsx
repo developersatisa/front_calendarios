@@ -232,6 +232,11 @@ const ProcesosList: FC = () => {
         setProcesos([...procesos, newProceso])
       }
       setShowModal(false)
+      if (debouncedSearchTerm.trim()) {
+        await loadAllProcesos()
+      } else {
+        await loadAll()
+      }
     } catch (error) {
       console.error('Error al guardar el proceso:', error)
     }
@@ -241,7 +246,11 @@ const ProcesosList: FC = () => {
     if (confirm('¿Está seguro de eliminar este proceso?')) {
       try {
         await deleteProceso(id)
-        loadAll()
+        if (debouncedSearchTerm.trim()) {
+          await loadAllProcesos()
+        } else {
+          await loadAll()
+        }
       } catch (error: any) {
         // Extraer el mensaje de error del backend
         let errorMessage = 'Error al eliminar el proceso'
@@ -269,7 +278,11 @@ const ProcesosList: FC = () => {
     try {
       const promises = newRelations.map(relation => createProcesoHitosMaestro(relation))
       await Promise.all(promises)
-      loadAll()
+      if (debouncedSearchTerm.trim()) {
+        await loadAllProcesos()
+      } else {
+        await loadAll()
+      }
       setShowHitosModal(false)
     } catch (error) {
       console.error('Error al guardar hitos:', error)
@@ -821,7 +834,7 @@ const ProcesosList: FC = () => {
             >
               <button
                 onClick={() => {
-                  const proceso = procesos.find(p => p.id === activeDropdown)
+                  const proceso = filteredProcesos.find(p => p.id === activeDropdown)
                   if (proceso) {
                     handleEditar(proceso)
                   }

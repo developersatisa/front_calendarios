@@ -91,6 +91,8 @@ export interface ClienteProcesoHitoResumido {
   cliente: string;
   hito: string;
   proceso: string;
+  proceso_id: number;
+  hito_id: number;
   estado: string;
   hora_limite: string | null;
 }
@@ -102,13 +104,35 @@ export interface ClienteProcesoHitosFechaResponse {
   items: ClienteProcesoHitoResumido[];
 }
 
+export interface FiltrosResponse {
+  procesos: { id: number; nombre: string }[];
+  hitos: { id: number; nombre: string }[];
+}
+
+export const getFiltrosClienteProcesoHitos = async (
+  anio: number,
+  mes: number,
+  clienteId?: string | number
+) => {
+  const params = new URLSearchParams({
+    anio: anio.toString(),
+    mes: mes.toString()
+  });
+  if (clienteId) params.append('cliente_id', clienteId.toString());
+  const response = await api.get<FiltrosResponse>(`/cliente-proceso-hitos/filtros?${params.toString()}`);
+  return response.data;
+}
+
 export const getClienteProcesoHitosPorFecha = async (
   anio: number,
   mes: number,
   page: number = 1,
   limit: number = 10,
   sortField: string = 'fecha_limite',
-  sortDirection: 'asc' | 'desc' = 'asc'
+  sortDirection: 'asc' | 'desc' = 'asc',
+  clienteId?: string | number,
+  procesosIds?: number[],
+  hitosIds?: number[]
 ) => {
   const params = new URLSearchParams({
     anio: anio.toString(),
@@ -118,6 +142,13 @@ export const getClienteProcesoHitosPorFecha = async (
     sort_by: sortField,
     order: sortDirection
   });
+  if (clienteId) params.append('cliente_id', clienteId.toString());
+  if (procesosIds?.length) {
+    procesosIds.forEach(id => params.append('proceso_ids', id.toString()));
+  }
+  if (hitosIds?.length) {
+    hitosIds.forEach(id => params.append('hito_ids', id.toString()));
+  }
   const response = await api.get<ClienteProcesoHitosFechaResponse>(`/cliente-proceso-hitos/fecha?${params.toString()}`);
   return response.data;
 }

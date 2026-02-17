@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState, useRef } from 'react'
+import React, { FC, useEffect, useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { KTCard, KTCardBody, KTSVG } from '../../../_metronic/helpers'
@@ -24,7 +24,10 @@ const MetadatosList: FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Estados para búsqueda
+  const [allMetadatos, setAllMetadatos] = useState<Metadato[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [searching, setSearching] = useState(false)
 
   // Estados para el modal
   const [showModal, setShowModal] = useState(false)
@@ -117,6 +120,34 @@ const MetadatosList: FC = () => {
     }
   }, [activeDropdown])
 
+  // Debounce para el término de búsqueda
+  useEffect(() => {
+    if (searchTerm) {
+      setSearching(true)
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300)
+
+    return () => {
+      clearTimeout(timer)
+      if (!searchTerm) {
+        setSearching(false)
+      }
+    }
+  }, [searchTerm])
+
+  // Cargar todos los metadatos cuando hay búsqueda
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      setPage(1)
+      loadAllMetadatos()
+    } else {
+      setAllMetadatos([])
+    }
+  }, [debouncedSearchTerm])
+
   const loadAll = async () => {
     try {
       setLoading(true)
@@ -144,16 +175,58 @@ const MetadatosList: FC = () => {
     }
   }
 
+  const loadAllMetadatos = async () => {
+    try {
+      setLoading(true)
+      setSearching(true)
+      const [metadatosData, subdepartamentosData, metadatosAreaData] = await Promise.all([
+        getAllMetadatos(),
+        getAllSubdepartamentos(),
+        getAllMetadatosArea()
+      ])
+      setAllMetadatos(metadatosData.metadatos || [])
+      setSubdepartamentos(subdepartamentosData.subdepartamentos || [])
+      setMetadatosArea(metadatosAreaData || [])
+    } catch (error: any) {
+      // Handle error similarly
+      console.error('Error loading all metadatos:', error)
+      if (error?.response?.status === 404) {
+        setAllMetadatos([])
+      }
+    } finally {
+      setLoading(false)
+      setSearching(false)
+    }
+  }
+
   useEffect(() => {
-    loadAll()
-  }, [page, limit, sortField, sortDirection])
+    if (!debouncedSearchTerm.trim()) {
+      loadAll()
+    }
+  }, [page, limit, sortField, sortDirection, debouncedSearchTerm])
 
   // Filtrar metadatos por término de búsqueda
-  const filteredMetadatos = metadatos.filter(metadato =>
-    metadato.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (metadato.descripcion || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    metadato.tipo_generacion.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredMetadatos = useMemo(() => {
+    const metadatosToFilter = debouncedSearchTerm.trim() ? allMetadatos : metadatos
+    if (!debouncedSearchTerm.trim()) return metadatosToFilter
+
+    return metadatosToFilter.filter(metadato =>
+      metadato.nombre.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      (metadato.descripcion || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      metadato.tipo_generacion.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    )
+  }, [metadatos, allMetadatos, debouncedSearchTerm])
+
+  // Aplicar paginación a los resultados filtrados
+  const paginatedMetadatos = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return filteredMetadatos
+    }
+    // Cuando hay búsqueda, aplicar paginación a los resultados filtrados
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredMetadatos.slice(startIndex, endIndex)
+  }, [filteredMetadatos, page, limit, debouncedSearchTerm])
 
   // Agrupar metadatos-area por metadato
   const groupedMetadatosArea = metadatosArea.reduce((groups, ma) => {
@@ -198,7 +271,12 @@ const MetadatosList: FC = () => {
       }
       setShowModal(false)
       setEditingMetadato(null)
-      await loadAll()
+      setEditingMetadato(null)
+      if (debouncedSearchTerm.trim()) {
+        await loadAllMetadatos()
+      } else {
+        await loadAll()
+      }
     } catch (error) {
       console.error('Error al guardar metadato:', error)
       setError('Error al guardar el metadato')
@@ -209,7 +287,11 @@ const MetadatosList: FC = () => {
     if (window.confirm('¿Está seguro de que desea eliminar este metadato?')) {
       try {
         await deleteMetadato(id)
-        await loadAll()
+        if (debouncedSearchTerm.trim()) {
+          await loadAllMetadatos()
+        } else {
+          await loadAll()
+        }
       } catch (error) {
         console.error('Error al eliminar metadato:', error)
         setError('Error al eliminar el metadato')
@@ -226,7 +308,12 @@ const MetadatosList: FC = () => {
     try {
       const promises = newRelations.map(relation => createMetadatoArea(relation))
       await Promise.all(promises)
-      await loadAll()
+      await Promise.all(promises)
+      if (debouncedSearchTerm.trim()) {
+        await loadAllMetadatos()
+      } else {
+        await loadAll()
+      }
       setShowSubdepartamentosModal(false)
     } catch (error) {
       console.error('Error al guardar subdepartamentos:', error)
@@ -280,9 +367,33 @@ const MetadatosList: FC = () => {
                   border: `2px solid ${atisaStyles.colors.light}`,
                   borderRadius: '8px',
                   fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  paddingRight: searching ? '50px' : '16px'
                 }}
               />
+              {searching && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 10
+                  }}
+                >
+                  <div
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    style={{
+                      color: atisaStyles.colors.primary,
+                      width: '20px',
+                      height: '20px'
+                    }}
+                  >
+                    <span className="visually-hidden">Buscando...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className='card-toolbar'>
@@ -392,7 +503,7 @@ const MetadatosList: FC = () => {
                       margin: 0
                     }}
                   >
-                    {searchTerm ? 'No se encontraron metadatos que coincidan con tu búsqueda.' : 'Comienza creando tu primer metadato.'}
+                    {debouncedSearchTerm ? 'No se encontraron metadatos que coincidan con tu búsqueda.' : 'Comienza creando tu primer metadato.'}
                   </p>
                 </div>
               ) : (
@@ -549,7 +660,7 @@ const MetadatosList: FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredMetadatos.map((metadato, index) => (
+                      {paginatedMetadatos.map((metadato, index) => (
                         <tr
                           key={metadato.id}
                           style={{
@@ -738,7 +849,7 @@ const MetadatosList: FC = () => {
               {filteredMetadatos.length > 0 && (
                 <SharedPagination
                   currentPage={page}
-                  totalItems={total}
+                  totalItems={debouncedSearchTerm.trim() ? filteredMetadatos.length : total}
                   pageSize={limit}
                   onPageChange={setPage}
                 />
@@ -772,7 +883,7 @@ const MetadatosList: FC = () => {
             >
               <button
                 onClick={() => {
-                  const metadato = metadatos.find(m => m.id === activeDropdown)
+                  const metadato = filteredMetadatos.find(m => m.id === activeDropdown)
                   if (metadato) {
                     handleEdit(metadato)
                   }
@@ -809,7 +920,7 @@ const MetadatosList: FC = () => {
               </button>
 
               {(() => {
-                const metadato = metadatos.find(m => m.id === activeDropdown)
+                const metadato = filteredMetadatos.find(m => m.id === activeDropdown)
                 if (metadato && metadato.tipo_generacion !== 'automatico') {
                   return (
                     <>

@@ -1,8 +1,29 @@
 import { FC, useState, useEffect } from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import { atisaStyles } from '../../../../styles/atisaStyles'
-import { getClienteProcesoHitosPorFecha, ClienteProcesoHitoResumido } from '../../../../api/clienteProcesoHitos'
+import { getClienteProcesoHitosPorFecha, ClienteProcesoHitoResumido, getFiltrosClienteProcesoHitos } from '../../../../api/clienteProcesoHitos'
+import Select, { components } from 'react-select'
+
+// Componente personalizado para opción con checkbox
+const CheckboxOption = (props: any) => {
+    return (
+        <components.Option {...props}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                    type="checkbox"
+                    checked={props.isSelected}
+                    onChange={() => null}
+                    style={{ marginRight: '8px' }}
+                    className="form-check-input"
+                />
+                <label>{props.label}</label>
+            </div>
+        </components.Option>
+    );
+};
+
 import { useAuth } from '../../../../modules/auth/core/Auth'
+import { Cliente, getDropdownClientes } from '../../../../api/clientes'
 import SharedPagination from '../../../../components/pagination/SharedPagination'
 import CumplimentarHitosMasivoModal from './CumplimentarHitosMasivoModal'
 
@@ -20,6 +41,14 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
     // Filtros
     const [mes, setMes] = useState<number>(new Date().getMonth() + 1)
     const [anio, setAnio] = useState<number>(new Date().getFullYear())
+    const [selectedClienteId, setSelectedClienteId] = useState<string>('')
+    const [clientes, setClientes] = useState<Cliente[]>([])
+
+    // Filtros Multi-select
+    const [procesosOpts, setProcesosOpts] = useState<{ value: number; label: string }[]>([])
+    const [hitosOpts, setHitosOpts] = useState<{ value: number; label: string }[]>([])
+    const [selectedProcesos, setSelectedProcesos] = useState<{ value: number; label: string }[]>([])
+    const [selectedHitos, setSelectedHitos] = useState<{ value: number; label: string }[]>([])
 
     // Tabla y Paginación
     const [items, setItems] = useState<ClienteProcesoHitoResumido[]>([])
@@ -45,20 +74,78 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
             setSelectedIds([])
             setPage(1)
             setHasSearched(true)
+            setSelectedClienteId('')
+
+            // Cargar lista de clientes
+            getDropdownClientes()
+                .then(setClientes)
+                .catch(console.error)
+
+            setSelectedProcesos([])
+            setSelectedHitos([])
         }
     }, [show])
+
+    // Cargar opciones de filtros cuando cambian dependencias
+    useEffect(() => {
+        if (show) {
+            getFiltrosClienteProcesoHitos(anio, mes, selectedClienteId)
+                .then(data => {
+                    setProcesosOpts(data.procesos.map(p => ({ value: p.id, label: p.nombre })))
+                    setHitosOpts(data.hitos.map(h => ({ value: h.id, label: h.nombre })))
+                })
+                .catch(console.error)
+        }
+    }, [anio, mes, selectedClienteId, show])
 
     // Cargar datos (reactivo a filtros y paginación)
     useEffect(() => {
         if (show && hasSearched) {
-            loadData(anio, mes, page, limit, sortField, sortDirection)
+            loadData(anio, mes, page, limit, sortField, sortDirection, selectedClienteId)
         }
-    }, [page, sortField, sortDirection, mes, anio, show, hasSearched])
+    }, [page, sortField, sortDirection, mes, anio, show, hasSearched, selectedClienteId])
 
-    const loadData = async (pAnio: number, pMes: number, pPage: number, pLimit: number, pSort: string, pOrder: 'asc' | 'desc') => {
+    // Lógica de Selección Automática basada en filtros
+    useEffect(() => {
+        if (items.length === 0) return
+
+        const selectedProcIds = selectedProcesos.map(p => p.value)
+        const selectedHitoIds = selectedHitos.map(h => h.value)
+
+        if (selectedProcIds.length === 0 && selectedHitoIds.length === 0) {
+            return
+        }
+
+        const matchingIds: number[] = []
+        items.forEach(item => {
+            let match = false
+            if (selectedProcIds.includes(item.proceso_id)) match = true
+            if (selectedHitoIds.includes(item.hito_id)) match = true
+
+            if (match) matchingIds.push(item.id)
+        })
+
+        setSelectedIds(prev => {
+            const newSet = new Set(prev)
+            matchingIds.forEach(id => newSet.add(id))
+            const newArr = Array.from(newSet)
+            if (prev.length === newArr.length) return prev
+            return newArr
+        })
+    }, [selectedProcesos, selectedHitos, items])
+
+    const loadData = async (
+        pAnio: number,
+        pMes: number,
+        pPage: number,
+        pLimit: number,
+        pSort: string,
+        pOrder: 'asc' | 'desc',
+        pClienteId?: string
+    ) => {
         setLoadingData(true)
         try {
-            const response = await getClienteProcesoHitosPorFecha(pAnio, pMes, pPage, pLimit, pSort, pOrder)
+            const response = await getClienteProcesoHitosPorFecha(pAnio, pMes, pPage, pLimit, pSort, pOrder, pClienteId)
             setItems(response.items || [])
             setTotalItems(response.total || 0)
         } catch (error) {
@@ -76,6 +163,11 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
         setMes(now.getMonth() + 1)
         setAnio(now.getFullYear())
         setPage(1)
+        setAnio(now.getFullYear())
+        setPage(1)
+        setSelectedClienteId('')
+        setSelectedProcesos([])
+        setSelectedHitos([])
     }
 
     const handleMesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -206,6 +298,29 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
                     >
                         <div className="row g-3 align-items-end">
                             <div className="col-md-3">
+                                <label className="form-label fw-bold" style={{ color: atisaStyles.colors.primary }}>Cliente</label>
+                                <select
+                                    className="form-select form-select-solid"
+                                    value={selectedClienteId}
+                                    onChange={(e) => {
+                                        setSelectedClienteId(e.target.value)
+                                        setPage(1)
+                                    }}
+                                    style={{
+                                        border: `1px solid ${atisaStyles.colors.light}`,
+                                        borderRadius: '8px',
+                                        fontSize: '14px'
+                                    }}
+                                >
+                                    <option value="">Todos los clientes</option>
+                                    {clientes.map((c) => (
+                                        <option key={c.idcliente} value={c.idcliente}>
+                                            {c.idcliente} - {c.razsoc}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-2">
                                 <label className="form-label fw-bold" style={{ color: atisaStyles.colors.primary }}>Mes</label>
                                 <select
                                     className="form-select form-select-solid"
@@ -224,7 +339,7 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
                                     ))}
                                 </select>
                             </div>
-                            <div className="col-md-3">
+                            <div className="col-md-2">
                                 <label className="form-label fw-bold" style={{ color: atisaStyles.colors.primary }}>Año</label>
                                 <input
                                     type="number"
@@ -238,7 +353,7 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
                                     }}
                                 />
                             </div>
-                            <div className="col-md-3">
+                            <div className="col-md-2">
                                 <button
                                     className="btn w-100"
                                     onClick={handleResetFecha}
@@ -260,8 +375,60 @@ const CumplimientoMasivoModal: FC<Props> = ({ show, onHide, onSuccess, onError }
                                         e.currentTarget.style.transform = 'translateY(0)'
                                     }}
                                 >
-                                    {loadingData ? 'Cargando...' : <><i className="bi bi-calendar-event me-2 text-white"></i>Mes Actual</>}
+                                    {loadingData ? 'Cargando...' : <><i className="bi bi-calendar-event me-2 text-white"></i>Reset</>}
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* Fila de filtros de Procesos e Hitos */}
+                        <div className="row g-3 mt-2">
+                            <div className="col-md-6">
+                                <label className="form-label fw-bold" style={{ color: atisaStyles.colors.primary }}>Procesos</label>
+                                <Select
+                                    isMulti
+                                    closeMenuOnSelect={false}
+                                    hideSelectedOptions={false}
+                                    components={{ Option: CheckboxOption }}
+                                    options={procesosOpts}
+                                    value={selectedProcesos}
+                                    onChange={(newValue) => {
+                                        setSelectedProcesos(newValue as { value: number; label: string }[])
+                                        setPage(1)
+                                    }}
+                                    placeholder="Seleccionar procesos..."
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            borderColor: atisaStyles.colors.light,
+                                            borderRadius: '8px',
+                                            minHeight: '42px'
+                                        })
+                                    }}
+                                />
+                            </div>
+                            <div className="col-md-6">
+                                <label className="form-label fw-bold" style={{ color: atisaStyles.colors.primary }}>Hitos</label>
+                                <Select
+                                    isMulti
+                                    closeMenuOnSelect={false}
+                                    hideSelectedOptions={false}
+                                    components={{ Option: CheckboxOption }}
+                                    options={hitosOpts}
+                                    value={selectedHitos}
+                                    onChange={(newValue) => {
+                                        setSelectedHitos(newValue as { value: number; label: string }[])
+                                        setPage(1)
+                                    }}
+                                    placeholder="Seleccionar hitos..."
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            borderColor: atisaStyles.colors.light,
+                                            borderRadius: '8px',
+                                            minHeight: '42px'
+                                        })
+                                    }}
+                                />
                             </div>
                         </div>
                     </div>

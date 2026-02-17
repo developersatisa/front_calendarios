@@ -1,15 +1,15 @@
-import {FC, useState, useEffect, useRef, useMemo} from 'react'
-import {createPortal} from 'react-dom'
-import {useNavigate} from 'react-router-dom'
-import {KTCard, KTCardBody} from '../../../_metronic/helpers'
+import { FC, useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
+import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import CustomToast from '../../components/ui/CustomToast'
 import PlantillaModal from './components/PlantillaModal'
 import PlantillaProcesosModal from './components/PlantillaProcesosModal'
-import {Plantilla, getAllPlantillas, createPlantilla, updatePlantilla, deletePlantilla} from '../../api/plantillas'
-import {PlantillaProcesos, getAllPlantillaProcesos, createPlantillaProcesos, deletePlantillaProcesos} from '../../api/plantillaProcesos'
-import {Proceso, getAllProcesos} from '../../api/procesos'
+import { Plantilla, getAllPlantillas, createPlantilla, updatePlantilla, deletePlantilla } from '../../api/plantillas'
+import { PlantillaProcesos, getAllPlantillaProcesos, createPlantillaProcesos, deletePlantillaProcesos } from '../../api/plantillaProcesos'
+import { Proceso, getAllProcesos } from '../../api/procesos'
 import SharedPagination from '../../components/pagination/SharedPagination'
-import {atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles} from '../../styles/atisaStyles'
+import { atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles } from '../../styles/atisaStyles'
 
 const PlantillasList: FC = () => {
   const navigate = useNavigate()
@@ -230,6 +230,11 @@ const PlantillasList: FC = () => {
         setPlantillas([...plantillas, created])
       }
       setShowModal(false)
+      if (debouncedSearchTerm.trim()) {
+        await loadAllPlantillas()
+      } else {
+        await loadAll()
+      }
     } catch (error) {
       console.error('Error al guardar la plantilla:', error)
     }
@@ -239,7 +244,12 @@ const PlantillasList: FC = () => {
     if (confirm('¿Estás seguro de que deseas eliminar esta plantilla?')) {
       try {
         await deletePlantilla(id)
-        setPlantillas(plantillas.filter((plantilla) => plantilla.id !== id))
+        if (debouncedSearchTerm.trim()) {
+          await loadAllPlantillas()
+        } else {
+          setPlantillas(plantillas.filter((plantilla) => plantilla.id !== id))
+          await loadAll()
+        }
       } catch (error: any) {
         // Extraer el mensaje de error del backend
         let errorMessage = 'Error al eliminar la plantilla'
@@ -257,7 +267,11 @@ const PlantillasList: FC = () => {
     try {
       const promises = newRelations.map(relation => createPlantillaProcesos(relation))
       await Promise.all(promises)
-      loadAll()
+      if (debouncedSearchTerm.trim()) {
+        await loadAllPlantillas()
+      } else {
+        await loadAll()
+      }
       setShowProcesosModal(false)
     } catch (error) {
       console.error('Error al guardar procesos:', error)
@@ -787,7 +801,7 @@ const PlantillasList: FC = () => {
             >
               <button
                 onClick={() => {
-                  const plantilla = plantillas.find(p => p.id === activeDropdown)
+                  const plantilla = filteredPlantillas.find(p => p.id === activeDropdown)
                   if (plantilla) {
                     setPlantillaEditando(plantilla)
                     setShowModal(true)

@@ -233,8 +233,8 @@ const ClientesList: FC = () => {
     try {
       setLoading(true)
       setSearching(true)
-      // Cargar todos los clientes sin paginación para búsqueda
-      const data = await getAllClientes()
+      // Cargar todos los clientes sin paginación para búsqueda (limit grande para traer todos)
+      const data = await getAllClientes(1, 10000)
       setAllClientes(data.clientes || [])
 
       // NO verificar procesos durante la búsqueda para mejorar el rendimiento
@@ -268,7 +268,7 @@ const ClientesList: FC = () => {
       .trim()
   }
 
-  // Filtrar clientes usando useMemo para optimizar el rendimiento (solo por razón social)
+  // Filtrar clientes usando useMemo para optimizar el rendimiento (por múltiples campos)
   const filteredClientes = useMemo(() => {
     // Si hay búsqueda, usar allClientes; si no, usar clientes paginados
     const clientesToFilter = debouncedSearchTerm.trim() ? allClientes : clientes
@@ -282,10 +282,17 @@ const ClientesList: FC = () => {
     const searchNormalized = normalizeText(searchTermStr)
 
     return clientesToFilter.filter((cliente) => {
-      // Buscar únicamente en el campo razón social (razsoc)
-      if (!cliente.razsoc) return false
-      const razsocNormalized = normalizeText(cliente.razsoc)
-      return razsocNormalized.includes(searchNormalized)
+      // Buscar en múltiples campos
+      const searchFields = [
+        cliente.razsoc,
+        cliente.cif
+      ]
+
+      return searchFields.some(field => {
+        if (!field) return false
+        const fieldNormalized = normalizeText(field)
+        return fieldNormalized.includes(searchNormalized)
+      })
     })
   }, [clientes, allClientes, debouncedSearchTerm])
 
@@ -412,7 +419,7 @@ const ClientesList: FC = () => {
                 <input
                   type='text'
                   className='form-control form-control-solid w-250px ps-14'
-                  placeholder='Buscar por razón social...'
+                  placeholder='Buscar por Razón Social o CIF...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
