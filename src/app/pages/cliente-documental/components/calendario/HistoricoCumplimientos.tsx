@@ -45,7 +45,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     const [selectedEstadoProceso, setSelectedEstadoProceso] = useState<'todos' | 'Finalizado' | 'En proceso'>('todos')
     const [showFilters, setShowFilters] = useState(false)
     const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
-    const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento'>('fecha_creacion')
+    const [sortField, setSortField] = useState<'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento' | 'hito_tipo' | 'estado_plazo' | 'proceso_periodo' | 'proceso_estado' | 'num_documentos'>('fecha_creacion')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
     // Función para cargar cumplimientos
@@ -306,7 +306,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     }
 
     // Función para manejar el ordenamiento
-    const handleSort = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento') => {
+    const handleSort = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento' | 'hito_tipo' | 'estado_plazo' | 'proceso_periodo' | 'proceso_estado' | 'num_documentos') => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
         } else {
@@ -316,7 +316,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
     }
 
     // Función para obtener el icono de ordenamiento
-    const getSortIcon = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento') => {
+    const getSortIcon = (field: 'fecha_cumplimiento' | 'hora_cumplimiento' | 'fecha_limite' | 'hora_limite' | 'usuario' | 'proceso' | 'hito' | 'observacion' | 'fecha_creacion' | 'departamento' | 'hito_tipo' | 'estado_plazo' | 'proceso_periodo' | 'proceso_estado' | 'num_documentos') => {
         if (sortField !== field) {
             return (
                 <i
@@ -419,6 +419,44 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                     const fechaCreA = a.fecha_creacion ? new Date(a.fecha_creacion).getTime() : 0
                     const fechaCreB = b.fecha_creacion ? new Date(b.fecha_creacion).getTime() : 0
                     comparison = fechaCreA - fechaCreB
+                    break
+
+                case 'hito_tipo':
+                    const hitoInfoA = hitos.find(h => h.id === a.hito_id)
+                    const hitoInfoB = hitos.find(h => h.id === b.hito_id)
+                    const tipoA = hitoInfoA?.tipo || ''
+                    const tipoB = hitoInfoB?.tipo || ''
+                    comparison = tipoA.localeCompare(tipoB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'estado_plazo':
+                    const getEstado = (c: CumplimientoHistorico) => {
+                        if (!c.fecha_limite) return 'Cumplido';
+                        const fechaCumpl = new Date(c.fecha + (c.hora ? 'T' + c.hora : 'T00:00:00'));
+                        const fechaLim = new Date(c.fecha_limite + (c.hora_limite ? 'T' + c.hora_limite : 'T23:59:59'));
+                        return fechaCumpl <= fechaLim ? 'Cumplido en plazo' : 'Cumplido fuera de plazo';
+                    }
+                    const estadoA = getEstado(a)
+                    const estadoB = getEstado(b)
+                    comparison = estadoA.localeCompare(estadoB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'proceso_periodo':
+                    const perA = a.proceso_periodo || ''
+                    const perB = b.proceso_periodo || ''
+                    comparison = perA.localeCompare(perB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'proceso_estado':
+                    const estA = a.proceso_estado || ''
+                    const estB = b.proceso_estado || ''
+                    comparison = estA.localeCompare(estB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'num_documentos':
+                    const docsA = a.num_documentos || 0
+                    const docsB = b.num_documentos || 0
+                    comparison = docsA - docsB
                     break
 
                 default:
@@ -964,279 +1002,137 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     <th
                                         className="cursor-pointer user-select-none"
                                         onClick={() => handleSort('fecha_cumplimiento')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
                                         Fecha / Hora Cumplimiento {getSortIcon('fecha_cumplimiento')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
                                         onClick={() => handleSort('fecha_limite')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
                                         Fecha / Hora Límite {getSortIcon('fecha_limite')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('usuario')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
-                                    >
-                                        Usuario {getSortIcon('usuario')}
-                                    </th>
-
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('departamento')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
-                                    >
-                                        Cubos {getSortIcon('departamento')}
-                                    </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('proceso')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
-                                    >
-                                        Proceso {getSortIcon('proceso')}
-                                    </th>
-                                    <th
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                        }}
-                                    >
-                                        Período Proceso
-                                    </th>
-                                    <th
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        Estado Proceso
-                                    </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
                                         onClick={() => handleSort('hito')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
                                         Hito {getSortIcon('hito')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('observacion')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer',
-                                            textAlign: 'center'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
+                                        onClick={() => handleSort('hito_tipo')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
-                                        Observación {getSortIcon('observacion')}
+                                        Responsable {getSortIcon('hito_tipo')}
+                                    </th>
+
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('estado_plazo')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Estado (Plazo) {getSortIcon('estado_plazo')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('proceso')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Proceso {getSortIcon('proceso')}
+                                    </th>
+
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('departamento')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Cubos {getSortIcon('departamento')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('usuario')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Usuario {getSortIcon('usuario')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('observacion')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer', textAlign: 'center' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Observaciones {getSortIcon('observacion')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('proceso_periodo')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Período Proceso {getSortIcon('proceso_periodo')}
+                                    </th>
+                                    <th
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('proceso_estado')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer', textAlign: 'center' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
+                                    >
+                                        Estado Proceso {getSortIcon('proceso_estado')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"
                                         onClick={() => handleSort('fecha_creacion')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                        }}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
                                         Fecha / Hora Creación {getSortIcon('fecha_creacion')}
                                     </th>
                                     <th
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            textAlign: 'center'
-                                        }}
+                                        className="cursor-pointer user-select-none"
+                                        onClick={() => handleSort('num_documentos')}
+                                        style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, transition: 'background-color 0.2s ease', cursor: 'pointer', textAlign: 'center' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
-                                        Documentos
+                                        Documentos {getSortIcon('num_documentos')}
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td
-                                            colSpan={10}
-                                            className="text-center py-4"
-                                            style={{
-                                                backgroundColor: '#f8f9fa',
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                padding: '2rem'
-                                            }}
-                                        >
-                                            <div
-                                                className="spinner-border"
-                                                role="status"
-                                                style={{
-                                                    color: atisaStyles.colors.primary,
-                                                    width: '2rem',
-                                                    height: '2rem'
-                                                }}
-                                            >
+                                        <td colSpan={13} className="text-center py-4" style={{ backgroundColor: '#f8f9fa', fontFamily: atisaStyles.fonts.secondary, padding: '2rem' }}>
+                                            <div className="spinner-border" role="status" style={{ color: atisaStyles.colors.primary, width: '2rem', height: '2rem' }}>
                                                 <span className="visually-hidden">Cargando cumplimientos...</span>
                                             </div>
-                                            <span
-                                                className="ms-2"
-                                                style={{
-                                                    color: atisaStyles.colors.dark,
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    fontWeight: '500'
-                                                }}
-                                            >
-                                                Cargando cumplimientos...
-                                            </span>
+                                            <span className="ms-2" style={{ color: atisaStyles.colors.dark, fontFamily: atisaStyles.fonts.secondary, fontWeight: '500' }}>Cargando cumplimientos...</span>
                                         </td>
                                     </tr>
                                 ) : cumplimientosFiltrados.length === 0 ? (
                                     <tr>
-                                        <td
-                                            colSpan={10}
-                                            className="text-center py-4"
-                                            style={{
-                                                backgroundColor: '#f8f9fa',
-                                                fontFamily: atisaStyles.fonts.secondary,
-                                                padding: '2rem',
-                                                color: atisaStyles.colors.dark
-                                            }}
-                                        >
+                                        <td colSpan={13} className="text-center py-4" style={{ backgroundColor: '#f8f9fa', fontFamily: atisaStyles.fonts.secondary, padding: '2rem', color: atisaStyles.colors.dark }}>
                                             <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
                                             {debouncedSearchTerm || selectedHito || selectedProceso || fechaDesde || fechaHasta
                                                 ? 'No se encontraron cumplimientos con los filtros aplicados'
@@ -1245,315 +1141,124 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    cumplimientosFiltrados.map((cumplimiento, index) => (
-                                        <tr
-                                            key={cumplimiento.id}
-                                            style={{
-                                                backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                                                transition: 'all 0.2s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#e9ecef'
-                                                e.currentTarget.style.transform = 'translateY(-1px)'
-                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
-                                                e.currentTarget.style.transform = 'translateY(0)'
-                                                e.currentTarget.style.boxShadow = 'none'
-                                            }}
-                                        >
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {formatDate(cumplimiento.fecha)}, {formatTime(cumplimiento.hora)}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        backgroundColor: '#e8f5e8',
-                                                        color: '#2e7d32',
-                                                        padding: '6px 12px',
-                                                        borderRadius: '6px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '600',
-                                                        border: '1px solid #c8e6c9',
-                                                        boxShadow: '0 1px 3px rgba(46, 125, 50, 0.1)'
-                                                    }}
-                                                    title={cumplimiento.fecha_limite ? `${formatDate(cumplimiento.fecha_limite)} ${cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : ''}` : 'No disponible'}
-                                                >
-                                                    {cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
-                                                    {cumplimiento.hora_limite && `, ${formatTime(cumplimiento.hora_limite)}`}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        backgroundColor: atisaStyles.colors.light,
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500'
-                                                    }}
-                                                >
-                                                    {cumplimiento.usuario}
-                                                </span>
-                                            </td>
+                                    cumplimientosFiltrados.map((cumplimiento, index) => {
+                                        let estadoPlazo = 'Cumplido';
+                                        let estadoPlazoColor = '#2e7d32'; // Green
+                                        let estadoPlazoBg = '#e8f5e8';
 
-                                            <td
+                                        if (cumplimiento.fecha_limite) {
+                                            const fechaCumpl = new Date(cumplimiento.fecha + (cumplimiento.hora ? 'T' + cumplimiento.hora : 'T00:00:00'));
+                                            const fechaLim = new Date(cumplimiento.fecha_limite + (cumplimiento.hora_limite ? 'T' + cumplimiento.hora_limite : 'T23:59:59'));
+
+                                            if (fechaCumpl <= fechaLim) {
+                                                estadoPlazo = 'Cumplido en plazo';
+                                            } else {
+                                                estadoPlazo = 'Cumplido fuera de plazo';
+                                                estadoPlazoColor = '#d32f2f'; // Red
+                                                estadoPlazoBg = '#ffebee';
+                                            }
+                                        }
+
+                                        const hitoInfo = hitos.find(h => h.id === cumplimiento.hito_id);
+
+                                        return (
+                                            <tr
+                                                key={cumplimiento.id}
                                                 style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
+                                                    backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = '#e9ecef'
+                                                    e.currentTarget.style.transform = 'translateY(-1px)'
+                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 80, 92, 0.1)'
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                                                    e.currentTarget.style.transform = 'translateY(0)'
+                                                    e.currentTarget.style.boxShadow = 'none'
                                                 }}
                                             >
-                                                {cumplimiento.codSubDepar?.substring(4)} -
-                                                {cumplimiento.departamento || '-'}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span title={cumplimiento.proceso || 'No disponible'}>
-                                                    {cumplimiento.proceso || 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle',
-                                                    fontSize: '13px'
-                                                }}
-                                            >
-                                                {cumplimiento.proceso_periodo || '-'}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle',
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                {cumplimiento.proceso_estado && (
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    {formatDate(cumplimiento.fecha)}, {formatTime(cumplimiento.hora)}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle' }}>
                                                     <span
-                                                        style={{
-                                                            backgroundColor: cumplimiento.proceso_estado === 'Finalizado' ? '#e8f5e9' : '#e3f2fd',
-                                                            color: cumplimiento.proceso_estado === 'Finalizado' ? '#2e7d32' : '#1976d2',
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            border: `1px solid ${cumplimiento.proceso_estado === 'Finalizado' ? '#c8e6c9' : '#90caf9'}`,
-                                                            display: 'inline-block'
-                                                        }}
+                                                        style={{ backgroundColor: '#e8f5e8', color: '#2e7d32', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', border: '1px solid #c8e6c9', boxShadow: '0 1px 3px rgba(46, 125, 50, 0.1)' }}
+                                                        title={cumplimiento.fecha_limite ? `${formatDate(cumplimiento.fecha_limite)} ${cumplimiento.hora_limite ? formatTime(cumplimiento.hora_limite) : ''}` : 'No disponible'}
                                                     >
-                                                        {cumplimiento.proceso_estado}
+                                                        {cumplimiento.fecha_limite ? formatDate(cumplimiento.fecha_limite) : 'No disponible'}
+                                                        {cumplimiento.hora_limite && `, ${formatTime(cumplimiento.hora_limite)}`}
                                                     </span>
-                                                )}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span title={cumplimiento.hito || 'No disponible'}>
-                                                    {cumplimiento.hito || 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.dark,
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle',
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                {cumplimiento.observacion ? (
-                                                    <OverlayTrigger
-                                                        placement="top"
-                                                        overlay={
-                                                            <Tooltip id={`tooltip-obs-${cumplimiento.id}`} style={{ maxWidth: '300px' }}>
-                                                                {cumplimiento.observacion}
-                                                            </Tooltip>
-                                                        }
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-icon btn-sm"
-                                                            style={{
-                                                                background: 'transparent',
-                                                                border: 'none',
-                                                                padding: 0,
-                                                                transition: 'transform 0.2s'
-                                                            }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                                        >
-                                                            <i
-                                                                className="bi bi-chat-square-text-fill"
-                                                                style={{
-                                                                    color: '#dc3545', // Color rojo similar a indicador de comentario Excel
-                                                                    fontSize: '20px'
-                                                                }}
-                                                            ></i>
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    <span title={cumplimiento.hito || 'No disponible'}>
+                                                        {cumplimiento.hito || 'No disponible'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    {hitoInfo?.tipo || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    <span style={{ backgroundColor: estadoPlazoBg, color: estadoPlazoColor, padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', border: `1px solid ${estadoPlazoColor}40`, display: 'inline-block' }}>
+                                                        {estadoPlazo}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    <span title={cumplimiento.proceso || 'No disponible'}>
+                                                        {cumplimiento.proceso || 'No disponible'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    {cumplimiento.codSubDepar?.substring(4)} - {cumplimiento.departamento || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    <span style={{ backgroundColor: atisaStyles.colors.light, padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
+                                                        {cumplimiento.usuario}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                                    {cumplimiento.observacion ? (
+                                                        <OverlayTrigger placement="top" overlay={<Tooltip id={`tooltip-obs-${cumplimiento.id}`} style={{ maxWidth: '300px' }}>{cumplimiento.observacion}</Tooltip>}>
+                                                            <button type="button" className="btn btn-icon btn-sm" style={{ background: 'transparent', border: 'none', padding: 0, transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+                                                                <i className="bi bi-chat-square-text-fill" style={{ color: '#dc3545', fontSize: '20px' }}></i>
+                                                            </button>
+                                                        </OverlayTrigger>
+                                                    ) : (
+                                                        <i className="bi bi-chat-square" style={{ color: '#dee2e6', fontSize: '20px' }}></i>
+                                                    )}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {cumplimiento.proceso_periodo || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                                    {cumplimiento.proceso_estado && (
+                                                        <span style={{ backgroundColor: cumplimiento.proceso_estado === 'Finalizado' ? '#e8f5e9' : '#e3f2fd', color: cumplimiento.proceso_estado === 'Finalizado' ? '#2e7d32' : '#1976d2', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', border: `1px solid ${cumplimiento.proceso_estado === 'Finalizado' ? '#c8e6c9' : '#90caf9'}`, display: 'inline-block' }}>
+                                                            {cumplimiento.proceso_estado}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle' }}>
+                                                    <span style={{ backgroundColor: '#f3e5f5', color: '#7b1fa2', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', border: '1px solid #e1bee7', boxShadow: '0 1px 3px rgba(123, 31, 162, 0.1)' }} title={cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'No disponible'}>
+                                                        {cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'No disponible'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, padding: '16px 12px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                                    {cumplimiento.id && cumplimiento.num_documentos && cumplimiento.num_documentos > 0 ? (
+                                                        <button className="btn btn-sm" onClick={() => handleDescargarDocumentos(cumplimiento.id!)} disabled={downloadingCumplimientoId === cumplimiento.id} style={{ backgroundColor: atisaStyles.colors.accent, color: 'white', border: 'none', borderRadius: '8px', padding: '0', transition: 'background-color 0.3s ease, box-shadow 0.3s ease', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', boxShadow: '0 2px 8px rgba(0, 161, 222, 0.25)', cursor: downloadingCumplimientoId === cumplimiento.id ? 'not-allowed' : 'pointer', lineHeight: '1', verticalAlign: 'middle' }} onMouseEnter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 80, 92, 0.35)' } }} onMouseLeave={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 161, 222, 0.25)' } }} title={`Descargar ${cumplimiento.num_documentos} documento(s)`}>
+                                                            {downloadingCumplimientoId === cumplimiento.id ? (
+                                                                <span className="spinner-border spinner-border-sm" style={{ width: '20px', height: '20px', borderWidth: '3px', borderColor: 'rgba(255, 255, 255, 0.3)', borderTopColor: 'white' }}></span>
+                                                            ) : (
+                                                                <i className="bi bi-download" style={{ fontSize: '20px', lineHeight: '1', fontWeight: 'bold', color: 'white' }}></i>
+                                                            )}
                                                         </button>
-                                                    </OverlayTrigger>
-                                                ) : (
-                                                    <i
-                                                        className="bi bi-chat-square"
-                                                        style={{
-                                                            color: '#dee2e6',
-                                                            fontSize: '20px'
-                                                        }}
-                                                    ></i>
-                                                )}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    color: atisaStyles.colors.primary,
-                                                    fontWeight: '600',
-                                                    padding: '16px 12px',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        backgroundColor: '#f3e5f5',
-                                                        color: '#7b1fa2',
-                                                        padding: '6px 12px',
-                                                        borderRadius: '6px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '600',
-                                                        border: '1px solid #e1bee7',
-                                                        boxShadow: '0 1px 3px rgba(123, 31, 162, 0.1)'
-                                                    }}
-                                                    title={cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion).toLocaleString('es-ES', {
-                                                        day: '2-digit',
-                                                        month: '2-digit',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        second: '2-digit'
-                                                    }) : 'No disponible'}
-                                                >
-                                                    {cumplimiento.fecha_creacion ? new Date(cumplimiento.fecha_creacion).toLocaleString('es-ES', {
-                                                        day: '2-digit',
-                                                        month: '2-digit',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        second: '2-digit'
-                                                    }) : 'No disponible'}
-                                                </span>
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: atisaStyles.fonts.secondary,
-                                                    padding: '16px 12px',
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle'
-                                                }}
-                                            >
-                                                {cumplimiento.id && cumplimiento.num_documentos && cumplimiento.num_documentos > 0 ? (
-                                                    <button
-                                                        className="btn btn-sm"
-                                                        onClick={() => handleDescargarDocumentos(cumplimiento.id!)}
-                                                        disabled={downloadingCumplimientoId === cumplimiento.id}
-                                                        style={{
-                                                            backgroundColor: atisaStyles.colors.accent,
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '8px',
-                                                            padding: '0',
-                                                            transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '38px',
-                                                            height: '38px',
-                                                            boxShadow: '0 2px 8px rgba(0, 161, 222, 0.25)',
-                                                            cursor: downloadingCumplimientoId === cumplimiento.id ? 'not-allowed' : 'pointer',
-                                                            lineHeight: '1',
-                                                            verticalAlign: 'middle'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (!e.currentTarget.disabled) {
-                                                                e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 80, 92, 0.35)'
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (!e.currentTarget.disabled) {
-                                                                e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 161, 222, 0.25)'
-                                                            }
-                                                        }}
-                                                        title={`Descargar ${cumplimiento.num_documentos} documento(s)`}
-                                                    >
-                                                        {downloadingCumplimientoId === cumplimiento.id ? (
-                                                            <span
-                                                                className="spinner-border spinner-border-sm"
-                                                                style={{
-                                                                    width: '20px',
-                                                                    height: '20px',
-                                                                    borderWidth: '3px',
-                                                                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                                                                    borderTopColor: 'white'
-                                                                }}
-                                                            ></span>
-                                                        ) : (
-                                                            <i className="bi bi-download" style={{ fontSize: '20px', lineHeight: '1', fontWeight: 'bold', color: 'white' }}></i>
-                                                        )}
-                                                    </button>
-                                                ) : (
-                                                    <i
-                                                        className="bi bi-file-earmark-x"
-                                                        title="Sin documentos"
-                                                        style={{
-                                                            color: '#dee2e6',
-                                                            fontSize: '20px'
-                                                        }}
-                                                    ></i>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
+                                                    ) : (
+                                                        <i className="bi bi-file-earmark-x" title="Sin documentos" style={{ color: '#dee2e6', fontSize: '20px' }}></i>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>

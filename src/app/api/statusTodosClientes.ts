@@ -18,6 +18,8 @@ export interface HitoCompletoConInfo {
   // Información adicional del cliente
   cliente_id: string
   cliente_nombre: string
+  codSubDepar?: string | null
+  departamento_cliente?: string | null
 
   // Información adicional del proceso
   proceso_id: number
@@ -25,6 +27,9 @@ export interface HitoCompletoConInfo {
 
   // Información adicional del hito maestro
   hito_nombre: string
+  departamento?: string
+  estado_proceso?: string
+  estado_calculado?: string
 
   // Último cumplimiento (opcional)
   ultimo_cumplimiento?: {
@@ -35,6 +40,8 @@ export interface HitoCompletoConInfo {
     usuario: string
     fecha_creacion?: string
     num_documentos?: number
+    departamento?: string
+    codSubDepar?: string
   } | null
 }
 
@@ -49,5 +56,16 @@ export interface StatusTodosClientesResponse {
  */
 export const getStatusTodosClientes = async (): Promise<StatusTodosClientesResponse> => {
   const response = await api.get<StatusTodosClientesResponse>('/status-todos-clientes/hitos')
+  return response.data
+}
+
+/**
+ * Obtiene los hitos habilitados para un usuario específico (no admin)
+ * Requiere el email del usuario en el payload
+ */
+export const getStatusTodosClientesByUser = async (email: string): Promise<StatusTodosClientesResponse> => {
+  const params = new URLSearchParams()
+  params.append('email', email)
+  const response = await api.get<StatusTodosClientesResponse>(`/cliente-proceso-hitos/status-todos-clientes/hitos?${params.toString()}`)
   return response.data
 }

@@ -5,14 +5,18 @@ import SharedPagination from '../../../../components/pagination/SharedPagination
 import { Cliente, getAllClientes } from '../../../../api/clientes'
 import { ClienteProcesoHito } from '../../../../api/clienteProcesoHitos'
 import { ClienteProcesoHitoCumplimiento } from '../../../../api/clienteProcesoHitoCumplimientos'
-import { getStatusTodosClientes, HitoCompletoConInfo } from '../../../../api/statusTodosClientes'
+import { getStatusTodosClientes, getStatusTodosClientesByUser, HitoCompletoConInfo } from '../../../../api/statusTodosClientes'
+import { useAuth } from '../../../../modules/auth/core/Auth'
 import api from '../../../../api/axiosConfig'
+import { getAllSubdepartamentos, Subdepartamento } from '../../../../api/subdepartamentos'
+import Select from 'react-select'
 
 // Usamos la interfaz del API optimizado
 type HitoConInfo = HitoCompletoConInfo
 
 const StatusTodosClientes: FC = () => {
     const navigate = useNavigate()
+    const { isAdmin, currentUser } = useAuth()
     const [hitos, setHitos] = useState<HitoConInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [exporting, setExporting] = useState(false)
@@ -41,9 +45,11 @@ const StatusTodosClientes: FC = () => {
     const [fechaHasta, setFechaHasta] = useState('')
     const [clientesList, setClientesList] = useState<Cliente[]>([])
     const [showFilters, setShowFilters] = useState(false)
-    const [sortField, setSortField] = useState<'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo'>('fecha_limite')
+    const [sortField, setSortField] = useState<'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo' | 'departamento' | 'estado_proceso' | 'critico' | 'usuario' | 'observacion'>('fecha_limite')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
+    const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
+    const [selectedDepartamentos, setSelectedDepartamentos] = useState<string[]>([])
 
     // Función para normalizar texto
     const normalizeText = (text: string | null | undefined): string => {
@@ -60,7 +66,17 @@ const StatusTodosClientes: FC = () => {
         setLoading(true)
         try {
             // Llamada única optimizada al backend
-            const response = await getStatusTodosClientes()
+            let response
+            if (isAdmin) {
+                response = await getStatusTodosClientes()
+            } else {
+                if (!currentUser?.email) {
+                    console.error('El usuario no tiene email configurado')
+                    setLoading(false)
+                    return
+                }
+                response = await getStatusTodosClientesByUser(currentUser.email)
+            }
             const todosLosHitos = response.hitos || []
 
             setHitos(todosLosHitos)
@@ -108,6 +124,17 @@ const StatusTodosClientes: FC = () => {
         }
     }
 
+    // Cargar subdepartamentos para el filtro
+    const cargarSubdepartamentos = async () => {
+        try {
+            const response = await getAllSubdepartamentos(undefined, 1000, undefined, 'asc')
+            setSubdepartamentos(response.subdepartamentos || [])
+        } catch (error) {
+            console.error('Error cargando subdepartamentos:', error)
+            setSubdepartamentos([])
+        }
+    }
+
     // Debounce para el término de búsqueda
     useEffect(() => {
         if (searchTerm) {
@@ -128,7 +155,8 @@ const StatusTodosClientes: FC = () => {
     // Cargar datos iniciales
     useEffect(() => {
         cargarTodosLosHitos()
-    }, [])
+        cargarSubdepartamentos()
+    }, [isAdmin, currentUser])
 
     const formatDate = (date: string) => {
         if (!date) return '-'
@@ -224,6 +252,7 @@ const StatusTodosClientes: FC = () => {
         setSelectedTipos(new Set())
         setFechaDesde(getTodayDate())
         setFechaHasta('')
+        setSelectedDepartamentos([])
         setCurrentPage(1)
     }
 
@@ -266,8 +295,17 @@ const StatusTodosClientes: FC = () => {
                 params.append('search_term', debouncedSearchTerm)
             }
 
+            if (!isAdmin && currentUser?.email) {
+                params.append('email', currentUser.email)
+            }
+
+            // Determinar la URL base según el rol
+            const baseUrl = isAdmin
+                ? '/status-todos-clientes/exportar-excel'
+                : '/cliente-proceso-hitos/status-todos-clientes/exportar-excel'
+
             // Construir URL completa
-            const url = `/status-todos-clientes/exportar-excel${params.toString() ? `?${params.toString()}` : ''}`
+            const url = `${baseUrl}${params.toString() ? `?${params.toString()}` : ''}`
 
             // Hacer la petición para descargar el archivo
             const response = await api.get(url, {
@@ -332,7 +370,7 @@ const StatusTodosClientes: FC = () => {
     }
 
     // Función para manejar el ordenamiento
-    const handleSort = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo') => {
+    const handleSort = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo' | 'departamento' | 'estado_proceso' | 'critico' | 'usuario' | 'observacion') => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
         } else {
@@ -342,7 +380,7 @@ const StatusTodosClientes: FC = () => {
     }
 
     // Función para obtener el icono de ordenamiento
-    const getSortIcon = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo') => {
+    const getSortIcon = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo' | 'departamento' | 'estado_proceso' | 'critico' | 'usuario' | 'observacion') => {
         if (sortField !== field) {
             return (
                 <i
@@ -424,6 +462,38 @@ const StatusTodosClientes: FC = () => {
                     comparison = tipoA.localeCompare(tipoB, 'es', { sensitivity: 'base' })
                     break
 
+
+                case 'departamento':
+                    const depA = `${a.codSubDepar || ''} ${a.departamento_cliente || ''}`
+                    const depB = `${b.codSubDepar || ''} ${b.departamento_cliente || ''}`
+                    comparison = depA.localeCompare(depB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'estado_proceso':
+                    const pEstA = a.estado_proceso || ''
+                    const pEstB = b.estado_proceso || ''
+                    comparison = pEstA.localeCompare(pEstB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'critico':
+                    // Ordenar por booleano (clave vs no clave)
+                    const critA = a.critico ? 1 : 0
+                    const critB = b.critico ? 1 : 0
+                    comparison = critA - critB
+                    break
+
+                case 'usuario':
+                    const userA = a.ultimo_cumplimiento?.usuario || ''
+                    const userB = b.ultimo_cumplimiento?.usuario || ''
+                    comparison = userA.localeCompare(userB, 'es', { sensitivity: 'base' })
+                    break
+
+                case 'observacion':
+                    const obsA = a.ultimo_cumplimiento?.observacion || ''
+                    const obsB = b.ultimo_cumplimiento?.observacion || ''
+                    comparison = obsA.localeCompare(obsB, 'es', { sensitivity: 'base' })
+                    break
+
                 default:
                     return 0
             }
@@ -497,11 +567,13 @@ const StatusTodosClientes: FC = () => {
                 }
             }
 
-            return matchesSearch && matchesHito && matchesProceso && matchesCliente && matchesEstado && matchesTipo && matchesFecha
+            const matchesDepartamento = selectedDepartamentos.length === 0 || (hito.codSubDepar && selectedDepartamentos.includes(hito.codSubDepar!))
+
+            return matchesSearch && matchesHito && matchesProceso && matchesCliente && matchesEstado && matchesTipo && matchesFecha && matchesDepartamento
         })
 
         return sortHitos(filtrados)
-    }, [hitos, debouncedSearchTerm, selectedHito, selectedProceso, selectedCliente, selectedEstados, selectedTipos, fechaDesde, fechaHasta, sortField, sortDirection, cumplimientosPorHito])
+    }, [hitos, debouncedSearchTerm, selectedHito, selectedProceso, selectedCliente, selectedEstados, selectedTipos, fechaDesde, fechaHasta, selectedDepartamentos, sortField, sortDirection, cumplimientosPorHito])
 
     // Paginación
     const paginatedHitos = useMemo(() => {
@@ -676,8 +748,6 @@ const StatusTodosClientes: FC = () => {
                             padding: '1.5rem 2rem',
                             backgroundColor: 'rgba(255, 255, 255, 0.1)',
                             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                            maxHeight: 'calc(100vh - 150px)',
-                            overflowY: 'auto'
                         }}
                     >
                         {/* Búsqueda Global */}
@@ -784,7 +854,7 @@ const StatusTodosClientes: FC = () => {
                         <div className="row g-3 mt-1">
                             {/* Fecha Desde */}
                             <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Vencimiento Desde</label>
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Límite Desde</label>
                                 <input
                                     type="date"
                                     className="form-control form-control-sm"
@@ -801,7 +871,7 @@ const StatusTodosClientes: FC = () => {
 
                             {/* Fecha Hasta */}
                             <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Vencimiento Hasta</label>
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Límite Hasta</label>
                                 <input
                                     type="date"
                                     className="form-control form-control-sm"
@@ -812,6 +882,90 @@ const StatusTodosClientes: FC = () => {
                                         border: '1px solid rgba(255, 255, 255, 0.3)',
                                         color: 'white',
                                         borderRadius: '6px'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Filtro Departamento (Cubo) */}
+                            <div className="col-md-6">
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubos</label>
+                                <Select
+                                    isMulti
+                                    options={subdepartamentos
+                                        .filter(subDep => subDep.codSubDepar !== null)
+                                        .map(subDep => ({
+                                            value: subDep.codSubDepar!,
+                                            label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
+                                        }))
+                                    }
+                                    value={subdepartamentos
+                                        .filter(subDep => subDep.codSubDepar !== null && selectedDepartamentos.includes(subDep.codSubDepar!))
+                                        .map(subDep => ({
+                                            value: subDep.codSubDepar!,
+                                            label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
+                                        }))
+                                    }
+                                    onChange={(selectedOptions) => {
+                                        setSelectedDepartamentos(selectedOptions ? (selectedOptions as any).map((opt: any) => opt.value) : [])
+                                    }}
+                                    placeholder="Seleccionar cubos..."
+                                    noOptionsMessage={() => "No hay opciones"}
+                                    menuPortalTarget={document.body}
+                                    styles={{
+                                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                                        control: (base) => ({
+                                            ...base,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                            color: 'white',
+                                            minHeight: '31px',
+                                            borderRadius: '6px'
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            backgroundColor: 'white',
+                                            zIndex: 9999
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
+                                            color: atisaStyles.colors.dark,
+                                            cursor: 'pointer',
+                                            ':active': {
+                                                backgroundColor: atisaStyles.colors.secondary
+                                            }
+                                        }),
+                                        multiValue: (base) => ({
+                                            ...base,
+                                            backgroundColor: atisaStyles.colors.secondary,
+                                            borderRadius: '4px',
+                                        }),
+                                        multiValueLabel: (base) => ({
+                                            ...base,
+                                            color: 'white',
+                                            fontSize: '12px'
+                                        }),
+                                        multiValueRemove: (base) => ({
+                                            ...base,
+                                            color: 'white',
+                                            ':hover': {
+                                                backgroundColor: '#d32f2f',
+                                                color: 'white',
+                                            },
+                                        }),
+                                        placeholder: (base) => ({
+                                            ...base,
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            fontSize: '14px'
+                                        }),
+                                        input: (base) => ({
+                                            ...base,
+                                            color: 'white'
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: 'white'
+                                        }),
                                     }}
                                 />
                             </div>
@@ -879,7 +1033,7 @@ const StatusTodosClientes: FC = () => {
                             </div>
 
                             <div className="col-md-6">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Tipo</label>
+                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Responsable</label>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                     {['Atisa', 'Cliente', 'Terceros'].map((tipo) => (
                                         <div key={tipo} className="form-check me-3">
@@ -989,124 +1143,41 @@ const StatusTodosClientes: FC = () => {
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                                     }}
                                 >
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('cliente')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('cliente')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Cliente {getSortIcon('cliente')}
                                     </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('proceso')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('departamento')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Cubo {getSortIcon('departamento')}
+                                    </th>
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('proceso')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Proceso {getSortIcon('proceso')}
                                     </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('hito')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('estado_proceso')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Estado Proceso {getSortIcon('estado_proceso')}
+                                    </th>
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('hito')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Hito {getSortIcon('hito')}
                                     </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('estado')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('tipo')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Responsable {getSortIcon('tipo')}
+                                    </th>
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('critico')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Crítico {getSortIcon('critico')}
+                                    </th>
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('estado')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Estado {getSortIcon('estado')}
                                     </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('fecha_limite')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('fecha_limite')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Fecha / Hora Límite {getSortIcon('fecha_limite')}
                                     </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('fecha_estado')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('fecha_estado')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Fecha Actualización {getSortIcon('fecha_estado')}
                                     </th>
-                                    <th
-                                        className="cursor-pointer user-select-none"
-                                        onClick={() => handleSort('tipo')}
-                                        style={{
-                                            fontFamily: atisaStyles.fonts.primary,
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            padding: '16px 12px',
-                                            border: 'none',
-                                            color: 'white',
-                                            backgroundColor: atisaStyles.colors.primary,
-                                            transition: 'background-color 0.2s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        Tipo {getSortIcon('tipo')}
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('usuario')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Gestor {getSortIcon('usuario')}
+                                    </th>
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('observacion')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Observaciones {getSortIcon('observacion')}
                                     </th>
                                 </tr>
                             </thead>
@@ -1114,7 +1185,7 @@ const StatusTodosClientes: FC = () => {
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={7}
+                                            colSpan={13}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1148,7 +1219,7 @@ const StatusTodosClientes: FC = () => {
                                 ) : hitosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={7}
+                                            colSpan={13}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1193,6 +1264,20 @@ const StatusTodosClientes: FC = () => {
                                             }
                                         }
 
+                                        // Cálculo del texto de estado
+                                        let estadoTexto = isFinalized ? 'Cumplido' : 'Pendiente'
+                                        if (isFinalized) {
+                                            estadoTexto = finalizadoFuera ? 'Cumplido fuera de plazo' : 'Cumplido en plazo'
+                                        } else {
+                                            if (venceHoy) {
+                                                estadoTexto = 'Vence hoy'
+                                            } else if (estadoVenc === 'vencido') {
+                                                estadoTexto = 'Pendiente fuera de plazo'
+                                            } else if (estadoVenc === 'en_plazo') {
+                                                estadoTexto = 'Pendiente en plazo'
+                                            }
+                                        }
+
                                         return (
                                             <tr
                                                 key={`${hito.cliente_id}-${hito.id}`}
@@ -1211,129 +1296,59 @@ const StatusTodosClientes: FC = () => {
                                                     e.currentTarget.style.boxShadow = 'none'
                                                 }}
                                             >
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.primary,
-                                                        fontWeight: '600',
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
                                                     <span title={hito.cliente_nombre || 'No disponible'}>
                                                         {hito.cliente_nombre || 'No disponible'}
                                                     </span>
                                                 </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.dark,
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    <span title={hito.proceso_nombre || 'No disponible'}>
-                                                        {hito.proceso_nombre || 'No disponible'}
-                                                    </span>
-                                                </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.primary,
-                                                        fontWeight: '600',
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    <span title={hito.hito_nombre || 'No disponible'}>
-                                                        {hito.hito_nombre || 'No disponible'}
-                                                    </span>
-                                                </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    {finalizadoFuera ? (
-                                                        <span style={{ backgroundColor: '#b45309', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                            Cumplido fuera de plazo
-                                                        </span>
-                                                    ) : isFinalized ? (
-                                                        <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                            Cumplido en plazo
-                                                        </span>
-                                                    ) : venceHoy ? (
-                                                        <span style={{ backgroundColor: '#dc2626', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                            Vence hoy
-                                                        </span>
-                                                    ) : estadoVenc === 'vencido' ? (
-                                                        <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                            Pendiente fuera de plazo
-                                                        </span>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.ultimo_cumplimiento && hito.ultimo_cumplimiento.codSubDepar ? (
+                                                        `${hito.ultimo_cumplimiento.codSubDepar!.substring(4)} - ${hito.ultimo_cumplimiento.departamento || '-'}`
+                                                    ) : hito.codSubDepar ? (
+                                                        `${hito.codSubDepar!.substring(4)} - ${hito.departamento_cliente || hito.departamento || '-'}`
                                                     ) : (
-                                                        <span style={{ backgroundColor: atisaStyles.colors.accent, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, fontFamily: atisaStyles.fonts.secondary }}>
-                                                            Pendiente en plazo
-                                                        </span>
+                                                        hito.departamento_cliente || hito.departamento || '-'
                                                     )}
                                                 </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.primary,
-                                                        fontWeight: '600',
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    <span
-                                                        style={{
-                                                            backgroundColor: badgeColors.bg,
-                                                            color: badgeColors.color,
-                                                            padding: '6px 12px',
-                                                            borderRadius: '6px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            border: `1px solid ${badgeColors.border}`,
-                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                            display: 'inline-block'
-                                                        }}
-                                                        title={hito.fecha_limite ? `${formatDate(hito.fecha_limite)} ${hito.hora_limite ? formatTime(hito.hora_limite) : ''}` : ''}
-                                                    >
-                                                        {hito.fecha_limite ? formatDate(hito.fecha_limite) : 'No disponible'}
-                                                        {hito.hora_limite && `, ${formatTime(hito.hora_limite)}`}
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.proceso_nombre || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.estado_proceso || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.hito_nombre || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.tipo || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.critico ? 'Clave' : 'No clave'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    <span style={{ backgroundColor: badgeColors.bg, color: badgeColors.color, padding: '4px 10px', borderRadius: '4px', border: `1px solid ${badgeColors.border}`, fontWeight: '600', fontSize: '11px', display: 'inline-block' }}>
+                                                        {estadoTexto}
                                                     </span>
                                                 </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.dark,
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    {formatDateTime(hito.fecha_estado)}
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {formatDate(hito.fecha_limite)} {formatTime(hito.hora_limite)}
                                                 </td>
-                                                <td
-                                                    style={{
-                                                        fontFamily: atisaStyles.fonts.secondary,
-                                                        color: atisaStyles.colors.dark,
-                                                        padding: '16px 12px',
-                                                        verticalAlign: 'middle'
-                                                    }}
-                                                >
-                                                    <span
-                                                        style={{
-                                                            backgroundColor: atisaStyles.colors.light,
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '500'
-                                                        }}
-                                                    >
-                                                        {hito.tipo || '-'}
-                                                    </span>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.fecha_estado ? formatDateTime(hito.fecha_estado) : '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.ultimo_cumplimiento?.usuario || '-'}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                                    {hito.ultimo_cumplimiento?.observacion ? (
+                                                        <i
+                                                            className="bi bi-chat-square-text-fill"
+                                                            style={{ color: atisaStyles.colors.primary, fontSize: '16px', cursor: 'help' }}
+                                                            title={hito.ultimo_cumplimiento.observacion}
+                                                        ></i>
+                                                    ) : (
+                                                        <span style={{ color: '#adb5bd' }}>-</span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )
