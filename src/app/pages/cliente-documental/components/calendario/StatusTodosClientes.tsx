@@ -642,25 +642,16 @@ const StatusTodosClientes: FC = () => {
                 flexDirection: 'column'
             }}
         >
-            {/* Header Sticky con Título y Filtros */}
+            {/* Header compacto */}
             <header
                 style={{
                     background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
                     color: 'white',
                     boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10,
                     width: '100%'
                 }}
             >
-                {/* Sección Título */}
-                <div
-                    style={{
-                        padding: '24px 24px 16px 24px',
-                        borderBottom: showFilters ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
-                    }}
-                >
+                <div style={{ padding: '20px 24px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
                         {/* Columna izquierda: Botón Volver */}
                         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -704,8 +695,8 @@ const StatusTodosClientes: FC = () => {
                                 style={{
                                     fontFamily: atisaStyles.fonts.secondary,
                                     color: atisaStyles.colors.light,
-                                    margin: '8px 0 0 0',
-                                    fontSize: '1.2rem',
+                                    margin: '4px 0 0 0',
+                                    fontSize: '1rem',
                                     fontWeight: '500'
                                 }}
                             >
@@ -713,11 +704,34 @@ const StatusTodosClientes: FC = () => {
                             </p>
                         </div>
 
-                        {/* Columna derecha: Toggle Filtros */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        {/* Columna derecha: Botón Filtros */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
+                            {/* Badge de filtros activos */}
+                            {(selectedCliente || selectedProceso || selectedHito || selectedEstados.size > 0 || selectedTipos.size > 0 || selectedDepartamentos.length > 0 || fechaDesde || fechaHasta || debouncedSearchTerm) && (
+                                <span style={{
+                                    backgroundColor: '#f1416c',
+                                    color: 'white',
+                                    borderRadius: '12px',
+                                    padding: '2px 10px',
+                                    fontSize: '12px',
+                                    fontWeight: '700'
+                                }}>
+                                    {[
+                                        selectedCliente ? 1 : 0,
+                                        selectedProceso ? 1 : 0,
+                                        selectedHito ? 1 : 0,
+                                        selectedEstados.size,
+                                        selectedTipos.size,
+                                        selectedDepartamentos.length,
+                                        fechaDesde ? 1 : 0,
+                                        fechaHasta ? 1 : 0,
+                                        debouncedSearchTerm ? 1 : 0
+                                    ].reduce((a, b) => a + b, 0)} filtros activos
+                                </span>
+                            )}
                             <button
                                 className="btn"
-                                onClick={() => setShowFilters(!showFilters)}
+                                onClick={() => setShowFilters(true)}
                                 style={{
                                     backgroundColor: showFilters ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
                                     color: 'white',
@@ -733,364 +747,333 @@ const StatusTodosClientes: FC = () => {
                                     gap: '8px'
                                 }}
                             >
-                                <i className={`bi ${showFilters ? 'bi-funnel-fill' : 'bi-funnel'}`}></i>
+                                <i className="bi bi-funnel"></i>
                                 Filtros
-                                <i className={`bi ${showFilters ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
                             </button>
                         </div>
                     </div>
                 </div>
+            </header>
 
-                {/* Sección Filtros Collapsible */}
-                {showFilters && (
-                    <div
+            {/* Overlay oscuro */}
+            {showFilters && (
+                <div
+                    onClick={() => setShowFilters(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        zIndex: 1040,
+                        backdropFilter: 'blur(2px)',
+                        transition: 'opacity 0.3s ease'
+                    }}
+                />
+            )}
+
+            {/* Panel lateral de filtros (Drawer) */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    right: showFilters ? 0 : '-480px',
+                    width: '460px',
+                    height: '100vh',
+                    background: 'linear-gradient(160deg, #00505c 0%, #007b8a 100%)',
+                    boxShadow: showFilters ? '-8px 0 40px rgba(0,0,0,0.25)' : 'none',
+                    zIndex: 1050,
+                    transition: 'right 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflowY: 'auto'
+                }}
+            >
+                {/* Cabecera del drawer */}
+                <div style={{
+                    padding: '20px 24px',
+                    borderBottom: '1px solid rgba(255,255,255,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="bi bi-funnel-fill" style={{ color: 'white', fontSize: '18px' }}></i>
+                        <span style={{ color: 'white', fontFamily: atisaStyles.fonts.primary, fontWeight: '700', fontSize: '1.2rem' }}>Filtros</span>
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(false)}
                         style={{
-                            padding: '1.5rem 2rem',
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            background: 'rgba(255,255,255,0.15)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            borderRadius: '8px',
+                            color: 'white',
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: '18px',
+                            transition: 'background 0.2s'
                         }}
                     >
-                        {/* Búsqueda Global */}
-                        <div className="row g-3 mb-3">
-                            <div className="col-12">
-                                <div style={{ position: 'relative' }}>
-                                    <i className="bi bi-search" style={{
-                                        position: 'absolute',
-                                        left: '12px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        color: 'rgba(255, 255, 255, 0.7)'
-                                    }}></i>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Buscar por proceso, hito..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{
-                                            paddingLeft: '36px',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                                            color: 'white',
-                                            borderRadius: '6px'
-                                        }}
-                                    />
-                                    {searching && (
-                                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
-                                            <div className="spinner-border spinner-border-sm text-light" role="status"></div>
-                                        </div>
-                                    )}
+                        <i className="bi bi-x"></i>
+                    </button>
+                </div>
+
+                {/* Contenido del drawer */}
+                <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                    {/* Búsqueda */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Búsqueda</label>
+                        <div style={{ position: 'relative' }}>
+                            <i className="bi bi-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }}></i>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Buscar por proceso, hito..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ paddingLeft: '36px', backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                            />
+                            {searching && (
+                                <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                                    <div className="spinner-border spinner-border-sm text-light" role="status"></div>
                                 </div>
-                            </div>
+                            )}
                         </div>
+                    </div>
 
-                        <div className="row g-3">
-                            {/* Filtro Cliente */}
-                            <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cliente</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedCliente}
-                                    onChange={(e) => setSelectedCliente(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="" style={{ color: 'black' }}>Todos los clientes</option>
-                                    {clientesUnicos.map((cliente) => (
-                                        <option key={cliente.id} value={cliente.id} style={{ color: 'black' }}>{cliente.nombre}</option>
-                                    ))}
-                                </select>
-                            </div>
+                    {/* Cliente */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cliente</label>
+                        <select
+                            className="form-select form-select-sm"
+                            value={selectedCliente}
+                            onChange={(e) => setSelectedCliente(e.target.value)}
+                            style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                        >
+                            <option value="" style={{ color: 'black' }}>Todos los clientes</option>
+                            {clientesUnicos.map((cliente) => (
+                                <option key={cliente.id} value={cliente.id} style={{ color: 'black' }}>{cliente.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                            {/* Filtro Proceso */}
-                            <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Proceso</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedProceso}
-                                    onChange={(e) => setSelectedProceso(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="" style={{ color: 'black' }}>Todos los procesos</option>
-                                    {procesosUnicos.map((proceso, index) => (
-                                        <option key={index} value={proceso} style={{ color: 'black' }}>{proceso}</option>
-                                    ))}
-                                </select>
-                            </div>
+                    {/* Proceso */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Proceso</label>
+                        <select
+                            className="form-select form-select-sm"
+                            value={selectedProceso}
+                            onChange={(e) => setSelectedProceso(e.target.value)}
+                            style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                        >
+                            <option value="" style={{ color: 'black' }}>Todos los procesos</option>
+                            {procesosUnicos.map((proceso, index) => (
+                                <option key={index} value={proceso} style={{ color: 'black' }}>{proceso}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                            {/* Filtro Hito */}
-                            <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Hito</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedHito}
-                                    onChange={(e) => setSelectedHito(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="" style={{ color: 'black' }}>Todos los hitos</option>
-                                    {hitosUnicos.map((hito) => (
-                                        <option key={hito.id} value={hito.id} style={{ color: 'black' }}>{hito.nombre}</option>
-                                    ))}
-                                </select>
-                            </div>
+                    {/* Hito */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Hito</label>
+                        <select
+                            className="form-select form-select-sm"
+                            value={selectedHito}
+                            onChange={(e) => setSelectedHito(e.target.value)}
+                            style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                        >
+                            <option value="" style={{ color: 'black' }}>Todos los hitos</option>
+                            {hitosUnicos.map((hito) => (
+                                <option key={hito.id} value={hito.id} style={{ color: 'black' }}>{hito.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                            {/* Fechas en la misma fila si caben, o nueva fila. Vamos a poner fechas en una fila abajo para no saturar */}
+                    {/* Cubos */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cubos</label>
+                        <Select
+                            isMulti
+                            options={subdepartamentos
+                                .filter(subDep => subDep.codSubDepar !== null)
+                                .map(subDep => ({
+                                    value: subDep.codSubDepar!,
+                                    label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
+                                }))
+                            }
+                            value={subdepartamentos
+                                .filter(subDep => subDep.codSubDepar !== null && selectedDepartamentos.includes(subDep.codSubDepar!))
+                                .map(subDep => ({
+                                    value: subDep.codSubDepar!,
+                                    label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
+                                }))
+                            }
+                            onChange={(selectedOptions) => {
+                                setSelectedDepartamentos(selectedOptions ? (selectedOptions as any).map((opt: any) => opt.value) : [])
+                            }}
+                            placeholder="Seleccionar cubos..."
+                            noOptionsMessage={() => "No hay opciones"}
+                            menuPortalTarget={document.body}
+                            styles={{
+                                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                                control: (base) => ({
+                                    ...base,
+                                    backgroundColor: 'rgba(255,255,255,0.12)',
+                                    borderColor: 'rgba(255,255,255,0.25)',
+                                    color: 'white',
+                                    borderRadius: '8px'
+                                }),
+                                menu: (base) => ({ ...base, backgroundColor: 'white', zIndex: 9999 }),
+                                option: (base, state) => ({
+                                    ...base,
+                                    backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
+                                    color: atisaStyles.colors.dark,
+                                    cursor: 'pointer',
+                                    ':active': { backgroundColor: atisaStyles.colors.secondary }
+                                }),
+                                multiValue: (base) => ({ ...base, backgroundColor: atisaStyles.colors.secondary, borderRadius: '4px' }),
+                                multiValueLabel: (base) => ({ ...base, color: 'white', fontSize: '12px' }),
+                                multiValueRemove: (base) => ({ ...base, color: 'white', ':hover': { backgroundColor: '#d32f2f', color: 'white' } }),
+                                placeholder: (base) => ({ ...base, color: 'rgba(255,255,255,0.6)', fontSize: '13px' }),
+                                input: (base) => ({ ...base, color: 'white' }),
+                                singleValue: (base) => ({ ...base, color: 'white' }),
+                            }}
+                        />
+                    </div>
+
+                    {/* Fechas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Desde</label>
+                            <input
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={fechaDesde}
+                                onChange={(e) => setFechaDesde(e.target.value)}
+                                style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                            />
                         </div>
-
-                        <div className="row g-3 mt-1">
-                            {/* Fecha Desde */}
-                            <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Límite Desde</label>
-                                <input
-                                    type="date"
-                                    className="form-control form-control-sm"
-                                    value={fechaDesde}
-                                    onChange={(e) => setFechaDesde(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                />
-                            </div>
-
-                            {/* Fecha Hasta */}
-                            <div className="col-md-3">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Fecha Límite Hasta</label>
-                                <input
-                                    type="date"
-                                    className="form-control form-control-sm"
-                                    value={fechaHasta}
-                                    onChange={(e) => setFechaHasta(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                />
-                            </div>
-
-                            {/* Filtro Departamento (Cubo) */}
-                            <div className="col-md-6">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubos</label>
-                                <Select
-                                    isMulti
-                                    options={subdepartamentos
-                                        .filter(subDep => subDep.codSubDepar !== null)
-                                        .map(subDep => ({
-                                            value: subDep.codSubDepar!,
-                                            label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
-                                        }))
-                                    }
-                                    value={subdepartamentos
-                                        .filter(subDep => subDep.codSubDepar !== null && selectedDepartamentos.includes(subDep.codSubDepar!))
-                                        .map(subDep => ({
-                                            value: subDep.codSubDepar!,
-                                            label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
-                                        }))
-                                    }
-                                    onChange={(selectedOptions) => {
-                                        setSelectedDepartamentos(selectedOptions ? (selectedOptions as any).map((opt: any) => opt.value) : [])
-                                    }}
-                                    placeholder="Seleccionar cubos..."
-                                    noOptionsMessage={() => "No hay opciones"}
-                                    menuPortalTarget={document.body}
-                                    styles={{
-                                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                                        control: (base) => ({
-                                            ...base,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                            borderColor: 'rgba(255, 255, 255, 0.3)',
-                                            color: 'white',
-                                            minHeight: '31px',
-                                            borderRadius: '6px'
-                                        }),
-                                        menu: (base) => ({
-                                            ...base,
-                                            backgroundColor: 'white',
-                                            zIndex: 9999
-                                        }),
-                                        option: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
-                                            color: atisaStyles.colors.dark,
-                                            cursor: 'pointer',
-                                            ':active': {
-                                                backgroundColor: atisaStyles.colors.secondary
-                                            }
-                                        }),
-                                        multiValue: (base) => ({
-                                            ...base,
-                                            backgroundColor: atisaStyles.colors.secondary,
-                                            borderRadius: '4px',
-                                        }),
-                                        multiValueLabel: (base) => ({
-                                            ...base,
-                                            color: 'white',
-                                            fontSize: '12px'
-                                        }),
-                                        multiValueRemove: (base) => ({
-                                            ...base,
-                                            color: 'white',
-                                            ':hover': {
-                                                backgroundColor: '#d32f2f',
-                                                color: 'white',
-                                            },
-                                        }),
-                                        placeholder: (base) => ({
-                                            ...base,
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            fontSize: '14px'
-                                        }),
-                                        input: (base) => ({
-                                            ...base,
-                                            color: 'white'
-                                        }),
-                                        singleValue: (base) => ({
-                                            ...base,
-                                            color: 'white'
-                                        }),
-                                    }}
-                                />
-                            </div>
+                        <div>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Hasta</label>
+                            <input
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={fechaHasta}
+                                onChange={(e) => setFechaHasta(e.target.value)}
+                                style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                            />
                         </div>
+                    </div>
 
-                        {/* Filtros de Estado y Tipo */}
-                        <div className="row mt-3">
-                            <div className="col-md-6">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Estado del Hito</label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    {/* Botón Todos */}
+                    {/* Estado del Hito */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px', display: 'block' }}>Estado del Hito</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            <div
+                                onClick={() => setSelectedEstados(new Set())}
+                                style={{
+                                    cursor: 'pointer',
+                                    backgroundColor: selectedEstados.size === 0 ? 'white' : 'rgba(255,255,255,0.1)',
+                                    color: selectedEstados.size === 0 ? atisaStyles.colors.primary : 'white',
+                                    border: '1px solid white',
+                                    padding: '5px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                Todos
+                            </div>
+                            {[
+                                { id: 'cumplido_en_plazo', label: 'Cumplido en Plazo', color: '#50cd89' },
+                                { id: 'cumplido_fuera_plazo', label: 'Cumplido Fuera de Plazo', color: '#ffc107' },
+                                { id: 'vence_hoy', label: 'Vence Hoy', color: '#009ef7' },
+                                { id: 'pendiente_en_plazo', label: 'Pendiente en Plazo', color: '#7239ea' },
+                                { id: 'pendiente_fuera_plazo', label: 'Pendiente Fuera de Plazo', color: '#f1416c' }
+                            ].map((estado) => {
+                                const isSelected = selectedEstados.has(estado.id as any)
+                                return (
                                     <div
-                                        onClick={() => setSelectedEstados(new Set())}
+                                        key={estado.id}
+                                        onClick={() => toggleEstado(estado.id as any)}
                                         style={{
                                             cursor: 'pointer',
-                                            backgroundColor: selectedEstados.size === 0 ? 'white' : 'rgba(255, 255, 255, 0.1)',
-                                            color: selectedEstados.size === 0 ? atisaStyles.colors.primary : 'white',
-                                            border: '1px solid white',
-                                            padding: '6px 12px',
+                                            backgroundColor: isSelected ? estado.color : 'rgba(255,255,255,0.1)',
+                                            color: 'white',
+                                            border: `1px solid ${estado.color}`,
+                                            padding: '5px 12px',
                                             borderRadius: '20px',
                                             fontSize: '12px',
                                             fontWeight: '600',
-                                            transition: 'all 0.2s ease',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
+                                            opacity: isSelected ? 1 : 0.65,
+                                            transition: 'all 0.2s ease'
                                         }}
                                     >
-                                        Todos
+                                        {estado.label}
                                     </div>
-
-                                    {[
-                                        { id: 'cumplido_en_plazo', label: 'Cumplido en Plazo', color: '#50cd89' },
-                                        { id: 'cumplido_fuera_plazo', label: 'Cumplido Fuera de Plazo', color: '#ffc107' },
-                                        { id: 'vence_hoy', label: 'Vence Hoy', color: '#009ef7' },
-                                        { id: 'pendiente_en_plazo', label: 'Pendiente en Plazo', color: '#7239ea' },
-                                        { id: 'pendiente_fuera_plazo', label: 'Pendiente Fuera de Plazo', color: '#f1416c' }
-                                    ].map((estado) => {
-                                        const isSelected = selectedEstados.has(estado.id as any)
-                                        return (
-                                            <div
-                                                key={estado.id}
-                                                onClick={() => toggleEstado(estado.id as any)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    backgroundColor: isSelected ? estado.color : 'rgba(255, 255, 255, 0.1)',
-                                                    color: 'white',
-                                                    border: `1px solid ${estado.color}`,
-                                                    padding: '6px 12px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    opacity: isSelected ? 1 : 0.6,
-                                                    transition: 'all 0.2s ease',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}
-                                            >
-                                                {estado.label}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="col-md-6">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Responsable</label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    {['Atisa', 'Cliente', 'Terceros'].map((tipo) => (
-                                        <div key={tipo} className="form-check me-3">
-                                            <input
-                                                className="form-check-input"
-                                                type="checkbox"
-                                                id={`check-tipo-${tipo}`}
-                                                checked={selectedTipos.has(tipo)}
-                                                onChange={() => toggleTipo(tipo)}
-                                                style={{ cursor: 'pointer' }}
-                                            />
-                                            <label className="form-check-label" htmlFor={`check-tipo-${tipo}`} style={{ color: 'white', fontSize: '13px', cursor: 'pointer' }}>
-                                                {tipo}
-                                            </label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="row mt-3">
-                            <div className="col-12 d-flex justify-content-end gap-2">
-                                <button
-                                    className="btn btn-sm"
-                                    onClick={exportarExcel}
-                                    disabled={exporting}
-                                    style={{
-                                        color: 'white',
-                                        backgroundColor: '#50cd89',
-                                        borderColor: '#50cd89',
-                                        opacity: exporting ? 0.7 : 1
-                                    }}
-                                >
-                                    {exporting ? (
-                                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                    ) : (
-                                        <i className="bi bi-file-earmark-excel me-1"></i>
-                                    )}
-                                    Exportar a Excel
-                                </button>
-
-                                <button
-                                    className="btn btn-sm"
-                                    onClick={limpiarFiltros}
-                                    style={{
-                                        color: 'white',
-                                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                    }}
-                                >
-                                    <i className="bi bi-arrow-clockwise me-1"></i> Limpiar
-                                </button>
-                            </div>
+                                )
+                            })}
                         </div>
                     </div>
-                )}
-            </header>
+
+                    {/* Responsable */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px', display: 'block' }}>Responsable</label>
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                            {['Atisa', 'Cliente', 'Terceros'].map((tipo) => (
+                                <div key={tipo} className="form-check">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        id={`drawer-check-tipo-${tipo}`}
+                                        checked={selectedTipos.has(tipo)}
+                                        onChange={() => toggleTipo(tipo)}
+                                        style={{ cursor: 'pointer' }}
+                                    />
+                                    <label className="form-check-label" htmlFor={`drawer-check-tipo-${tipo}`} style={{ color: 'white', fontSize: '13px', cursor: 'pointer' }}>
+                                        {tipo}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer del drawer */}
+                <div style={{
+                    padding: '16px 24px',
+                    borderTop: '1px solid rgba(255,255,255,0.15)',
+                    display: 'flex',
+                    gap: '10px',
+                    flexShrink: 0
+                }}>
+                    <button
+                        className="btn btn-sm flex-grow-1"
+                        onClick={exportarExcel}
+                        disabled={exporting}
+                        style={{ color: 'white', backgroundColor: '#50cd89', borderColor: '#50cd89', opacity: exporting ? 0.7 : 1, fontWeight: '600' }}
+                    >
+                        {exporting ? (
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        ) : (
+                            <i className="bi bi-file-earmark-excel me-1"></i>
+                        )}
+                        Exportar Excel
+                    </button>
+                    <button
+                        className="btn btn-sm"
+                        onClick={limpiarFiltros}
+                        style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', fontWeight: '600' }}
+                    >
+                        <i className="bi bi-arrow-clockwise me-1"></i> Limpiar
+                    </button>
+                </div>
+            </div>
 
             <div className="p-4 flex-grow-1">
                 {/* Tabla de hitos */}

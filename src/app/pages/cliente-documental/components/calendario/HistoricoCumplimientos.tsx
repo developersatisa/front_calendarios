@@ -534,25 +534,16 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 flexDirection: 'column'
             }}
         >
-            {/* Header Sticky con Título y Filtros */}
+            {/* Header Sticky con Título */}
             <header
                 style={{
                     background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
                     color: 'white',
                     boxShadow: '0 4px 20px rgba(0, 80, 92, 0.15)',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10,
                     width: '100%'
                 }}
             >
-                {/* Sección Título */}
-                <div
-                    style={{
-                        padding: '24px 24px 16px 24px',
-                        borderBottom: showFilters ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
-                    }}
-                >
+                <div style={{ padding: '24px 24px 20px 24px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
                         {/* Columna izquierda: Botón Volver */}
                         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -606,12 +597,18 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                         </div>
 
                         {/* Columna derecha: Botón Ver Calendario y Toggle Filtros */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
+                            {/* Badge filtros activos */}
+                            {(debouncedSearchTerm || selectedHito || selectedProceso || selectedDepartamentos.length > 0 || selectedEstadoProceso !== 'todos' || fechaDesde || fechaHasta) && (
+                                <span style={{ backgroundColor: '#f1416c', color: 'white', borderRadius: '12px', padding: '2px 10px', fontSize: '12px', fontWeight: '700' }}>
+                                    {[debouncedSearchTerm ? 1 : 0, selectedHito ? 1 : 0, selectedProceso ? 1 : 0, selectedDepartamentos.length, selectedEstadoProceso !== 'todos' ? 1 : 0, fechaDesde ? 1 : 0, fechaHasta ? 1 : 0].reduce((a, b) => a + b, 0)} activos
+                                </span>
+                            )}
                             <button
                                 className="btn"
-                                onClick={() => setShowFilters(!showFilters)}
+                                onClick={() => setShowFilters(true)}
                                 style={{
-                                    backgroundColor: showFilters ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
                                     color: 'white',
                                     border: '1px solid rgba(255, 255, 255, 0.3)',
                                     borderRadius: '8px',
@@ -625,9 +622,8 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                     gap: '8px'
                                 }}
                             >
-                                <i className={`bi ${showFilters ? 'bi-funnel-fill' : 'bi-funnel'}`}></i>
+                                <i className="bi bi-funnel"></i>
                                 Filtros
-                                <i className={`bi ${showFilters ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
                             </button>
 
                             <button
@@ -664,288 +660,186 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                         </div>
                     </div>
                 </div>
+            </header>
 
-                {/* Sección Filtros Collapsible */}
-                {showFilters && (
-                    <div
-                        style={{
-                            padding: '1.5rem 2rem',
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-                        }}
-                    >
-                        {/* Búsqueda Global */}
-                        <div className="row g-3 mb-3">
-                            <div className="col-12">
-                                <div style={{ position: 'relative' }}>
-                                    <i className="bi bi-search" style={{
-                                        position: 'absolute',
-                                        left: '12px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        color: 'rgba(255, 255, 255, 0.7)'
-                                    }}></i>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Buscar por nombre, proceso, hito o usuario..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{
-                                            paddingLeft: '36px',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                                            color: 'white',
-                                            borderRadius: '6px'
-                                        }}
-                                    />
-                                    {searching && (
-                                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
-                                            <div className="spinner-border spinner-border-sm text-light" role="status"></div>
-                                        </div>
-                                    )}
+            {/* Overlay oscuro */}
+            {showFilters && (
+                <div
+                    onClick={() => setShowFilters(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        zIndex: 1040,
+                        backdropFilter: 'blur(2px)'
+                    }}
+                />
+            )}
+
+            {/* Panel lateral de filtros (Drawer) */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    right: showFilters ? 0 : '-520px',
+                    width: '500px',
+                    height: '100vh',
+                    background: 'linear-gradient(160deg, #00505c 0%, #007b8a 100%)',
+                    boxShadow: showFilters ? '-8px 0 40px rgba(0,0,0,0.25)' : 'none',
+                    zIndex: 1050,
+                    transition: 'right 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflowY: 'auto'
+                }}
+            >
+                {/* Cabecera del drawer */}
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="bi bi-funnel-fill" style={{ color: 'white', fontSize: '18px' }}></i>
+                        <span style={{ color: 'white', fontFamily: atisaStyles.fonts.primary, fontWeight: '700', fontSize: '1.2rem' }}>Filtros</span>
+                    </div>
+                    <button onClick={() => setShowFilters(false)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '8px', color: 'white', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '18px' }}>
+                        <i className="bi bi-x"></i>
+                    </button>
+                </div>
+
+                {/* Contenido del drawer */}
+                <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                    {/* Búsqueda */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Búsqueda</label>
+                        <div style={{ position: 'relative' }}>
+                            <i className="bi bi-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }}></i>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Buscar por nombre, proceso, hito o usuario..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ paddingLeft: '36px', backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                            />
+                            {searching && (
+                                <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                                    <div className="spinner-border spinner-border-sm text-light" role="status"></div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div className="row g-3">
-                            {/* Filtro Hito */}
-                            <div className="col-md-4">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Hito</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedHito}
-                                    onChange={(e) => setSelectedHito(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="" style={{ color: 'black' }}>Todos los hitos</option>
-                                    {hitos.map((hito) => (
-                                        <option key={hito.id} value={hito.id} style={{ color: 'black' }}>{hito.nombre}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Filtro Proceso */}
-                            <div className="col-md-4">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Proceso</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedProceso}
-                                    onChange={(e) => setSelectedProceso(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="" style={{ color: 'black' }}>Todos los procesos</option>
-                                    {procesos.map((proceso) => (
-                                        <option key={proceso.id} value={proceso.id} style={{ color: 'black' }}>{proceso.nombre}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Filtro Estado del Proceso */}
-                            <div className="col-md-4">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Estado Proceso</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={selectedEstadoProceso}
-                                    onChange={(e) => setSelectedEstadoProceso(e.target.value as any)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="todos" style={{ color: 'black' }}>Todos</option>
-                                    <option value="Finalizado" style={{ color: 'black' }}>Finalizado</option>
-                                    <option value="En proceso" style={{ color: 'black' }}>En proceso</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Segunda fila: Cubos */}
-                        <div className="row g-3 mt-2">
-                            {/* Filtro Departamento (Cubos) */}
-                            <div className="col-md-12">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Cubos</label>
-                                <Select
-                                    isMulti
-                                    options={subdepartamentos.map((subdep) => ({
-                                        value: subdep.codSubDepar || '',
-                                        label: `${subdep.codSubDepar?.substring(4)} - ${subdep.nombre}`
-                                    }))}
-                                    value={subdepartamentos
-                                        .filter((subdep) => selectedDepartamentos.includes(subdep.codSubDepar || ''))
-                                        .map((subdep) => ({
-                                            value: subdep.codSubDepar || '',
-                                            label: `${subdep.codSubDepar?.substring(4)} - ${subdep.nombre}`
-                                        }))}
-                                    onChange={(newValue) => {
-                                        setSelectedDepartamentos(newValue.map((option) => option.value))
-                                    }}
-                                    placeholder="Seleccionar cubos..."
-                                    noOptionsMessage={() => "No hay opciones"}
-                                    styles={{
-                                        control: (base) => ({
-                                            ...base,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                            borderColor: 'rgba(255, 255, 255, 0.3)',
-                                            color: 'white',
-                                            minHeight: '31px',
-                                            borderRadius: '6px'
-                                        }),
-                                        menu: (base) => ({
-                                            ...base,
-                                            backgroundColor: 'white',
-                                            zIndex: 9999
-                                        }),
-                                        option: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
-                                            color: atisaStyles.colors.dark,
-                                            cursor: 'pointer',
-                                            ':active': {
-                                                backgroundColor: atisaStyles.colors.secondary
-                                            }
-                                        }),
-                                        multiValue: (base) => ({
-                                            ...base,
-                                            backgroundColor: atisaStyles.colors.secondary,
-                                            borderRadius: '4px',
-                                        }),
-                                        multiValueLabel: (base) => ({
-                                            ...base,
-                                            color: 'white',
-                                            fontSize: '12px'
-                                        }),
-                                        multiValueRemove: (base) => ({
-                                            ...base,
-                                            color: 'white',
-                                            ':hover': {
-                                                backgroundColor: '#d32f2f',
-                                                color: 'white',
-                                            },
-                                        }),
-                                        placeholder: (base) => ({
-                                            ...base,
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            fontSize: '14px'
-                                        }),
-                                        input: (base) => ({
-                                            ...base,
-                                            color: 'white'
-                                        }),
-                                        singleValue: (base) => ({
-                                            ...base,
-                                            color: 'white'
-                                        }),
-                                        indicatorSeparator: (base) => ({
-                                            ...base,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                                        }),
-                                        dropdownIndicator: (base) => ({
-                                            ...base,
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            ':hover': {
-                                                color: 'white'
-                                            }
-                                        }),
-                                        clearIndicator: (base) => ({
-                                            ...base,
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            ':hover': {
-                                                color: 'white'
-                                            }
-                                        })
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Tercera fila: Filtros de Fecha */}
-                        <div className="row g-3 mt-2">
-                            {/* Filtro Tipo Fecha */}
-                            <div className="col-md-4">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Tipo Fecha</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={tipoFiltroFecha}
-                                    onChange={(e) => setTipoFiltroFecha(e.target.value as any)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                >
-                                    <option value="cumplimiento" style={{ color: 'black' }}>Cumplimiento</option>
-                                    <option value="creacion" style={{ color: 'black' }}>Creación</option>
-                                    <option value="limite" style={{ color: 'black' }}>Límite</option>
-                                </select>
-                            </div>
-
-                            {/* Fecha Desde */}
-                            <div className="col-md-4">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Desde</label>
-                                <input
-                                    type="date"
-                                    className="form-control form-control-sm"
-                                    value={fechaDesde}
-                                    onChange={(e) => setFechaDesde(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                />
-                            </div>
-
-                            {/* Fecha Hasta */}
-                            <div className="col-md-4">
-                                <label style={{ color: 'white', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Hasta</label>
-                                <input
-                                    type="date"
-                                    className="form-control form-control-sm"
-                                    value={fechaHasta}
-                                    onChange={(e) => setFechaHasta(e.target.value)}
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        color: 'white',
-                                        borderRadius: '6px'
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="row mt-3">
-                            <div className="col-12 d-flex justify-content-end">
-                                <button
-                                    className="btn btn-sm"
-                                    onClick={limpiarFiltros}
-                                    style={{
-                                        color: 'white',
-                                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                    }}
-                                >
-                                    <i className="bi bi-arrow-clockwise me-1"></i> Limpiar
-                                </button>
-                            </div>
+                            )}
                         </div>
                     </div>
-                )}
-            </header>
+
+                    {/* Hito */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Hito</label>
+                        <select className="form-select form-select-sm" value={selectedHito} onChange={(e) => setSelectedHito(e.target.value)} style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}>
+                            <option value="" style={{ color: 'black' }}>Todos los hitos</option>
+                            {hitos.map((hito) => (
+                                <option key={hito.id} value={hito.id} style={{ color: 'black' }}>{hito.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Proceso */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Proceso</label>
+                        <select className="form-select form-select-sm" value={selectedProceso} onChange={(e) => setSelectedProceso(e.target.value)} style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}>
+                            <option value="" style={{ color: 'black' }}>Todos los procesos</option>
+                            {procesos.map((proceso) => (
+                                <option key={proceso.id} value={proceso.id} style={{ color: 'black' }}>{proceso.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Estado Proceso */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Estado Proceso</label>
+                        <select className="form-select form-select-sm" value={selectedEstadoProceso} onChange={(e) => setSelectedEstadoProceso(e.target.value as any)} style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}>
+                            <option value="todos" style={{ color: 'black' }}>Todos</option>
+                            <option value="Finalizado" style={{ color: 'black' }}>Finalizado</option>
+                            <option value="En proceso" style={{ color: 'black' }}>En proceso</option>
+                        </select>
+                    </div>
+
+                    {/* Cubos (multi-select) */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cubos</label>
+                        <Select
+                            isMulti
+                            options={subdepartamentos.map((subdep) => ({
+                                value: subdep.codSubDepar || '',
+                                label: `${subdep.codSubDepar?.substring(4)} - ${subdep.nombre}`
+                            }))}
+                            value={subdepartamentos
+                                .filter((subdep) => selectedDepartamentos.includes(subdep.codSubDepar || ''))
+                                .map((subdep) => ({
+                                    value: subdep.codSubDepar || '',
+                                    label: `${subdep.codSubDepar?.substring(4)} - ${subdep.nombre}`
+                                }))}
+                            onChange={(newValue) => {
+                                setSelectedDepartamentos(newValue.map((option) => option.value))
+                            }}
+                            placeholder="Seleccionar cubos..."
+                            noOptionsMessage={() => "No hay opciones"}
+                            styles={{
+                                control: (base) => ({
+                                    ...base,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                                    color: 'white',
+                                    minHeight: '36px',
+                                    borderRadius: '8px'
+                                }),
+                                menu: (base) => ({ ...base, backgroundColor: 'white', zIndex: 9999 }),
+                                option: (base, state) => ({
+                                    ...base,
+                                    backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
+                                    color: atisaStyles.colors.dark,
+                                    cursor: 'pointer',
+                                    ':active': { backgroundColor: atisaStyles.colors.secondary }
+                                }),
+                                multiValue: (base) => ({ ...base, backgroundColor: atisaStyles.colors.secondary, borderRadius: '4px' }),
+                                multiValueLabel: (base) => ({ ...base, color: 'white', fontSize: '12px' }),
+                                multiValueRemove: (base) => ({ ...base, color: 'white', ':hover': { backgroundColor: '#d32f2f', color: 'white' } }),
+                                placeholder: (base) => ({ ...base, color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px' }),
+                                input: (base) => ({ ...base, color: 'white' }),
+                                singleValue: (base) => ({ ...base, color: 'white' }),
+                                indicatorSeparator: (base) => ({ ...base, backgroundColor: 'rgba(255, 255, 255, 0.3)' }),
+                                dropdownIndicator: (base) => ({ ...base, color: 'rgba(255, 255, 255, 0.7)', ':hover': { color: 'white' } }),
+                                clearIndicator: (base) => ({ ...base, color: 'rgba(255, 255, 255, 0.7)', ':hover': { color: 'white' } })
+                            }}
+                        />
+                    </div>
+
+                    {/* Tipo de Fecha */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Tipo de Fecha</label>
+                        <select className="form-select form-select-sm" value={tipoFiltroFecha} onChange={(e) => setTipoFiltroFecha(e.target.value as any)} style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}>
+                            <option value="cumplimiento" style={{ color: 'black' }}>Cumplimiento</option>
+                            <option value="creacion" style={{ color: 'black' }}>Creación</option>
+                            <option value="limite" style={{ color: 'black' }}>Límite</option>
+                        </select>
+                    </div>
+
+                    {/* Rango de Fechas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Desde</label>
+                            <input type="date" className="form-control form-control-sm" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }} />
+                        </div>
+                        <div>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Hasta</label>
+                            <input type="date" className="form-control form-control-sm" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer del drawer */}
+                <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', gap: '10px', flexShrink: 0 }}>
+                    <button className="btn btn-sm flex-grow-1" onClick={limpiarFiltros} style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', fontWeight: '600' }}>
+                        <i className="bi bi-arrow-clockwise me-1"></i> Limpiar filtros
+                    </button>
+                </div>
+            </div>
 
             <div className="p-4 flex-grow-1">
 
