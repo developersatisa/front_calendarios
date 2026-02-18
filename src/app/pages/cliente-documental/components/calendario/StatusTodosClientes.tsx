@@ -1162,7 +1162,7 @@ const StatusTodosClientes: FC = () => {
                                         Responsable {getSortIcon('tipo')}
                                     </th>
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('critico')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
-                                        Crítico {getSortIcon('critico')}
+                                        Clave {getSortIcon('critico')}
                                     </th>
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('estado')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Estado {getSortIcon('estado')}
