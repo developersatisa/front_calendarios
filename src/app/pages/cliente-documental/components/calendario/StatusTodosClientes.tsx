@@ -755,16 +755,15 @@ const StatusTodosClientes: FC = () => {
                 </div>
             </header>
 
-            {/* Overlay oscuro */}
+            {/* Overlay transparente */}
             {showFilters && (
                 <div
                     onClick={() => setShowFilters(false)}
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        backgroundColor: 'transparent',
                         zIndex: 1040,
-                        backdropFilter: 'blur(2px)',
                         transition: 'opacity 0.3s ease'
                     }}
                 />
@@ -846,20 +845,22 @@ const StatusTodosClientes: FC = () => {
                     </div>
 
                     {/* Cliente */}
-                    <div>
-                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cliente</label>
-                        <select
-                            className="form-select form-select-sm"
-                            value={selectedCliente}
-                            onChange={(e) => setSelectedCliente(e.target.value)}
-                            style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
-                        >
-                            <option value="" style={{ color: 'black' }}>Todos los clientes</option>
-                            {clientesUnicos.map((cliente) => (
-                                <option key={cliente.id} value={cliente.id} style={{ color: 'black' }}>{cliente.nombre}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {isAdmin && (
+                        <div>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cliente</label>
+                            <select
+                                className="form-select form-select-sm"
+                                value={selectedCliente}
+                                onChange={(e) => setSelectedCliente(e.target.value)}
+                                style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                            >
+                                <option value="" style={{ color: 'black' }}>Todos los clientes</option>
+                                {clientesUnicos.map((cliente) => (
+                                    <option key={cliente.id} value={cliente.id} style={{ color: 'black' }}>{cliente.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Proceso */}
                     <div>
@@ -1126,9 +1127,11 @@ const StatusTodosClientes: FC = () => {
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                                     }}
                                 >
-                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('cliente')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
-                                        Cliente {getSortIcon('cliente')}
-                                    </th>
+                                    {isAdmin && (
+                                        <th className="cursor-pointer user-select-none" onClick={() => handleSort('cliente')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                            Cliente {getSortIcon('cliente')}
+                                        </th>
+                                    )}
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('departamento')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Cubo {getSortIcon('departamento')}
                                     </th>
@@ -1168,7 +1171,7 @@ const StatusTodosClientes: FC = () => {
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={13}
+                                            colSpan={isAdmin ? 12 : 11}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1202,7 +1205,7 @@ const StatusTodosClientes: FC = () => {
                                 ) : hitosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={13}
+                                            colSpan={isAdmin ? 12 : 11}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1279,11 +1282,13 @@ const StatusTodosClientes: FC = () => {
                                                     e.currentTarget.style.boxShadow = 'none'
                                                 }}
                                             >
-                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
-                                                    <span title={hito.cliente_nombre || 'No disponible'}>
-                                                        {hito.cliente_nombre || 'No disponible'}
-                                                    </span>
-                                                </td>
+                                                {isAdmin && (
+                                                    <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                        <span title={hito.cliente_nombre || 'No disponible'}>
+                                                            {hito.cliente_nombre || 'No disponible'}
+                                                        </span>
+                                                    </td>
+                                                )}
                                                 <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
                                                     {hito.ultimo_cumplimiento && hito.ultimo_cumplimiento.codSubDepar ? (
                                                         `${hito.ultimo_cumplimiento.codSubDepar!.substring(4)} - ${hito.ultimo_cumplimiento.departamento || '-'}`

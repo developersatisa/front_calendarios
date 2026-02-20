@@ -840,7 +840,7 @@ const ClientesList: FC = () => {
                               {clientesConProcesos.has(cliente.idcliente) && (
                                 <button
                                   className='btn btn-sm'
-                                  onClick={() => navigate(`/editar-calendario/${cliente.idcliente}`)}
+                                  onClick={() => navigate(`/edicion-calendario/${cliente.idcliente}`)}
                                   style={{
                                     backgroundColor: atisaStyles.colors.primary,
                                     border: `2px solid ${atisaStyles.colors.primary}`,

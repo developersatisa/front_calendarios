@@ -662,16 +662,16 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                 </div>
             </header>
 
-            {/* Overlay oscuro */}
+            {/* Overlay transparente */}
             {showFilters && (
                 <div
                     onClick={() => setShowFilters(false)}
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        backgroundColor: 'transparent',
                         zIndex: 1040,
-                        backdropFilter: 'blur(2px)'
+                        transition: 'opacity 0.3s ease'
                     }}
                 />
             )}
@@ -760,9 +760,9 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                         </select>
                     </div>
 
-                    {/* Cubos (multi-select) */}
+                    {/* Departamentos (multi-select) */}
                     <div>
-                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cubos</label>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Departamentos</label>
                         <Select
                             isMulti
                             options={subdepartamentos.map((subdep) => ({
@@ -778,9 +778,11 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                             onChange={(newValue) => {
                                 setSelectedDepartamentos(newValue.map((option) => option.value))
                             }}
-                            placeholder="Seleccionar cubos..."
+                            placeholder="Seleccionar departamentos..."
                             noOptionsMessage={() => "No hay opciones"}
+                            menuPortalTarget={document.body}
                             styles={{
+                                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                                 control: (base) => ({
                                     ...base,
                                     backgroundColor: 'rgba(255, 255, 255, 0.12)',
@@ -956,7 +958,7 @@ const HistoricoCumplimientos: FC<Props> = ({ clienteId }) => {
                                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)' }}
                                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.primary }}
                                     >
-                                        Cubos {getSortIcon('departamento')}
+                                        Departamento {getSortIcon('departamento')}
                                     </th>
                                     <th
                                         className="cursor-pointer user-select-none"

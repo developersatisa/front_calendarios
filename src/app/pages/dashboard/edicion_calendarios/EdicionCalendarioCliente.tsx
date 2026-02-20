@@ -7,8 +7,7 @@ import { ClienteProceso, getClienteProcesosByCliente, createClienteProceso, gene
 import { Proceso, getAllProcesos } from '../../../api/procesos'
 import { getClienteProcesoHitosByProceso, getClienteProcesoHitosHabilitadosByProceso, ClienteProcesoHito, updateClienteProcesoHito, deshabilitarHitosPorHitoDesde } from '../../../api/clienteProcesoHitos'
 import { Hito, getAllHitos } from '../../../api/hitos'
-import { createAuditoriaCalendario, AuditoriaCalendarioCreate } from '../../../api/auditoriaCalendarios'
-import HistorialAuditoriaModal from './HistorialAuditoriaModal'
+import { createAuditoriaCalendario, AuditoriaCalendarioCreate, MOTIVOS_AUDITORIA, MotivoAuditoria } from '../../../api/auditoriaCalendarios'
 import { atisaStyles, getSecondaryButtonStyles } from '../../../styles/atisaStyles'
 
 interface Props {
@@ -26,12 +25,13 @@ interface EditForm {
   fecha_limite: string | null
   hora_limite: string | null
   observaciones: string
+  motivo: MotivoAuditoria
 }
 
 import { useAuth } from '../../../modules/auth/core/Auth'
 
 const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
-  const { currentUser } = useAuth()
+  const { currentUser, auth } = useAuth()
   const navigate = useNavigate()
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [procesos, setProcesos] = useState<ClienteProceso[]>([])
@@ -51,14 +51,15 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     observaciones?: string
   }>>([])
   const [saving, setSaving] = useState(false)
-  const [showHistorialAuditoria, setShowHistorialAuditoria] = useState(false)
   const [observacionesGlobales, setObservacionesGlobales] = useState('')
+  const [motivoGlobal, setMotivoGlobal] = useState<MotivoAuditoria | 0>(0)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedHito, setSelectedHito] = useState<ClienteProcesoHito | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({
     fecha_limite: null,
     hora_limite: null,
-    observaciones: ''
+    observaciones: '',
+    motivo: 1
   })
   const [showSuccess, setShowSuccess] = useState(false)
   const [showError, setShowError] = useState(false)
@@ -733,7 +734,43 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
 
   const validarTodosLosCambios = () => true
 
-  const registrarAuditoria = async (hitoId: number, campo: string, valorAnterior: string, valorNuevo: string, observaciones?: string) => {
+  // Funciones helper para obtener datos del usuario logueado desde el JWT
+  // (igual que en CumplimentarHitoModal y CumplimentarHitosMasivoModal)
+  const getCurrentUsername = (): string => {
+    if (auth?.api_token) {
+      try {
+        const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+        if (payload.numeross) return payload.numeross
+        if (payload.username) return payload.username
+        if (payload.sub) return payload.sub
+      } catch (error) {
+        console.warn('Error decodificando token JWT:', error)
+      }
+    }
+    if (currentUser?.username) return currentUser.username
+    return 'usuario'
+  }
+
+  const getCurrentCodSubDepar = (): string | undefined => {
+    if (auth?.api_token) {
+      try {
+        const payload = JSON.parse(atob(auth.api_token.split('.')[1]))
+        return payload.codSubDepar
+      } catch (error) {
+        console.warn('Error decodificando token JWT para codSubDepar:', error)
+      }
+    }
+    return undefined
+  }
+
+  const registrarAuditoria = async (
+    hitoId: number,
+    campo: string,
+    valorAnterior: string,
+    valorNuevo: string,
+    observaciones?: string,
+    motivo: MotivoAuditoria = 1
+  ) => {
     try {
       const auditoriaData: AuditoriaCalendarioCreate = {
         cliente_id: clienteId,
@@ -741,8 +778,11 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
         campo_modificado: campo,
         valor_anterior: valorAnterior || null,
         valor_nuevo: valorNuevo || null,
-        usuario_modificacion: currentUser?.username || 'Administrador',
-        observaciones: observaciones || null
+        usuario_modificacion: getCurrentUsername(),
+        usuario: getCurrentUsername(),
+        observaciones: observaciones || null,
+        motivo,
+        codSubDepar: getCurrentCodSubDepar() || null
       }
 
       await createAuditoriaCalendario(auditoriaData)
@@ -755,6 +795,11 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   const guardarCambios = async () => {
     if (Object.keys(hitosEditados).length === 0) {
       showToastMessage('No hay cambios para guardar', 'info')
+      return
+    }
+
+    if (motivoGlobal === 0) {
+      showToastMessage('Debes seleccionar un motivo antes de guardar los cambios', 'warning')
       return
     }
 
@@ -794,7 +839,8 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           cambio.campo,
           cambio.valorAnterior,
           cambio.valorNuevo,
-          observacionesGlobales
+          observacionesGlobales,
+          motivoGlobal as MotivoAuditoria
         )
       }
 
@@ -816,6 +862,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
       setHitosEditados({})
       setCambiosRealizados([])
       setObservacionesGlobales('')
+      setMotivoGlobal(0)
     } catch (error) {
       console.error('Error guardando cambios:', error)
       showToastMessage('Error al guardar los cambios. Por favor, inténtelo de nuevo.', 'error')
@@ -830,6 +877,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
       setHitosEditados({})
       setCambiosRealizados([])
       setObservacionesGlobales('')
+      setMotivoGlobal(0)
     }
   }
 
@@ -872,7 +920,8 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
     setEditForm({
       fecha_limite: formatDateForInput(hito.fecha_limite || ''),
       hora_limite: formatTimeForInput(hito.hora_limite),
-      observaciones: ''
+      observaciones: '',
+      motivo: 1
     })
     setShowEditModal(true)
   }
@@ -917,13 +966,15 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
       }
 
       // Registrar auditoría para cada cambio
+      // codSubDepar viene del usuario logueado (misma lógica que cumplimientos)
       for (const cambio of cambios) {
         await registrarAuditoria(
           selectedHito.id,
           cambio.campo,
           cambio.anterior,
           cambio.nuevo,
-          editForm.observaciones
+          editForm.observaciones,
+          editForm.motivo
         )
       }
 
@@ -934,7 +985,8 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           'hito_completo',
           'Sin cambios específicos',
           'Hito editado desde modal',
-          editForm.observaciones
+          editForm.observaciones,
+          editForm.motivo
         )
       }
 
@@ -974,7 +1026,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
   }
 
   const verHistorial = (hitoId: number) => {
-    setShowHistorialAuditoria(true)
+    navigate(`/historial-auditoria/${clienteId}`)
   }
 
   // Función para manejar el ordenamiento
@@ -1553,7 +1605,7 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 )}
                 <button
                   className="btn"
-                  onClick={() => setShowHistorialAuditoria(true)}
+                  onClick={() => navigate(`/historial-auditoria/${clienteId}`)}
                   style={{
                     backgroundColor: atisaStyles.colors.primary,
                     color: 'white',
@@ -1648,14 +1700,45 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                     Cancelar
                   </button>
 
+                  {/* Selector de Motivo (obligatorio) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="bi bi-flag" style={{ color: motivoGlobal === 0 ? '#ffc107' : 'rgba(255,255,255,0.7)', fontSize: '14px' }}></i>
+                    <select
+                      value={motivoGlobal}
+                      onChange={(e) => setMotivoGlobal(Number(e.target.value) as MotivoAuditoria | 0)}
+                      style={{
+                        backgroundColor: motivoGlobal === 0 ? 'rgba(255,193,7,0.2)' : 'rgba(255,255,255,0.15)',
+                        color: 'white',
+                        border: `2px solid ${motivoGlobal === 0 ? '#ffc107' : 'rgba(255,255,255,0.4)'}`,
+                        borderRadius: '8px',
+                        padding: '7px 10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        fontFamily: atisaStyles.fonts.secondary,
+                        minWidth: '200px',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <option value={0} style={{ backgroundColor: '#003a45', color: '#ffc107' }}>⚠ Seleccionar motivo...</option>
+                      {MOTIVOS_AUDITORIA.map((m) => (
+                        <option key={m.id} value={m.id} style={{ backgroundColor: '#003a45', color: 'white' }}>
+                          {m.id}. {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <button
                     className="btn btn-sm"
                     onClick={guardarCambios}
-                    disabled={saving}
+                    disabled={saving || motivoGlobal === 0}
+                    title={motivoGlobal === 0 ? 'Selecciona un motivo antes de guardar' : ''}
                     style={{
-                      backgroundColor: atisaStyles.colors.secondary,
+                      backgroundColor: motivoGlobal === 0 ? '#6c757d' : atisaStyles.colors.secondary,
                       color: 'white',
-                      border: `2px solid ${atisaStyles.colors.secondary}`,
+                      border: `2px solid ${motivoGlobal === 0 ? '#6c757d' : atisaStyles.colors.secondary}`,
                       borderRadius: '8px',
                       fontFamily: atisaStyles.fonts.secondary,
                       fontWeight: '600',
@@ -1666,16 +1749,17 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      cursor: motivoGlobal === 0 ? 'not-allowed' : 'pointer'
                     }}
                     onMouseEnter={(e) => {
-                      if (!saving) {
+                      if (!saving && motivoGlobal !== 0) {
                         e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
                         e.currentTarget.style.borderColor = atisaStyles.colors.accent
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!saving) {
+                      if (!saving && motivoGlobal !== 0) {
                         e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
                         e.currentTarget.style.borderColor = atisaStyles.colors.secondary
                       }
@@ -2685,6 +2769,55 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
                 </div>
               </div>
 
+              {/* Motivo de Auditoría */}
+              <div className="form-group mb-4">
+                <label className="form-label" style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: atisaStyles.colors.dark,
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <i className="bi bi-flag" style={{ color: atisaStyles.colors.primary }}></i>
+                  Motivo de modificación *
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {MOTIVOS_AUDITORIA.map((m) => {
+                    const isSelected = editForm.motivo === m.id
+                    const colors: Record<number, string> = {
+                      1: atisaStyles.colors.primary,
+                      2: '#009ef7',
+                      3: '#50cd89',
+                      4: '#ffc107'
+                    }
+                    const color = colors[m.id] || atisaStyles.colors.primary
+                    return (
+                      <div
+                        key={m.id}
+                        onClick={() => setEditForm({ ...editForm, motivo: m.id as MotivoAuditoria })}
+                        style={{
+                          cursor: 'pointer',
+                          backgroundColor: isSelected ? color : 'transparent',
+                          color: isSelected ? 'white' : atisaStyles.colors.dark,
+                          border: `2px solid ${color}`,
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          transition: 'all 0.2s ease',
+                          userSelect: 'none'
+                        }}
+                      >
+                        {m.id}. {m.label}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Observaciones */}
               <div className="form-group mb-4">
                 <label className="form-label" style={{
                   fontSize: '14px',
@@ -2791,12 +2924,6 @@ const EditarCalendarioCliente: FC<Props> = ({ clienteId }) => {
           </Modal.Footer>
         </Modal>
 
-        {/* Modal de Historial de Auditoría */}
-        <HistorialAuditoriaModal
-          show={showHistorialAuditoria}
-          onHide={() => setShowHistorialAuditoria(false)}
-          clienteId={clienteId}
-        />
 
         {/* Notificaciones Toast */}
         <CustomToast

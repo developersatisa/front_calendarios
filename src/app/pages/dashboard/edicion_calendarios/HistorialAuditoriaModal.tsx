@@ -1,5 +1,5 @@
 import { FC, useEffect, useState } from 'react'
-import { Modal } from 'react-bootstrap'
+import { Modal, OverlayTrigger, Tooltip } from 'react-bootstrap'
 import { getAuditoriaCalendariosByCliente, AuditoriaCalendario } from '../../../api/auditoriaCalendarios'
 import { atisaStyles } from '../../../styles/atisaStyles'
 import SharedPagination from '../../../components/pagination/SharedPagination'
@@ -104,7 +104,7 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
       <Modal
         show={show}
         onHide={onHide}
-        size="xl"
+        fullscreen={true}
         centered
         style={{
           fontFamily: atisaStyles.fonts.secondary
@@ -115,7 +115,6 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
             backgroundColor: atisaStyles.colors.primary,
             color: 'white',
             border: 'none',
-            borderRadius: '12px 12px 0 0',
             padding: '20px 24px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -288,85 +287,132 @@ const HistorialAuditoriaModal: FC<Props> = ({ show, onHide, hitoId, clienteId })
               </p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <table
-                className="table table-hover"
-                style={{
-                  fontFamily: atisaStyles.fonts.secondary,
-                  margin: 0
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      backgroundColor: atisaStyles.colors.primary,
-                      color: 'white'
-                    }}
-                  >
-                    <th style={{ border: 'none', padding: '12px' }}>Fecha</th>
-                    <th style={{ border: 'none', padding: '12px' }}>Hito</th>
-                    <th style={{ border: 'none', padding: '12px' }}>Campo</th>
-                    <th style={{ border: 'none', padding: '12px' }}>Valor Anterior</th>
-                    <th style={{ border: 'none', padding: '12px' }}>Valor Nuevo</th>
-                    <th style={{ border: 'none', padding: '12px' }}>Usuario</th>
-                    <th style={{ border: 'none', padding: '12px' }}>Observaciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditoria.map((item, index) => (
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0, 80, 92, 0.1)',
+                border: `1px solid ${atisaStyles.colors.light}`,
+                overflow: 'hidden'
+              }}
+            >
+              <div className="table-responsive">
+                <table
+                  className="table table-hover"
+                  style={{
+                    fontFamily: atisaStyles.fonts.secondary,
+                    margin: 0
+                  }}
+                >
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
                     <tr
-                      key={item.id}
                       style={{
-                        backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                        backgroundColor: atisaStyles.colors.primary,
+                        color: 'white',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                       }}
                     >
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        {formatDate(item.fecha_modificacion)}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600' }}>
-                        {item.nombre_hito}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        <span
-                          style={{
-                            backgroundColor: atisaStyles.colors.accent,
-                            color: 'white',
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>Cubo</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>Proceso</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>Hito</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>Origen</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap', textAlign: 'center' }}>Clave</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>F/H Ant.</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>F/H Act.</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>Motivo</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>F. Act.</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap' }}>Usuario</th>
+                      <th style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', backgroundColor: atisaStyles.colors.primary, color: 'white', whiteSpace: 'nowrap', textAlign: 'center', width: '60px' }}>Obs.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditoria.map((item, index) => (
+                      <tr
+                        key={item.id}
+                        style={{
+                          backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8f9fa'
+                        }}
+                      >
+                        <td style={{ padding: '12px', fontSize: '13px' }}>
+                          <div style={{ fontWeight: '600' }}>{item.codSubDepar ? `${item.codSubDepar.substring(4)} - ${item.nombre_subdepar || '-'}` : (item.nombre_subdepar || '-')}</div>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500' }}>
+                          <div style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.proceso_nombre}>
+                            {item.proceso_nombre}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600' }}>
+                          <div style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.hito_nombre}>
+                            {item.hito_nombre}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px' }}>
+                          <span className="badge" style={{ backgroundColor: 'rgba(0,161,222,0.1)', color: atisaStyles.colors.primary, border: `1px solid rgba(0,161,222,0.3)` }}>
+                            {item.tipo || '-'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', textAlign: 'center' }}>
+                          {item.critico ? (
+                            <i className="bi bi-star-fill text-warning" title="Hito Clave"></i>
+                          ) : (
+                            <i className="bi bi-dash text-muted" title="No Clave"></i>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px' }}>
+                          <code style={{ backgroundColor: '#f8f9fa', padding: '3px 6px', borderRadius: '4px', color: '#6c757d', border: '1px solid #dee2e6', whiteSpace: 'nowrap' }}>
+                            {item.fecha_limite_anterior || item.valor_anterior || '-'}
+                          </code>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px' }}>
+                          <code style={{ backgroundColor: '#e8f5e9', padding: '3px 6px', borderRadius: '4px', color: '#105021', border: '1px solid #c8e6c9', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
+                            {item.fecha_limite_actual || item.valor_nuevo || '-'}
+                          </code>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px' }}>
+                          <span style={{
+                            backgroundColor: 'rgba(0,161,222,0.1)',
+                            color: atisaStyles.colors.primary,
                             padding: '4px 8px',
                             borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: '600'
-                          }}
-                        >
-                          {getCampoNombre(item.campo_modificado)}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        <code style={{ backgroundColor: '#f8f9fa', padding: '2px 4px', borderRadius: '3px' }}>
-                          {item.valor_anterior || '-'}
-                        </code>
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        <code style={{ backgroundColor: '#d4edda', padding: '2px 4px', borderRadius: '3px' }}>
-                          {item.valor_nuevo || '-'}
-                        </code>
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600' }}>
-                        {item.usuario_modificacion}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        {item.observaciones || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            border: `1px solid rgba(0,161,222,0.3)`,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {item.motivo_descripcion || 'Configuración'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                          {formatDate(item.fecha_modificacion)}
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600' }}>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }} title={(item.nombre_usuario || item.usuario)?.trim()}>
+                            {(item.nombre_usuario || item.usuario)?.trim()}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          {item.observaciones ? (
+                            <OverlayTrigger placement="top" overlay={<Tooltip id={`tooltip-obs-${item.id}`} style={{ maxWidth: '300px', zIndex: 9999 }}>{item.observaciones}</Tooltip>}>
+                              <button type="button" className="btn btn-icon btn-sm" style={{ background: 'transparent', border: 'none', padding: 0, transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+                                <i className="bi bi-chat-square-text-fill" style={{ color: '#dc3545', fontSize: '20px' }}></i>
+                              </button>
+                            </OverlayTrigger>
+                          ) : (
+                            <i className="bi bi-chat-square" style={{ color: '#dee2e6', fontSize: '20px' }}></i>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

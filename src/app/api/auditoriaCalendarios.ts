@@ -4,15 +4,27 @@ export interface AuditoriaCalendario {
   id: number
   cliente_id: string
   hito_id: number
-  nombre_hito: string | null
   campo_modificado: string
   valor_anterior: string | null
   valor_nuevo: string | null
-  usuario_modificacion: string
-  fecha_modificacion: string
   observaciones: string | null
+  motivo: number
+  motivo_descripcion: string
+  usuario: string
+  nombre_usuario: string
+  codSubDepar: string
+  fecha_modificacion: string
   created_at: string | null
   updated_at: string | null
+  nombre_subdepar: string
+  proceso_nombre: string
+  hito_nombre: string
+  tipo: string
+  critico: boolean
+  obligatorio: boolean
+  fecha_limite_anterior: string | null
+  fecha_limite_actual: string | null
+  momento_cambio: string | null
 }
 
 export interface AuditoriaCalendarioCreate {
@@ -21,9 +33,23 @@ export interface AuditoriaCalendarioCreate {
   campo_modificado: string
   valor_anterior: string | null
   valor_nuevo: string | null
-  usuario_modificacion: string
+  /** @deprecated use usuario instead */
+  usuario_modificacion?: string
+  usuario: string
   observaciones?: string | null
+  /** 1=Configuración | 2=A petición de Atisa | 3=A petición de cliente | 4=A petición de tercero */
+  motivo: number
+  codSubDepar?: string | null
 }
+
+export const MOTIVOS_AUDITORIA = [
+  { id: 1, label: 'Configuración' },
+  { id: 2, label: 'A petición de Atisa' },
+  { id: 3, label: 'A petición de cliente' },
+  { id: 4, label: 'A petición de tercero' },
+] as const
+
+export type MotivoAuditoria = typeof MOTIVOS_AUDITORIA[number]['id']
 
 export interface AuditoriaCalendariosResponse {
   auditoria: AuditoriaCalendario[]
@@ -77,7 +103,8 @@ export const getAuditoriaCalendariosByCliente = async (
   sortField?: string,
   sortDirection: string = 'desc',
   fechaDesde?: string,
-  fechaHasta?: string
+  fechaHasta?: string,
+  filtrosAdicionales?: Record<string, any>
 ) => {
   const params = new URLSearchParams()
   if (page) params.append('page', page.toString())
@@ -86,6 +113,22 @@ export const getAuditoriaCalendariosByCliente = async (
   params.append('sort_direction', sortDirection)
   if (fechaDesde) params.append('fecha_desde', fechaDesde)
   if (fechaHasta) params.append('fecha_hasta', fechaHasta)
+
+  if (filtrosAdicionales) {
+    Object.keys(filtrosAdicionales).forEach(key => {
+      const val = filtrosAdicionales[key]
+      if (val !== undefined && val !== null && val !== '') {
+        // Support arrays
+        if (Array.isArray(val)) {
+          if (val.length > 0) {
+            params.append(key, val.join(','))
+          }
+        } else {
+          params.append(key, val.toString())
+        }
+      }
+    })
+  }
 
   const response = await api.get<AuditoriaClienteResponse>(`/auditoria-calendarios/cliente/${clienteId}?${params.toString()}`)
   return response.data

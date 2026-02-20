@@ -5,7 +5,7 @@ import { getClienteProcesosByCliente } from '../../api/clienteProcesos'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import { useNavigate } from 'react-router-dom'
 import { atisaStyles } from '../../styles/atisaStyles'
-import CumplimientoMasivoModal from './components/calendario/CumplimientoMasivoModal'
+
 import CustomToast from '../../components/ui/CustomToast'
 import { useAuth } from '../../modules/auth/core/Auth'
 
@@ -26,7 +26,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [clientesConProcesos, setClientesConProcesos] = useState<Set<string>>(new Set())
 
-  const [showMasivoModal, setShowMasivoModal] = useState(false)
+
   const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({
     show: false,
     message: '',
@@ -328,7 +328,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
               <button
                 type='button'
                 className='btn'
-                onClick={() => setShowMasivoModal(true)}
+                onClick={() => navigate('/cumplimiento-masivo')}
                 style={{
                   backgroundColor: atisaStyles.colors.success,
                   color: 'white',
@@ -850,12 +850,7 @@ const ClientesDocumentalCalendarioList: FC = () => {
         )}
       </div>
 
-      <CumplimientoMasivoModal
-        show={showMasivoModal}
-        onHide={() => setShowMasivoModal(false)}
-        onSuccess={(msg) => setToast({ show: true, message: msg, type: 'success' })}
-        onError={(msg) => setToast({ show: true, message: msg, type: 'error' })}
-      />
+
 
       <CustomToast
         show={toast.show}
