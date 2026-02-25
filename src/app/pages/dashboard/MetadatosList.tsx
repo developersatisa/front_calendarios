@@ -4,11 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { KTCard, KTCardBody } from '../../../_metronic/helpers'
 import CustomToast from '../../components/ui/CustomToast'
 import { Metadato, getAllMetadatos, createMetadato, updateMetadato, deleteMetadato } from '../../api/metadatos'
-import { MetadatoArea, getAllMetadatosArea, createMetadatoArea } from '../../api/metadatosArea'
-import { Subdepartamento, getAllSubdepartamentos } from '../../api/subdepartamentos'
 import SharedPagination from '../../components/pagination/SharedPagination'
 import MetadatoModal from './components/MetadatoModal'
-import MetadatoSubdepartamentosModal from './components/MetadatoSubdepartamentosModal'
 import { atisaStyles, getPrimaryButtonStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles, getBadgeStyles, getDropdownStyles, getActionsButtonStyles } from '../../styles/atisaStyles'
 
 const MetadatosList: FC = () => {
@@ -34,11 +31,6 @@ const MetadatosList: FC = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingMetadato, setEditingMetadato] = useState<Metadato | null>(null)
 
-  // Estados para subdepartamentos y asociaciones
-  const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
-  const [metadatosArea, setMetadatosArea] = useState<MetadatoArea[]>([])
-  const [showSubdepartamentosModal, setShowSubdepartamentosModal] = useState(false)
-  const [selectedMetadatoForAreas, setSelectedMetadatoForAreas] = useState<Metadato | null>(null)
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null)
   const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({})
@@ -170,16 +162,12 @@ const MetadatosList: FC = () => {
   const loadAll = async () => {
     try {
       setLoading(true)
-      const [metadatosData, subdepartamentosData, metadatosAreaData] = await Promise.all([
-        getAllMetadatos(page, limit, sortField, sortDirection),
-        getAllSubdepartamentos(),
-        getAllMetadatosArea()
-      ])
+
+      const metadatosData = await getAllMetadatos(page, limit, sortField, sortDirection)
       setMetadatos(metadatosData.metadatos || [])
       setTotal(metadatosData.total || 0)
-      setSubdepartamentos(subdepartamentosData.subdepartamentos || [])
-      setMetadatosArea(metadatosAreaData || [])
       setError(null)
+
     } catch (error: any) {
       if (error?.response?.status === 404) {
         setMetadatos([])
@@ -187,7 +175,7 @@ const MetadatosList: FC = () => {
         setError(null)
       } else {
         setError('Error al cargar los datos')
-        console.error('Error:', error)
+        console.error('Error in loadAll:', error)
       }
     } finally {
       setLoading(false)
@@ -198,16 +186,10 @@ const MetadatosList: FC = () => {
     try {
       setLoading(true)
       setSearching(true)
-      const [metadatosData, subdepartamentosData, metadatosAreaData] = await Promise.all([
-        getAllMetadatos(),
-        getAllSubdepartamentos(),
-        getAllMetadatosArea()
-      ])
+      const metadatosData = await getAllMetadatos()
       setAllMetadatos(metadatosData.metadatos || [])
-      setSubdepartamentos(subdepartamentosData.subdepartamentos || [])
-      setMetadatosArea(metadatosAreaData || [])
+
     } catch (error: any) {
-      // Handle error similarly
       console.error('Error loading all metadatos:', error)
       if (error?.response?.status === 404) {
         setAllMetadatos([])
@@ -247,18 +229,6 @@ const MetadatosList: FC = () => {
     return filteredMetadatos.slice(startIndex, endIndex)
   }, [filteredMetadatos, page, limit, debouncedSearchTerm])
 
-  // Agrupar metadatos-area por metadato
-  const groupedMetadatosArea = metadatosArea.reduce((groups, ma) => {
-    if (!groups[ma.id_metadato]) {
-      groups[ma.id_metadato] = []
-    }
-    const subdep = subdepartamentos.find(s => s.codSubDepar === ma.codSubDepar && s.codSubDepar !== null)
-    if (subdep) {
-      groups[ma.id_metadato].push({ ...ma, subdepData: subdep })
-    }
-    return groups
-  }, {} as Record<number, Array<MetadatoArea & { subdepData: Subdepartamento }>>)
-
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
   }
@@ -275,18 +245,10 @@ const MetadatosList: FC = () => {
 
   const handleSave = async (metadatoData: Omit<Metadato, 'id'>) => {
     try {
-      // Transformar global_ a global para el backend
-      const dataForBackend = {
-        ...metadatoData,
-        global: metadatoData.global_
-      }
-      // Eliminar global_ del objeto que se envía
-      delete (dataForBackend as any).global_
-
       if (editingMetadato) {
-        await updateMetadato(editingMetadato.id, dataForBackend)
+        await updateMetadato(editingMetadato.id, metadatoData)
       } else {
-        await createMetadato(dataForBackend)
+        await createMetadato(metadatoData)
       }
       setShowModal(false)
       setEditingMetadato(null)
@@ -343,28 +305,6 @@ const MetadatosList: FC = () => {
     setMetadatoAEliminar(null)
   }
 
-  const handleAsignarDepartamentos = (metadato: Metadato) => {
-    setSelectedMetadatoForAreas(metadato)
-    setShowSubdepartamentosModal(true)
-  }
-
-  const handleSaveSubdepartamentos = async (newRelations: { id_metadato: number; codSubDepar: string }[]) => {
-    try {
-      const promises = newRelations.map(relation => createMetadatoArea(relation))
-      await Promise.all(promises)
-      await Promise.all(promises)
-      if (debouncedSearchTerm.trim()) {
-        await loadAllMetadatos()
-      } else {
-        await loadAll()
-      }
-      setShowSubdepartamentosModal(false)
-    } catch (error) {
-      console.error('Error al guardar subdepartamentos:', error)
-      setError('Error al guardar los subdepartamentos')
-    }
-  }
-
   return (
     <div style={{
       fontFamily: atisaStyles.fonts.secondary,
@@ -379,69 +319,16 @@ const MetadatosList: FC = () => {
         <div
           className='card-header border-0 pt-6'
           style={{
-            backgroundColor: atisaStyles.colors.primary,
+            background: 'linear-gradient(135deg, #00505c 0%, #007b8a 100%)',
             color: 'white',
             borderRadius: '8px 8px 0 0',
             margin: 0,
             padding: '24px 16px'
           }}
         >
-          <div className='card-title'>
-            <h3 style={{
-              fontFamily: atisaStyles.fonts.primary,
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0
-            }}>
-              Gestión de Metadatos
-            </h3>
-            <div className='d-flex align-items-center position-relative my-3'>
-              <i
-                className='bi bi-search position-absolute ms-6'
-                style={{ color: atisaStyles.colors.light }}
-              ></i>
-              <input
-                type='text'
-                className='form-control form-control-solid w-250px ps-14'
-                placeholder='Buscar metadatos...'
-                value={searchTerm}
-                onChange={handleSearch}
-                style={{
-                  backgroundColor: 'white',
-                  border: `2px solid ${atisaStyles.colors.light}`,
-                  borderRadius: '8px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  paddingRight: searching ? '50px' : '16px'
-                }}
-              />
-              {searching && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 10
-                  }}
-                >
-                  <div
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    style={{
-                      color: atisaStyles.colors.primary,
-                      width: '20px',
-                      height: '20px'
-                    }}
-                  >
-                    <span className="visually-hidden">Buscando...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className='card-toolbar'>
-            <div className='d-flex justify-content-end gap-2'>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            {/* Izquierda: Botón Volver + Buscador */}
+            <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
               <button
                 type='button'
                 className='btn'
@@ -457,8 +344,70 @@ const MetadatosList: FC = () => {
                 }}
               >
                 <i className="bi bi-arrow-left me-2"></i>
-                Volver
+                Volver a Dashboard
               </button>
+              <div className='d-flex align-items-center position-relative' style={{ position: 'relative' }}>
+                <i
+                  className='bi bi-search position-absolute ms-6'
+                  style={{ color: atisaStyles.colors.light, zIndex: 1 }}
+                ></i>
+                <input
+                  type='text'
+                  className='form-control form-control-solid w-250px ps-14'
+                  placeholder='Buscar metadatos...'
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  style={{
+                    backgroundColor: 'white',
+                    border: `2px solid ${atisaStyles.colors.light}`,
+                    borderRadius: '8px',
+                    fontFamily: atisaStyles.fonts.secondary,
+                    fontSize: '14px',
+                    paddingRight: searching ? '50px' : '16px'
+                  }}
+                />
+                {searching && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      style={{
+                        color: atisaStyles.colors.primary,
+                        width: '20px',
+                        height: '20px'
+                      }}
+                    >
+                      <span className="visually-hidden">Buscando...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Centro: Título */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <h3 style={{
+                fontFamily: atisaStyles.fonts.primary,
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                fontSize: '2rem'
+              }}>
+                Gestión de Metadatos
+              </h3>
+            </div>
+
+            {/* Derecha: Botón Nuevo */}
+            <div className='d-flex gap-2' style={{ justifyContent: 'flex-end' }}>
               <button
                 type='button'
                 className='btn'
@@ -679,17 +628,6 @@ const MetadatosList: FC = () => {
                           Estado {getSortIcon('activo')}
                         </th>
                         <th
-                          style={{
-                            ...getTableHeaderStyles(),
-                            fontFamily: atisaStyles.fonts.primary,
-                            fontWeight: 'bold',
-                            backgroundColor: atisaStyles.colors.light,
-                            color: atisaStyles.colors.primary
-                          }}
-                        >
-                          Departamentos Asociados
-                        </th>
-                        <th
                           className='text-start'
                           style={{
                             ...getTableHeaderStyles(),
@@ -779,109 +717,36 @@ const MetadatosList: FC = () => {
                               {metadato.activo ? 'Activo' : 'Inactivo'}
                             </span>
                           </td>
-                          <td style={{
-                            ...getTableCellStyles()
-                          }}>
-                            {metadato.global_ ? (
-                              <span
-                                style={{
-                                  color: atisaStyles.colors.dark,
-                                  fontStyle: 'italic',
-                                  fontFamily: atisaStyles.fonts.secondary
-                                }}
-                              >
-                                Global - Aplica a todos los departamentos
-                              </span>
-                            ) : (
-                              <div className='d-flex flex-column gap-2' style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                {groupedMetadatosArea[metadato.id]?.map((ma) => (
-                                  <div key={ma.id} className='d-flex align-items-center'>
-                                    <span
-                                      className='badge me-2'
-                                      style={getBadgeStyles(true)}
-                                    >
-                                      {ma.subdepData.codSubDepar || '-'}
-                                    </span>
-                                    <span
-                                      style={{
-                                        fontSize: '12px',
-                                        fontFamily: atisaStyles.fonts.secondary,
-                                        color: atisaStyles.colors.dark
-                                      }}
-                                    >
-                                      {ma.subdepData.nombre || '-'}
-                                    </span>
-                                  </div>
-                                ))}
-                                {(!groupedMetadatosArea[metadato.id] || groupedMetadatosArea[metadato.id].length === 0) && (
-                                  <span
-                                    style={{
-                                      color: atisaStyles.colors.dark,
-                                      fontFamily: atisaStyles.fonts.secondary
-                                    }}
-                                  >
-                                    Sin departamentos
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
                           <td
                             className='text-start'
                             style={{
                               ...getTableCellStyles()
                             }}
                           >
-                            <div className='d-flex gap-2'>
-                              {!metadato.global_ && (
-                                <button
-                                  className='btn btn-sm'
-                                  onClick={() => handleAsignarDepartamentos(metadato)}
-                                  style={{
-                                    backgroundColor: atisaStyles.colors.accent,
-                                    border: `2px solid ${atisaStyles.colors.accent}`,
-                                    color: 'white',
-                                    fontFamily: atisaStyles.fonts.secondary,
-                                    fontWeight: '600',
-                                    borderRadius: '6px',
-                                    padding: '4px 8px',
-                                    fontSize: '11px',
-                                    transition: 'all 0.3s ease'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    e.currentTarget.style.borderColor = atisaStyles.colors.primary
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                    e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                                  }}
-                                >
-                                  <i className='bi bi-building me-2'></i>
-                                  Asignar Departamentos
-                                </button>
-                              )}
-                              <div className='dropdown-container' style={{ position: 'relative', display: 'inline-block' }}>
-                                <button
-                                  ref={(el) => (buttonRefs.current[metadato.id] = el)}
-                                  className='btn btn-sm'
-                                  type='button'
-                                  onClick={(e) => handleActionsClick(metadato.id, e)}
-                                  style={getActionsButtonStyles()}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                                    e.currentTarget.style.borderColor = atisaStyles.colors.accent
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
-                                    e.currentTarget.style.borderColor = atisaStyles.colors.primary
-                                  }}
-                                >
-                                  Acciones
-                                  <i className={`bi ${activeDropdown === metadato.id ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
-                                </button>
+                            {metadato.tipo_generacion !== 'automatico' && (
+                              <div className='d-flex gap-2'>
+                                <div className='dropdown-container' style={{ position: 'relative', display: 'inline-block' }}>
+                                  <button
+                                    ref={(el) => (buttonRefs.current[metadato.id] = el)}
+                                    className='btn btn-sm'
+                                    type='button'
+                                    onClick={(e) => handleActionsClick(metadato.id, e)}
+                                    style={getActionsButtonStyles()}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
+                                      e.currentTarget.style.borderColor = atisaStyles.colors.accent
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                                      e.currentTarget.style.borderColor = atisaStyles.colors.primary
+                                    }}
+                                  >
+                                    Acciones
+                                    <i className={`bi ${activeDropdown === metadato.id ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`}></i>
+                                  </button>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -926,91 +791,104 @@ const MetadatosList: FC = () => {
                 fontFamily: atisaStyles.fonts.secondary
               }}
             >
-              <button
-                onClick={() => {
-                  const metadato = filteredMetadatos.find(m => m.id === activeDropdown)
-                  if (metadato) {
-                    handleEdit(metadato)
-                  }
-                  setActiveDropdown(null)
-                  setDropdownPosition(null)
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px 16px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: atisaStyles.colors.primary,
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: '0'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = atisaStyles.colors.light
-                  e.currentTarget.style.color = atisaStyles.colors.accent
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = atisaStyles.colors.primary
-                }}
-              >
-                <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px' }}></i>
-                Editar
-              </button>
-
               {(() => {
                 const metadato = filteredMetadatos.find(m => m.id === activeDropdown)
-                if (metadato && metadato.tipo_generacion !== 'automatico') {
-                  return (
-                    <>
-                      <div style={{
-                        height: '1px',
-                        backgroundColor: atisaStyles.colors.light,
-                        margin: '4px 0'
-                      }}></div>
 
-                      <button
-                        onClick={() => {
-                          handleEliminar(activeDropdown)
-                        }}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '12px 16px',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: '#dc3545',
-                          fontFamily: atisaStyles.fonts.secondary,
-                          fontWeight: '600',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          borderRadius: '0'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f8d7da'
-                          e.currentTarget.style.color = '#721c24'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent'
-                          e.currentTarget.style.color = '#dc3545'
-                        }}
-                      >
-                        <i className="bi bi-trash3 me-3" style={{ fontSize: '16px' }}></i>
-                        Eliminar
-                      </button>
-                    </>
+                if (metadato && metadato.tipo_generacion === 'automatico') {
+                  return (
+                    <div style={{
+                      padding: '12px 16px',
+                      color: atisaStyles.colors.dark,
+                      fontFamily: atisaStyles.fonts.secondary,
+                      fontSize: '14px',
+                      opacity: 0.6,
+                      fontStyle: 'italic',
+                      textAlign: 'center'
+                    }}>
+                      Sin acciones disponibles
+                    </div>
                   )
                 }
-                return null
+
+                return (
+                  <>
+                    <button
+                      onClick={() => {
+                        if (metadato) {
+                          handleEdit(metadato)
+                        }
+                        setActiveDropdown(null)
+                        setDropdownPosition(null)
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '12px 16px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: atisaStyles.colors.primary,
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '0'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = atisaStyles.colors.light
+                        e.currentTarget.style.color = atisaStyles.colors.accent
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = atisaStyles.colors.primary
+                      }}
+                    >
+                      <i className="bi bi-pencil-square me-3" style={{ fontSize: '16px' }}></i>
+                      Editar
+                    </button>
+
+                    <div style={{
+                      height: '1px',
+                      backgroundColor: atisaStyles.colors.light,
+                      margin: '4px 0'
+                    }}></div>
+
+                    <button
+                      onClick={() => {
+                        if (activeDropdown) handleEliminar(activeDropdown)
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '12px 16px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#dc3545',
+                        fontFamily: atisaStyles.fonts.secondary,
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '0'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8d7da'
+                        e.currentTarget.style.color = '#721c24'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = '#dc3545'
+                      }}
+                    >
+                      <i className="bi bi-trash3 me-3" style={{ fontSize: '16px' }}></i>
+                      Eliminar
+                    </button>
+                  </>
+                )
               })()}
             </div>
           </div>,
@@ -1028,15 +906,6 @@ const MetadatosList: FC = () => {
         metadato={editingMetadato}
       />
 
-      <MetadatoSubdepartamentosModal
-        show={showSubdepartamentosModal}
-        onHide={() => setShowSubdepartamentosModal(false)}
-        onSave={handleSaveSubdepartamentos}
-        metadatos={metadatos}
-        subdepartamentos={subdepartamentos}
-        areasActuales={metadatosArea}
-        selectedMetadatoId={selectedMetadatoForAreas?.id || 0}
-      />
       {/* Modal de confirmación para eliminar */}
       {showEliminarModal && metadatoAEliminar && (
         <div

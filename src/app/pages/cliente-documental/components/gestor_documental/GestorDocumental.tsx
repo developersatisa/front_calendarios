@@ -2,7 +2,6 @@ import React, { FC, useEffect, useState } from 'react'
 import { KTCard, KTCardBody } from '../../../../../_metronic/helpers'
 import { DocumentalCarpetaCliente, getDocumentalCarpetaClienteByClienteId } from '../../../../api/documentalCarpetaCliente'
 import { Cliente, getClienteById } from '../../../../api/clientes'
-import SubirDocumentosModal from './SubirDocumentosModal'
 import DocumentosCategoriaList from './DocumentosCategoriaList'
 import CustomToast from '../../../../components/ui/CustomToast'
 import { atisaStyles } from '../../../../styles/atisaStyles'
@@ -18,7 +17,6 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
-  const [showSubirModal, setShowSubirModal] = useState<boolean>(false)
   const [showDocumentosModal, setShowDocumentosModal] = useState<boolean>(false)
   const [carpetaSeleccionada, setCarpetaSeleccionada] = useState<DocumentalCarpetaCliente | null>(null)
 
@@ -55,35 +53,21 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
     }
   }
 
-  const handleAñadirDocumento = (carpetaId: number) => {
-    const carpeta = carpetas.find(carp => carp.id === carpetaId)
-    if (carpeta) {
-      setCarpetaSeleccionada(carpeta)
-      setShowSubirModal(true)
-    }
-  }
+
 
   const handleVerDocumentos = (carpeta: DocumentalCarpetaCliente) => {
     setCarpetaSeleccionada(carpeta)
     setShowDocumentosModal(true)
   }
 
-  const handleCloseSubirModal = () => {
-    setShowSubirModal(false)
-    setCarpetaSeleccionada(null)
-  }
+
 
   const handleCloseDocumentosModal = () => {
     setShowDocumentosModal(false)
     setCarpetaSeleccionada(null)
   }
 
-  const handleUploadSuccess = () => {
-    setToastMessage('Documentos subidos correctamente')
-    setToastType('success')
-    setShowToast(true)
-    loadCarpetas() // Opcional: recargar carpetas si fuera necesario
-  }
+
 
   const handleVolver = () => {
     navigate(`/clientes-documental-calendario`)
@@ -342,7 +326,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                 <div className='d-flex gap-3'>
                   <button
                     className="btn"
-                    onClick={() => handleAñadirDocumento(carpeta.id)}
+                    onClick={() => handleVerDocumentos(carpeta)}
                     style={{
                       backgroundColor: atisaStyles.colors.accent,
                       color: 'white',
@@ -353,7 +337,10 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                       padding: '8px 16px',
                       fontSize: '14px',
                       transition: 'all 0.3s ease',
-                      boxShadow: '0 2px 8px rgba(0, 161, 222, 0.3)'
+                      boxShadow: '0 2px 8px rgba(0, 161, 222, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
@@ -366,37 +353,8 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 161, 222, 0.3)'
                     }}
                   >
-                    <i className="bi bi-file-arrow-up fs-6 me-2" style={{ color: 'white' }}></i>
-                    Añadir documento
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => handleVerDocumentos(carpeta)}
-                    style={{
-                      backgroundColor: atisaStyles.colors.secondary,
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontFamily: atisaStyles.fonts.secondary,
-                      fontWeight: '600',
-                      padding: '8px 16px',
-                      fontSize: '14px',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 2px 8px rgba(156, 186, 57, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = atisaStyles.colors.accent
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 161, 222, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(156, 186, 57, 0.3)'
-                    }}
-                  >
-                    <i className="bi bi-eye fs-6 me-2" style={{ color: 'white' }}></i>
-                    Ver Documentos
+                    <i className="bi bi-folder2-open fs-5" style={{ color: 'white' }}></i>
+                    Gestionar Documentos
                   </button>
                 </div>
               </div>
@@ -489,17 +447,7 @@ const GestorDocumental: FC<Props> = ({ clienteId }) => {
         )}
       </div>
 
-      {/* Modal para categorizar documentos */}
-      {carpetaSeleccionada && (
-        <SubirDocumentosModal
-          show={showSubirModal}
-          onHide={handleCloseSubirModal}
-          carpetaId={carpetaSeleccionada.carpeta_id}
-          carpetaNombre={carpetaSeleccionada.nombre_carpeta}
-          clienteId={clienteId}
-          onUploadSuccess={handleUploadSuccess}
-        />
-      )}
+
 
       {/* Modal para mostrar lista de documentos */}
       {carpetaSeleccionada && (

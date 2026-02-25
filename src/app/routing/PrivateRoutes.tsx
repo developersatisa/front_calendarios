@@ -30,6 +30,7 @@ import HistorialAuditoria from '../pages/dashboard/edicion_calendarios/Historial
 
 
 import { useAuth } from '../modules/auth/core/Auth'
+import MetadatosList from '../pages/dashboard/MetadatosList'
 
 const PrivateRoutes = () => {
   const { isAdmin } = useAuth()
@@ -69,7 +70,7 @@ const PrivateRoutes = () => {
         <Route path='historico-cumplimientos/:clienteId' element={<HistoricoCumplimientosWrapper />} />
         <Route path='status-cliente/:clienteId' element={<StatusClienteWrapper />} />
         <Route path='status-todos-clientes' element={<StatusTodosClientes />} />
-        {/* <Route path='metadatos' element={<MetadatosList />} /> */}
+        <Route path='metadatos' element={<MetadatosList />} />
         <Route path='metricas' element={<MetricasList />} />
         <Route path='config-avisos' element={<ConfigAvisosPage />} />
         {/* Administración - Solo para admins */}

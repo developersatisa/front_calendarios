@@ -5,24 +5,24 @@ export interface Metadato {
   nombre: string
   descripcion?: string
   tipo_generacion: string
-  global_: boolean
-  activo: boolean
+  global_: number | boolean
+  activo: number | boolean
 }
 
 export interface MetadatoCreate {
   nombre: string
   descripcion?: string
   tipo_generacion: string
-  global_: boolean
-  activo: boolean
+  global_: number | boolean
+  activo: number | boolean
 }
 
 export interface MetadatoUpdate {
   nombre: string
   descripcion?: string
   tipo_generacion: string
-  global_: boolean
-  activo: boolean
+  global_: number | boolean
+  activo: number | boolean
 }
 
 export interface MetadatosResponse {
