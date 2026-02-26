@@ -26,6 +26,7 @@ import ConfigAvisosPage from '../pages/config-avisos/ConfigAvisosPage'
 import AdminRoute from './AdminRoute'
 import CumplimientoMasivo from '../pages/cliente-documental/components/calendario/CumplimientoMasivo'
 import HistorialAuditoria from '../pages/dashboard/edicion_calendarios/HistorialAuditoria'
+import { HistorialAuditoriaGlobal } from '../pages/dashboard/components/HistorialAuditoriaGlobal'
 
 
 
@@ -66,6 +67,7 @@ const PrivateRoutes = () => {
         <Route path='/cliente-calendario/:clienteId' element={<CalendarioClienteWrapper />} />
         <Route path='/edicion-calendario/:clienteId' element={<EdicionCalendarioClienteWrapper />} />
         <Route path='/historial-auditoria/:clienteId' element={<HistorialAuditoria />} />
+        <Route path='/auditoria-general' element={<HistorialAuditoriaGlobal />} />
         <Route path='gestor-documental/:clienteId' element={<GestorDocumentalWrapper />} />
         <Route path='historico-cumplimientos/:clienteId' element={<HistoricoCumplimientosWrapper />} />
         <Route path='status-cliente/:clienteId' element={<StatusClienteWrapper />} />

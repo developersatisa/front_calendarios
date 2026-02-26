@@ -28,11 +28,12 @@ const StatusTodosClientes: FC = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
     const [searching, setSearching] = useState(false)
-    const [selectedHito, setSelectedHito] = useState('')
-    const [selectedProceso, setSelectedProceso] = useState('')
-    const [selectedCliente, setSelectedCliente] = useState('')
+    const [selectedHito, setSelectedHito] = useState<string[]>([])
+    const [selectedProceso, setSelectedProceso] = useState<string[]>([])
+    const [selectedCliente, setSelectedCliente] = useState<string[]>([])
     const [selectedEstados, setSelectedEstados] = useState<Set<'cumplido_en_plazo' | 'cumplido_fuera_plazo' | 'vence_hoy' | 'pendiente_fuera_plazo' | 'pendiente_en_plazo'>>(new Set())
-    const [selectedTipos, setSelectedTipos] = useState<Set<string>>(new Set())
+    const [claveFiltro, setClaveFiltro] = useState('')
+    const [obligatorioFiltro, setObligatorioFiltro] = useState('')
     // Obtener fecha de hoy en formato YYYY-MM-DD para el input type="date"
     const getTodayDate = () => {
         const today = new Date()
@@ -45,11 +46,12 @@ const StatusTodosClientes: FC = () => {
     const [fechaHasta, setFechaHasta] = useState('')
     const [clientesList, setClientesList] = useState<Cliente[]>([])
     const [showFilters, setShowFilters] = useState(false)
-    const [sortField, setSortField] = useState<'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo' | 'departamento' | 'estado_proceso' | 'critico' | 'usuario' | 'observacion'>('fecha_limite')
+    const [sortField, setSortField] = useState<'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'departamento' | 'estado_proceso' | 'linea'>('fecha_limite')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [cumplimientosPorHito, setCumplimientosPorHito] = useState<Record<number, ClienteProcesoHitoCumplimiento[]>>({})
     const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
     const [selectedDepartamentos, setSelectedDepartamentos] = useState<string[]>([])
+    const [selectedLineas, setSelectedLineas] = useState<string[]>([])
 
     // Función para normalizar texto
     const normalizeText = (text: string | null | undefined): string => {
@@ -245,14 +247,16 @@ const StatusTodosClientes: FC = () => {
     // Función para limpiar filtros
     const limpiarFiltros = () => {
         setSearchTerm('')
-        setSelectedHito('')
-        setSelectedProceso('')
-        setSelectedCliente('')
+        setSelectedHito([])
+        setSelectedProceso([])
+        setSelectedCliente([])
         setSelectedEstados(new Set())
-        setSelectedTipos(new Set())
         setFechaDesde(getTodayDate())
         setFechaHasta('')
+        setSelectedLineas([])
         setSelectedDepartamentos([])
+        setClaveFiltro('')
+        setObligatorioFiltro('')
         setCurrentPage(1)
     }
 
@@ -263,16 +267,16 @@ const StatusTodosClientes: FC = () => {
             // Construir parámetros de query
             const params = new URLSearchParams()
 
-            if (selectedHito) {
-                params.append('hito_id', selectedHito)
+            if (selectedHito.length > 0) {
+                selectedHito.forEach(id => params.append('hito_id', id))
             }
 
-            if (selectedProceso) {
-                params.append('proceso_nombre', selectedProceso)
+            if (selectedProceso.length > 0) {
+                selectedProceso.forEach(p => params.append('proceso_nombre', p))
             }
 
-            if (selectedCliente) {
-                params.append('cliente_id', selectedCliente)
+            if (selectedCliente.length > 0) {
+                selectedCliente.forEach(id => params.append('cliente_id', id))
             }
 
             if (fechaDesde) {
@@ -287,8 +291,20 @@ const StatusTodosClientes: FC = () => {
                 params.append('estados', Array.from(selectedEstados).join(','))
             }
 
-            if (selectedTipos.size > 0) {
-                params.append('tipos', Array.from(selectedTipos).join(','))
+            if (selectedLineas.length > 0) {
+                selectedLineas.forEach(l => params.append('lineas', l))
+            }
+
+            if (selectedDepartamentos.length > 0) {
+                selectedDepartamentos.forEach(d => params.append('departamentos', d))
+            }
+
+            if (claveFiltro !== '') {
+                params.append('critico', claveFiltro)
+            }
+
+            if (obligatorioFiltro !== '') {
+                params.append('obligatorio', obligatorioFiltro)
             }
 
             if (debouncedSearchTerm) {
@@ -358,19 +374,10 @@ const StatusTodosClientes: FC = () => {
         setSelectedEstados(nuevosEstados)
     }
 
-    // Función para toggle de tipos
-    const toggleTipo = (tipo: string) => {
-        const nuevosTipos = new Set(selectedTipos)
-        if (nuevosTipos.has(tipo)) {
-            nuevosTipos.delete(tipo)
-        } else {
-            nuevosTipos.add(tipo)
-        }
-        setSelectedTipos(nuevosTipos)
-    }
+
 
     // Función para manejar el ordenamiento
-    const handleSort = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo' | 'departamento' | 'estado_proceso' | 'critico' | 'usuario' | 'observacion') => {
+    const handleSort = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'departamento' | 'estado_proceso' | 'linea') => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
         } else {
@@ -380,7 +387,7 @@ const StatusTodosClientes: FC = () => {
     }
 
     // Función para obtener el icono de ordenamiento
-    const getSortIcon = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'tipo' | 'departamento' | 'estado_proceso' | 'critico' | 'usuario' | 'observacion') => {
+    const getSortIcon = (field: 'cliente' | 'proceso' | 'hito' | 'estado' | 'fecha_limite' | 'hora_limite' | 'fecha_estado' | 'departamento' | 'estado_proceso' | 'linea') => {
         if (sortField !== field) {
             return (
                 <i
@@ -456,16 +463,16 @@ const StatusTodosClientes: FC = () => {
                     comparison = fechaEstA - fechaEstB
                     break
 
-                case 'tipo':
-                    const tipoA = a.tipo || ''
-                    const tipoB = b.tipo || ''
-                    comparison = tipoA.localeCompare(tipoB, 'es', { sensitivity: 'base' })
+
+                case 'linea':
+                    const linA = a.codSubDepar?.substring(4) || ''
+                    const linB = b.codSubDepar?.substring(4) || ''
+                    comparison = linA.localeCompare(linB, 'es', { sensitivity: 'base' })
                     break
 
-
                 case 'departamento':
-                    const depA = `${a.codSubDepar || ''} ${a.departamento_cliente || ''}`
-                    const depB = `${b.codSubDepar || ''} ${b.departamento_cliente || ''}`
+                    const depA = a.departamento_cliente || a.departamento || ''
+                    const depB = b.departamento_cliente || b.departamento || ''
                     comparison = depA.localeCompare(depB, 'es', { sensitivity: 'base' })
                     break
 
@@ -473,25 +480,6 @@ const StatusTodosClientes: FC = () => {
                     const pEstA = a.estado_proceso || ''
                     const pEstB = b.estado_proceso || ''
                     comparison = pEstA.localeCompare(pEstB, 'es', { sensitivity: 'base' })
-                    break
-
-                case 'critico':
-                    // Ordenar por booleano (clave vs no clave)
-                    const critA = a.critico ? 1 : 0
-                    const critB = b.critico ? 1 : 0
-                    comparison = critA - critB
-                    break
-
-                case 'usuario':
-                    const userA = a.ultimo_cumplimiento?.usuario || ''
-                    const userB = b.ultimo_cumplimiento?.usuario || ''
-                    comparison = userA.localeCompare(userB, 'es', { sensitivity: 'base' })
-                    break
-
-                case 'observacion':
-                    const obsA = a.ultimo_cumplimiento?.observacion || ''
-                    const obsB = b.ultimo_cumplimiento?.observacion || ''
-                    comparison = obsA.localeCompare(obsB, 'es', { sensitivity: 'base' })
                     break
 
                 default:
@@ -512,9 +500,12 @@ const StatusTodosClientes: FC = () => {
                 normalizeText(hito.proceso_nombre).includes(searchNormalized) ||
                 normalizeText(hito.hito_nombre).includes(searchNormalized)
 
-            const matchesHito = !selectedHito || hito.hito_id?.toString() === selectedHito
-            const matchesProceso = !selectedProceso || hito.proceso_nombre === selectedProceso
-            const matchesCliente = !selectedCliente || hito.cliente_id === selectedCliente
+            // Hito y Proceso actúan como OR entre sí
+            const matchesHitoOrProceso =
+                (selectedHito.length === 0 && selectedProceso.length === 0) ||
+                (selectedHito.length > 0 && selectedHito.includes(String(hito.hito_id))) ||
+                (selectedProceso.length > 0 && selectedProceso.includes(hito.proceso_nombre || ''))
+            const matchesCliente = selectedCliente.length === 0 || selectedCliente.includes(hito.cliente_id || '')
 
             // Filtro de estado basado en la lógica de estados (múltiple selección)
             let matchesEstado = true
@@ -544,12 +535,6 @@ const StatusTodosClientes: FC = () => {
                 })
             }
 
-            // Filtro de tipo (múltiple selección)
-            let matchesTipo = true
-            if (selectedTipos.size > 0) {
-                matchesTipo = hito.tipo ? selectedTipos.has(hito.tipo) : false
-            }
-
             let matchesFecha = true
             if (fechaDesde || fechaHasta) {
                 const fechaLimite = hito.fecha_limite ? new Date(hito.fecha_limite) : null
@@ -567,13 +552,24 @@ const StatusTodosClientes: FC = () => {
                 }
             }
 
-            const matchesDepartamento = selectedDepartamentos.length === 0 || (hito.codSubDepar && selectedDepartamentos.includes(hito.codSubDepar!))
+            const matchesLinea = selectedLineas.length === 0 || (hito.codSubDepar && selectedLineas.includes(hito.codSubDepar!))
+            const matchesDepartamento = selectedDepartamentos.length === 0 || (hito.codSubDepar && selectedDepartamentos.includes(hito.codSubDepar!.substring(0, 4)))
 
-            return matchesSearch && matchesHito && matchesProceso && matchesCliente && matchesEstado && matchesTipo && matchesFecha && matchesDepartamento
+            let matchesClave = true;
+            if (claveFiltro !== '') {
+                matchesClave = String(!!hito.critico) === claveFiltro;
+            }
+
+            let matchesObligatorio = true;
+            if (obligatorioFiltro !== '') {
+                matchesObligatorio = String(!!hito.obligatorio) === obligatorioFiltro;
+            }
+
+            return matchesSearch && matchesHitoOrProceso && matchesCliente && matchesEstado && matchesFecha && matchesLinea && matchesDepartamento && matchesClave && matchesObligatorio
         })
 
         return sortHitos(filtrados)
-    }, [hitos, debouncedSearchTerm, selectedHito, selectedProceso, selectedCliente, selectedEstados, selectedTipos, fechaDesde, fechaHasta, selectedDepartamentos, sortField, sortDirection, cumplimientosPorHito])
+    }, [hitos, debouncedSearchTerm, selectedHito, selectedProceso, selectedCliente, selectedEstados, fechaDesde, fechaHasta, selectedLineas, selectedDepartamentos, claveFiltro, obligatorioFiltro, sortField, sortDirection, cumplimientosPorHito])
 
     // Paginación
     const paginatedHitos = useMemo(() => {
@@ -591,17 +587,6 @@ const StatusTodosClientes: FC = () => {
             }
         })
         return Array.from(procesosSet).sort()
-    }, [hitos])
-
-    // Obtener tipos únicos para el filtro
-    const tiposUnicos = useMemo(() => {
-        const tiposSet = new Set<string>()
-        hitos.forEach(hito => {
-            if (hito.tipo) {
-                tiposSet.add(hito.tipo)
-            }
-        })
-        return Array.from(tiposSet).sort()
     }, [hitos])
 
     // Obtener clientes únicos para el filtro
@@ -631,6 +616,64 @@ const StatusTodosClientes: FC = () => {
         })
         return Array.from(hitosSet.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
     }, [hitos])
+
+    // Obtener líneas únicas para el filtro a partir de los hitos
+    const lineasUnicas = useMemo(() => {
+        const lineaSet = new Set<string>()
+        hitos.forEach(hito => {
+            if (hito.codSubDepar && hito.codSubDepar.length > 4) {
+                lineaSet.add(hito.codSubDepar.substring(4))
+            }
+        })
+        return Array.from(lineaSet).sort()
+    }, [hitos])
+
+    // Obtener departamentos únicos para el filtro a partir de los hitos
+    const departamentosUnicos = useMemo(() => {
+        const depMap = new Map<string, { cod: string, nombre: string }>()
+        hitos.forEach(hito => {
+            if (hito.codSubDepar) {
+                const codDep = hito.codSubDepar.substring(0, 4)
+                const depName = (hito.ultimo_cumplimiento?.departamento) || hito.departamento_cliente || hito.departamento || codDep
+                if (!depMap.has(codDep)) {
+                    depMap.set(codDep, { cod: codDep, nombre: depName })
+                } else if (depMap.get(codDep)?.nombre === codDep && depName !== codDep) {
+                    depMap.set(codDep, { cod: codDep, nombre: depName })
+                }
+            }
+        })
+        return Array.from(depMap.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
+    }, [hitos])
+
+    // Estilos para react-select (tema del drawer)
+    const selectStyles = {
+        menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+        control: (base: any) => ({
+            ...base,
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            borderColor: 'rgba(255,255,255,0.25)',
+            borderRadius: '8px',
+            boxShadow: 'none',
+            '&:hover': { borderColor: 'rgba(255,255,255,0.5)' }
+        }),
+        menu: (base: any) => ({ ...base, backgroundColor: 'white', zIndex: 9999 }),
+        option: (base: any, state: any) => ({
+            ...base,
+            backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
+            color: atisaStyles.colors.dark,
+            cursor: 'pointer',
+            ':active': { backgroundColor: atisaStyles.colors.secondary }
+        }),
+        multiValue: (base: any) => ({ ...base, backgroundColor: atisaStyles.colors.secondary, borderRadius: '4px' }),
+        multiValueLabel: (base: any) => ({ ...base, color: 'white', fontSize: '12px' }),
+        multiValueRemove: (base: any) => ({ ...base, color: 'white', ':hover': { backgroundColor: '#d32f2f', color: 'white' } }),
+        placeholder: (base: any) => ({ ...base, color: 'rgba(255,255,255,0.6)', fontSize: '13px' }),
+        input: (base: any) => ({ ...base, color: 'white' }),
+        singleValue: (base: any) => ({ ...base, color: 'white' }),
+        indicatorSeparator: (base: any) => ({ ...base, backgroundColor: 'rgba(255,255,255,0.3)' }),
+        dropdownIndicator: (base: any) => ({ ...base, color: 'rgba(255,255,255,0.6)' }),
+        clearIndicator: (base: any) => ({ ...base, color: 'rgba(255,255,255,0.6)' }),
+    }
 
     return (
         <div
@@ -707,7 +750,7 @@ const StatusTodosClientes: FC = () => {
                         {/* Columna derecha: Botón Filtros */}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
                             {/* Badge de filtros activos */}
-                            {(selectedCliente || selectedProceso || selectedHito || selectedEstados.size > 0 || selectedTipos.size > 0 || selectedDepartamentos.length > 0 || fechaDesde || fechaHasta || debouncedSearchTerm) && (
+                            {(selectedCliente || selectedProceso || selectedHito || selectedEstados.size > 0 || selectedLineas.length > 0 || selectedDepartamentos.length > 0 || fechaDesde || fechaHasta || debouncedSearchTerm || claveFiltro !== '' || obligatorioFiltro !== '') && (
                                 <span style={{
                                     backgroundColor: '#f1416c',
                                     color: 'white',
@@ -717,15 +760,17 @@ const StatusTodosClientes: FC = () => {
                                     fontWeight: '700'
                                 }}>
                                     {[
-                                        selectedCliente ? 1 : 0,
-                                        selectedProceso ? 1 : 0,
-                                        selectedHito ? 1 : 0,
+                                        selectedCliente.length,
+                                        selectedProceso.length,
+                                        selectedHito.length,
                                         selectedEstados.size,
-                                        selectedTipos.size,
+                                        selectedLineas.length,
                                         selectedDepartamentos.length,
                                         fechaDesde ? 1 : 0,
                                         fechaHasta ? 1 : 0,
-                                        debouncedSearchTerm ? 1 : 0
+                                        debouncedSearchTerm ? 1 : 0,
+                                        claveFiltro !== '' ? 1 : 0,
+                                        obligatorioFiltro !== '' ? 1 : 0
                                     ].reduce((a, b) => a + b, 0)} filtros activos
                                 </span>
                             )}
@@ -848,57 +893,106 @@ const StatusTodosClientes: FC = () => {
                     {isAdmin && (
                         <div>
                             <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cliente</label>
-                            <select
-                                className="form-select form-select-sm"
-                                value={selectedCliente}
-                                onChange={(e) => setSelectedCliente(e.target.value)}
-                                style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
-                            >
-                                <option value="" style={{ color: 'black' }}>Todos los clientes</option>
-                                {clientesUnicos.map((cliente) => (
-                                    <option key={cliente.id} value={cliente.id} style={{ color: 'black' }}>{cliente.nombre}</option>
-                                ))}
-                            </select>
+                            <Select
+                                isMulti
+                                closeMenuOnSelect={false}
+                                options={clientesUnicos.map(c => ({ value: c.id, label: c.nombre }))}
+                                value={clientesUnicos
+                                    .filter(c => selectedCliente.includes(c.id))
+                                    .map(c => ({ value: c.id, label: c.nombre }))}
+                                onChange={(opts) => setSelectedCliente(opts ? (opts as any[]).map((o: any) => o.value) : [])}
+                                placeholder="Todos los clientes..."
+                                noOptionsMessage={() => 'No hay opciones'}
+                                menuPortalTarget={document.body}
+                                styles={selectStyles}
+                            />
                         </div>
                     )}
 
                     {/* Proceso */}
                     <div>
                         <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Proceso</label>
-                        <select
-                            className="form-select form-select-sm"
-                            value={selectedProceso}
-                            onChange={(e) => setSelectedProceso(e.target.value)}
-                            style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
-                        >
-                            <option value="" style={{ color: 'black' }}>Todos los procesos</option>
-                            {procesosUnicos.map((proceso, index) => (
-                                <option key={index} value={proceso} style={{ color: 'black' }}>{proceso}</option>
-                            ))}
-                        </select>
+                        <Select
+                            isMulti
+                            closeMenuOnSelect={false}
+                            options={procesosUnicos.map(p => ({ value: p, label: p }))}
+                            value={procesosUnicos
+                                .filter(p => selectedProceso.includes(p))
+                                .map(p => ({ value: p, label: p }))}
+                            onChange={(opts) => setSelectedProceso(opts ? (opts as any[]).map((o: any) => o.value) : [])}
+                            placeholder="Todos los procesos..."
+                            noOptionsMessage={() => 'No hay opciones'}
+                            menuPortalTarget={document.body}
+                            styles={selectStyles}
+                        />
                     </div>
 
                     {/* Hito */}
                     <div>
                         <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Hito</label>
-                        <select
-                            className="form-select form-select-sm"
-                            value={selectedHito}
-                            onChange={(e) => setSelectedHito(e.target.value)}
-                            style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
-                        >
-                            <option value="" style={{ color: 'black' }}>Todos los hitos</option>
-                            {hitosUnicos.map((hito) => (
-                                <option key={hito.id} value={hito.id} style={{ color: 'black' }}>{hito.nombre}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Cubos */}
-                    <div>
-                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cubos</label>
                         <Select
                             isMulti
+                            closeMenuOnSelect={false}
+                            options={hitosUnicos.map(h => ({ value: String(h.id), label: h.nombre }))}
+                            value={hitosUnicos
+                                .filter(h => selectedHito.includes(String(h.id)))
+                                .map(h => ({ value: String(h.id), label: h.nombre }))}
+                            onChange={(opts) => setSelectedHito(opts ? (opts as any[]).map((o: any) => o.value) : [])}
+                            placeholder="Todos los hitos..."
+                            noOptionsMessage={() => 'No hay opciones'}
+                            menuPortalTarget={document.body}
+                            styles={selectStyles}
+                        />
+                    </div>
+
+                    {/* Departamentos */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Departamentos</label>
+                        <Select
+                            isMulti
+                            closeMenuOnSelect={false}
+                            options={departamentosUnicos.map(d => ({ value: d.cod, label: d.nombre }))}
+                            value={departamentosUnicos
+                                .filter(d => selectedDepartamentos.includes(d.cod))
+                                .map(d => ({ value: d.cod, label: d.nombre }))
+                            }
+                            onChange={(newValue) => setSelectedDepartamentos(newValue ? (newValue as any[]).map(v => v.value) : [])}
+                            placeholder="Seleccionar departamentos..."
+                            noOptionsMessage={() => "No hay opciones"}
+                            menuPortalTarget={document.body}
+                            styles={{
+                                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                                control: (base) => ({
+                                    ...base,
+                                    backgroundColor: 'rgba(255,255,255,0.12)',
+                                    borderColor: 'rgba(255,255,255,0.25)',
+                                    color: 'white',
+                                    borderRadius: '8px'
+                                }),
+                                menu: (base) => ({ ...base, backgroundColor: 'white', zIndex: 9999 }),
+                                option: (base, state) => ({
+                                    ...base,
+                                    backgroundColor: state.isFocused ? atisaStyles.colors.light : 'white',
+                                    color: atisaStyles.colors.dark,
+                                    cursor: 'pointer',
+                                    ':active': { backgroundColor: atisaStyles.colors.secondary }
+                                }),
+                                multiValue: (base) => ({ ...base, backgroundColor: atisaStyles.colors.secondary, borderRadius: '4px' }),
+                                multiValueLabel: (base) => ({ ...base, color: 'white', fontSize: '12px' }),
+                                multiValueRemove: (base) => ({ ...base, color: 'white', ':hover': { backgroundColor: '#d32f2f', color: 'white' } }),
+                                placeholder: (base) => ({ ...base, color: 'rgba(255,255,255,0.6)', fontSize: '13px' }),
+                                input: (base) => ({ ...base, color: 'white' }),
+                                singleValue: (base) => ({ ...base, color: 'white' }),
+                            }}
+                        />
+                    </div>
+
+                    {/* Líneas */}
+                    <div>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Líneas</label>
+                        <Select
+                            isMulti
+                            closeMenuOnSelect={false}
                             options={subdepartamentos
                                 .filter(subDep => subDep.codSubDepar !== null)
                                 .map(subDep => ({
@@ -907,16 +1001,16 @@ const StatusTodosClientes: FC = () => {
                                 }))
                             }
                             value={subdepartamentos
-                                .filter(subDep => subDep.codSubDepar !== null && selectedDepartamentos.includes(subDep.codSubDepar!))
+                                .filter(subDep => subDep.codSubDepar !== null && selectedLineas.includes(subDep.codSubDepar!))
                                 .map(subDep => ({
                                     value: subDep.codSubDepar!,
                                     label: `${subDep.codSubDepar?.substring(4)} - ${subDep.nombre || ''}`
                                 }))
                             }
                             onChange={(selectedOptions) => {
-                                setSelectedDepartamentos(selectedOptions ? (selectedOptions as any).map((opt: any) => opt.value) : [])
+                                setSelectedLineas(selectedOptions ? (selectedOptions as any).map((opt: any) => opt.value) : [])
                             }}
-                            placeholder="Seleccionar cubos..."
+                            placeholder="Seleccionar líneas..."
                             noOptionsMessage={() => "No hay opciones"}
                             menuPortalTarget={document.body}
                             styles={{
@@ -949,7 +1043,7 @@ const StatusTodosClientes: FC = () => {
                     {/* Fechas */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div>
-                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Desde</label>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Límite Desde</label>
                             <input
                                 type="date"
                                 className="form-control form-control-sm"
@@ -959,7 +1053,7 @@ const StatusTodosClientes: FC = () => {
                             />
                         </div>
                         <div>
-                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Hasta</label>
+                            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Límite Hasta</label>
                             <input
                                 type="date"
                                 className="form-control form-control-sm"
@@ -991,11 +1085,11 @@ const StatusTodosClientes: FC = () => {
                                 Todos
                             </div>
                             {[
-                                { id: 'cumplido_en_plazo', label: 'Cumplido en Plazo', color: '#50cd89' },
-                                { id: 'cumplido_fuera_plazo', label: 'Cumplido Fuera de Plazo', color: '#ffc107' },
-                                { id: 'vence_hoy', label: 'Vence Hoy', color: '#009ef7' },
-                                { id: 'pendiente_en_plazo', label: 'Pendiente en Plazo', color: '#7239ea' },
-                                { id: 'pendiente_fuera_plazo', label: 'Pendiente Fuera de Plazo', color: '#f1416c' }
+                                { id: 'cumplido_en_plazo', label: 'Cumplido en Plazo', color: '#2e7d32' },
+                                { id: 'cumplido_fuera_plazo', label: 'Cumplido Fuera de Plazo', color: '#ef6c00' },
+                                { id: 'vence_hoy', label: 'Vence Hoy', color: '#f9a825' },
+                                { id: 'pendiente_en_plazo', label: 'Pendiente en Plazo', color: '#00695c' },
+                                { id: 'pendiente_fuera_plazo', label: 'Pendiente Fuera de Plazo', color: '#c62828' }
                             ].map((estado) => {
                                 const isSelected = selectedEstados.has(estado.id as any)
                                 return (
@@ -1022,23 +1116,66 @@ const StatusTodosClientes: FC = () => {
                         </div>
                     </div>
 
-                    {/* Responsable */}
+                    {/* Crítico / Obligatorio */}
                     <div>
-                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px', display: 'block' }}>Responsable</label>
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                            {['Atisa', 'Cliente', 'Terceros'].map((tipo) => (
-                                <div key={tipo} className="form-check">
-                                    <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        id={`drawer-check-tipo-${tipo}`}
-                                        checked={selectedTipos.has(tipo)}
-                                        onChange={() => toggleTipo(tipo)}
-                                        style={{ cursor: 'pointer' }}
-                                    />
-                                    <label className="form-check-label" htmlFor={`drawer-check-tipo-${tipo}`} style={{ color: 'white', fontSize: '13px', cursor: 'pointer' }}>
-                                        {tipo}
-                                    </label>
+                        <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px', display: 'block' }}>Características del hito</label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {[
+                                { value: '', label: 'Todos', icon: 'bi-list-ul' },
+                                { value: 'true', label: 'Crítico', icon: 'bi-exclamation-triangle-fill', color: atisaStyles.colors.error },
+                                { value: 'false', label: 'No crítico', icon: 'bi-check-circle', color: 'rgba(255,255,255,0.5)' },
+                            ].map(opt => (
+                                <div
+                                    key={`crit-${opt.value}`}
+                                    onClick={() => setClaveFiltro(opt.value)}
+                                    style={{
+                                        cursor: 'pointer',
+                                        backgroundColor: claveFiltro === opt.value ? (opt.color || 'white') : 'rgba(255,255,255,0.1)',
+                                        color: claveFiltro === opt.value ? (opt.color ? 'white' : atisaStyles.colors.primary) : 'white',
+                                        border: `1px solid ${opt.color || 'white'}`,
+                                        padding: '5px 12px',
+                                        borderRadius: '20px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        opacity: claveFiltro === opt.value ? 1 : 0.65,
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px'
+                                    }}
+                                >
+                                    <i className={`bi ${opt.icon}`} style={{ fontSize: '11px' }}></i>
+                                    {opt.label}
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                            {[
+                                { value: '', label: 'Todos', icon: 'bi-list-ul' },
+                                { value: 'true', label: 'Obligatorio', icon: 'bi-asterisk', color: atisaStyles.colors.accent },
+                                { value: 'false', label: 'No obligatorio', icon: 'bi-x-circle', color: 'rgba(255,255,255,0.5)' },
+                            ].map(opt => (
+                                <div
+                                    key={`obl-${opt.value}`}
+                                    onClick={() => setObligatorioFiltro(opt.value)}
+                                    style={{
+                                        cursor: 'pointer',
+                                        backgroundColor: obligatorioFiltro === opt.value ? (opt.color || 'white') : 'rgba(255,255,255,0.1)',
+                                        color: obligatorioFiltro === opt.value ? (opt.color ? 'white' : atisaStyles.colors.primary) : 'white',
+                                        border: `1px solid ${opt.color || 'white'}`,
+                                        padding: '5px 12px',
+                                        borderRadius: '20px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        opacity: obligatorioFiltro === opt.value ? 1 : 0.65,
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px'
+                                    }}
+                                >
+                                    <i className={`bi ${opt.icon}`} style={{ fontSize: '11px' }}></i>
+                                    {opt.label}
                                 </div>
                             ))}
                         </div>
@@ -1132,6 +1269,9 @@ const StatusTodosClientes: FC = () => {
                                             Cliente {getSortIcon('cliente')}
                                         </th>
                                     )}
+                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('linea')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
+                                        Línea {getSortIcon('linea')}
+                                    </th>
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('departamento')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Cubo {getSortIcon('departamento')}
                                     </th>
@@ -1144,12 +1284,6 @@ const StatusTodosClientes: FC = () => {
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('hito')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Hito {getSortIcon('hito')}
                                     </th>
-                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('tipo')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
-                                        Responsable {getSortIcon('tipo')}
-                                    </th>
-                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('critico')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
-                                        Clave {getSortIcon('critico')}
-                                    </th>
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('estado')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Estado {getSortIcon('estado')}
                                     </th>
@@ -1159,19 +1293,14 @@ const StatusTodosClientes: FC = () => {
                                     <th className="cursor-pointer user-select-none" onClick={() => handleSort('fecha_estado')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
                                         Fecha Actualización {getSortIcon('fecha_estado')}
                                     </th>
-                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('usuario')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
-                                        Gestor {getSortIcon('usuario')}
-                                    </th>
-                                    <th className="cursor-pointer user-select-none" onClick={() => handleSort('observacion')} style={{ fontFamily: atisaStyles.fonts.primary, fontWeight: 'bold', fontSize: '14px', padding: '16px 12px', border: 'none', color: 'white', backgroundColor: atisaStyles.colors.primary, cursor: 'pointer' }}>
-                                        Observaciones {getSortIcon('observacion')}
-                                    </th>
+
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={isAdmin ? 12 : 11}
+                                            colSpan={isAdmin ? 9 : 8}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1205,7 +1334,7 @@ const StatusTodosClientes: FC = () => {
                                 ) : hitosFiltrados.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={isAdmin ? 12 : 11}
+                                            colSpan={isAdmin ? 9 : 8}
                                             className="text-center py-4"
                                             style={{
                                                 backgroundColor: '#f8f9fa',
@@ -1215,7 +1344,7 @@ const StatusTodosClientes: FC = () => {
                                             }}
                                         >
                                             <i className="bi bi-info-circle me-2" style={{ color: atisaStyles.colors.dark }}></i>
-                                            {debouncedSearchTerm || selectedHito || selectedProceso || selectedCliente || selectedEstados.size > 0 || selectedTipos.size > 0 || fechaDesde || fechaHasta
+                                            {debouncedSearchTerm || selectedHito || selectedProceso || selectedCliente || selectedEstados.size > 0 || fechaDesde || fechaHasta
                                                 ? 'No se encontraron hitos con los filtros aplicados'
                                                 : 'No hay hitos registrados'
                                             }
@@ -1290,10 +1419,17 @@ const StatusTodosClientes: FC = () => {
                                                     </td>
                                                 )}
                                                 <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
-                                                    {hito.ultimo_cumplimiento && hito.ultimo_cumplimiento.codSubDepar ? (
-                                                        `${hito.ultimo_cumplimiento.codSubDepar!.substring(4)} - ${hito.ultimo_cumplimiento.departamento || '-'}`
+                                                    {hito.ultimo_cumplimiento?.codSubDepar ? (
+                                                        hito.ultimo_cumplimiento.codSubDepar!.substring(4)
                                                     ) : hito.codSubDepar ? (
-                                                        `${hito.codSubDepar!.substring(4)} - ${hito.departamento_cliente || hito.departamento || '-'}`
+                                                        hito.codSubDepar!.substring(4)
+                                                    ) : (
+                                                        '-'
+                                                    )}
+                                                </td>
+                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
+                                                    {hito.ultimo_cumplimiento ? (
+                                                        hito.ultimo_cumplimiento.departamento || '-'
                                                     ) : (
                                                         hito.departamento_cliente || hito.departamento || '-'
                                                     )}
@@ -1304,14 +1440,28 @@ const StatusTodosClientes: FC = () => {
                                                 <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
                                                     {hito.estado_proceso || '-'}
                                                 </td>
-                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.primary, fontWeight: '600', padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
-                                                    {hito.hito_nombre || '-'}
-                                                </td>
                                                 <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
-                                                    {hito.tipo || '-'}
-                                                </td>
-                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
-                                                    {hito.critico ? 'Clave' : 'No clave'}
+                                                    <div className='d-flex align-items-center gap-2' style={{ position: 'relative', paddingLeft: (Boolean(hito.critico) || Boolean(hito.obligatorio)) ? '10px' : '0' }}>
+                                                        {Boolean(hito.critico) && (
+                                                            <div style={{ position: 'absolute', left: '-12px', top: '-10px', bottom: '-10px', width: '5px', backgroundColor: atisaStyles.colors.error, borderRadius: '0 3px 3px 0' }} />
+                                                        )}
+                                                        {!Boolean(hito.critico) && Boolean(hito.obligatorio) && (
+                                                            <div style={{ position: 'absolute', left: '-12px', top: '-10px', bottom: '-10px', width: '5px', backgroundColor: atisaStyles.colors.accent, borderRadius: '0 3px 3px 0' }} />
+                                                        )}
+                                                        <span style={{ fontWeight: Boolean(hito.critico) ? '700' : '600', color: atisaStyles.colors.primary, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={hito.hito_nombre}>
+                                                            {hito.hito_nombre || '-'}
+                                                        </span>
+                                                        {Boolean(hito.obligatorio) && (
+                                                            <div className='d-flex align-items-center justify-content-center flex-shrink-0' style={{ backgroundColor: atisaStyles.colors.accent, width: '20px', height: '20px', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,161,222,0.3)' }} title='Obligatorio'>
+                                                                <i className='bi bi-asterisk' style={{ fontSize: '11px', color: '#fff', lineHeight: 1 }}></i>
+                                                            </div>
+                                                        )}
+                                                        {Boolean(hito.critico) && (
+                                                            <div className='d-flex align-items-center justify-content-center flex-shrink-0' style={{ backgroundColor: atisaStyles.colors.error, width: '20px', height: '20px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(217,33,78,0.4)' }} title='Crítico'>
+                                                                <i className='bi bi-exclamation-triangle-fill' style={{ fontSize: '11px', color: '#fff', lineHeight: 1 }}></i>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
                                                     <span style={{ backgroundColor: badgeColors.bg, color: badgeColors.color, padding: '4px 10px', borderRadius: '4px', border: `1px solid ${badgeColors.border}`, fontWeight: '600', fontSize: '11px', display: 'inline-block' }}>
@@ -1324,20 +1474,7 @@ const StatusTodosClientes: FC = () => {
                                                 <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
                                                     {hito.fecha_estado ? formatDateTime(hito.fecha_estado) : '-'}
                                                 </td>
-                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', fontSize: '13px' }}>
-                                                    {hito.ultimo_cumplimiento?.usuario || '-'}
-                                                </td>
-                                                <td style={{ fontFamily: atisaStyles.fonts.secondary, color: atisaStyles.colors.dark, padding: '16px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
-                                                    {hito.ultimo_cumplimiento?.observacion ? (
-                                                        <i
-                                                            className="bi bi-chat-square-text-fill"
-                                                            style={{ color: atisaStyles.colors.primary, fontSize: '16px', cursor: 'help' }}
-                                                            title={hito.ultimo_cumplimiento.observacion}
-                                                        ></i>
-                                                    ) : (
-                                                        <span style={{ color: '#adb5bd' }}>-</span>
-                                                    )}
-                                                </td>
+
                                             </tr>
                                         )
                                     })

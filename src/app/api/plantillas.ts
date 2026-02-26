@@ -1,5 +1,7 @@
 import api from './axiosConfig'
 
+// ─── Interfaces ─────────────────────────────────────────────────────────────
+
 export interface Plantilla {
   id: number
   nombre: string
@@ -11,19 +13,21 @@ export interface PlantillasResponse {
   total: number
 }
 
+// ─── API Functions ───────────────────────────────────────────────────────────
+
 export const getAllPlantillas = async (
   page?: number,
   limit?: number,
   sortField?: string,
   sortDirection?: 'asc' | 'desc'
 ) => {
-  const params = new URLSearchParams();
-  if (page) params.append('page', page.toString());
-  if (limit) params.append('limit', limit.toString());
-  if (sortField) params.append('sort_field', sortField);
-  if (sortDirection) params.append('sort_direction', sortDirection);
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (limit) params.append('limit', limit.toString())
+  if (sortField) params.append('sort_field', sortField)
+  if (sortDirection) params.append('sort_direction', sortDirection)
 
-  const response = await api.get<PlantillasResponse>(`/plantillas?${params.toString()}`)
+  const response = await api.get<PlantillasResponse>(`/plantillas?${params}`)
   return response.data
 }
 
@@ -38,6 +42,5 @@ export const updatePlantilla = async (id: number, plantilla: Omit<Plantilla, 'id
 }
 
 export const deletePlantilla = async (id: number) => {
-  const response = await api.delete<void>(`/plantillas/${id}`)
-  return response.data
+  await api.delete<void>(`/plantillas/${id}`)
 }

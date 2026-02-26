@@ -1,9 +1,7 @@
 import { FC, useEffect, useState, useMemo } from 'react'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
-import { getAuditoriaCalendariosByCliente, AuditoriaCalendario, MOTIVOS_AUDITORIA } from '../../../api/auditoriaCalendarios'
-import { getClienteById } from '../../../api/clientes'
-import { getClienteProcesosHabilitadosByCliente } from '../../../api/clienteProcesos'
-import { getClienteProcesoHitosHabilitadosByProceso } from '../../../api/clienteProcesoHitos'
+import { getAuditoriaCalendariosGlobal, AuditoriaCalendario, MOTIVOS_AUDITORIA } from '../../../api/auditoriaCalendarios'
+import { getDropdownClientes, Cliente } from '../../../api/clientes'
 import { getAllProcesos } from '../../../api/procesos'
 import { getAllHitos } from '../../../api/hitos'
 import { getAllSubdepartamentos, Subdepartamento } from '../../../api/subdepartamentos'
@@ -11,10 +9,9 @@ import Select from 'react-select'
 import { KTCard, KTCardBody } from '../../../../_metronic/helpers'
 import { atisaStyles, getSecondaryButtonStyles, getTableHeaderStyles, getTableCellStyles } from '../../../styles/atisaStyles'
 import SharedPagination from '../../../components/pagination/SharedPagination'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
-const HistorialAuditoria: FC = () => {
-    const { clienteId } = useParams<{ clienteId: string }>()
+export const HistorialAuditoriaGlobal: FC = () => {
     const navigate = useNavigate()
 
     const [auditoria, setAuditoria] = useState<AuditoriaCalendario[]>([])
@@ -24,16 +21,18 @@ const HistorialAuditoria: FC = () => {
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(10)
 
-    const [clienteNombre, setClienteNombre] = useState<string>('')
+    const [clientes, setClientes] = useState<Cliente[]>([])
     const [procesosCliente, setProcesosCliente] = useState<{ id: number, nombre: string }[]>([])
     const [hitosCliente, setHitosCliente] = useState<{ id: number, nombre: string }[]>([])
     const [subdepartamentos, setSubdepartamentos] = useState<Subdepartamento[]>([])
 
     // Filtros front-end para envío al backend
     const [showFilters, setShowFilters] = useState(false)
+    const [clienteFiltro, setClienteFiltro] = useState('')
     const [cuboFiltro, setCuboFiltro] = useState<string[]>([])
     const [procesoFiltro, setProcesoFiltro] = useState('')
     const [hitoFiltro, setHitoFiltro] = useState('')
+
     const [claveFiltro, setClaveFiltro] = useState('')
     const [obligatorioFiltro, setObligatorioFiltro] = useState('')
     const [fechaAntFiltro, setFechaAntFiltro] = useState('')
@@ -47,80 +46,53 @@ const HistorialAuditoria: FC = () => {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
     useEffect(() => {
-        if (clienteId) {
-            const hoy = new Date()
-            const haceUnAno = new Date(Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate()))
-            setFechaDesde(haceUnAno.toISOString().split('T')[0])
-            setFechaHasta('')
+        const hoy = new Date()
+        const haceUnAno = new Date(Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate()))
+        setFechaDesde(haceUnAno.toISOString().split('T')[0])
+        setFechaHasta('')
 
-            // Cargar información del cliente (nombre, procesos, hitos)
-            const cargarFiltrosCliente = async () => {
-                try {
-                    const clienteData = await getClienteById(clienteId);
-                    setClienteNombre(clienteData.razsoc || '');
+        const cargarFiltros = async () => {
+            try {
+                const clientesData = await getDropdownClientes();
+                setClientes(clientesData || []);
 
-                    const [{ procesos }, { hitos }, resSubdeps] = await Promise.all([
-                        getAllProcesos(),
-                        getAllHitos(),
-                        getAllSubdepartamentos(undefined, 1000, undefined, 'asc')
-                    ]);
+                const [{ procesos }, { hitos }, resSubdeps] = await Promise.all([
+                    getAllProcesos(),
+                    getAllHitos(),
+                    getAllSubdepartamentos(undefined, 1000, undefined, 'asc')
+                ]);
 
-                    setSubdepartamentos(resSubdeps.subdepartamentos || []);
+                setSubdepartamentos(resSubdeps.subdepartamentos || []);
 
-                    const resCP = await getClienteProcesosHabilitadosByCliente(clienteId);
-                    const cpList = resCP.clienteProcesos || resCP;
+                // Map to required format
+                const procsUnique = procesos.map((p: any) => ({
+                    id: p.id,
+                    nombre: p.nombre || `Proceso ${p.id}`
+                })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+                setProcesosCliente(procsUnique);
 
-                    const procsUnique = Array.from(new Map(
-                        cpList.map((cp: any) => {
-                            const pMaestro = procesos.find((p: any) => p.id === cp.proceso_id);
-                            return [cp.proceso_id, {
-                                id: cp.proceso_id,
-                                nombre: pMaestro?.nombre || `Proceso ${cp.proceso_id}`
-                            }];
-                        })
-                    ).values()) as { id: number, nombre: string }[];
-
-                    procsUnique.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                    setProcesosCliente(procsUnique);
-
-                    const promesasHitos = cpList.map((cp: any) => getClienteProcesoHitosHabilitadosByProceso(cp.id));
-                    const resHitos = await Promise.all(promesasHitos);
-
-                    const hitosIds = new Set<number>();
-                    resHitos.forEach((listaHitos: any) => {
-                        listaHitos.forEach((h: any) => hitosIds.add(h.hito_id));
-                    });
-
-                    const hitosInfo = Array.from(hitosIds).map(id => {
-                        const hMaestro = hitos.find((h: any) => h.id === id);
-                        return {
-                            id,
-                            nombre: hMaestro?.nombre || `Hito ${id}`
-                        };
-                    });
-                    hitosInfo.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                    setHitosCliente(hitosInfo);
-
-                } catch (error) {
-                    console.error("Error cargando info de filtros del cliente:", error);
-                }
-            };
-            cargarFiltrosCliente();
-        }
-    }, [clienteId])
+                const hitosInfo = hitos.map((h: any) => ({
+                    id: h.id,
+                    nombre: h.nombre || `Hito ${h.id}`
+                })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+                setHitosCliente(hitosInfo);
+            } catch (error) {
+                console.error("Error cargando filtros:", error);
+            }
+        };
+        cargarFiltros();
+    }, [])
 
     useEffect(() => {
-        if (clienteId && fechaDesde) {
+        if (fechaDesde) {
             cargarAuditoria()
         }
-    }, [clienteId, fechaDesde, fechaHasta, sortField, sortDirection])
+    }, [fechaDesde, fechaHasta, sortField, sortDirection])
 
     const cargarAuditoria = async () => {
-        if (!clienteId) return
         setLoading(true)
         try {
-            const data = await getAuditoriaCalendariosByCliente(
-                clienteId,
+            const data = await getAuditoriaCalendariosGlobal(
                 1,
                 10000,
                 sortField,
@@ -140,6 +112,7 @@ const HistorialAuditoria: FC = () => {
     }
 
     const clearFilters = () => {
+        setClienteFiltro('')
         setCuboFiltro([])
         setProcesoFiltro('')
         setHitoFiltro('')
@@ -219,7 +192,7 @@ const HistorialAuditoria: FC = () => {
     }
 
     // Calcula si hay filtros activos para mostrar el count
-    const activeFiltersCount = [cuboFiltro.length > 0 ? '1' : '', procesoFiltro, hitoFiltro, claveFiltro, obligatorioFiltro, fechaAntFiltro, fechaActFiltro, motivoFiltro, momentoFiltro, usuarioFiltro].filter(v => v !== '').length
+    const activeFiltersCount = [clienteFiltro, cuboFiltro.length > 0 ? '1' : '', procesoFiltro, hitoFiltro, claveFiltro, obligatorioFiltro, fechaAntFiltro, fechaActFiltro, motivoFiltro, momentoFiltro, usuarioFiltro].filter(v => v !== '').length
 
     const usuariosUnicos = useMemo(() => {
         const users = new Set<string>();
@@ -249,9 +222,11 @@ const HistorialAuditoria: FC = () => {
     // Filtrado y Ordenación local
     const auditoriaProcesada = useMemo(() => {
         const filtered = auditoria.filter(item => {
+            const matchesCliente = !clienteFiltro || item.cliente_id === clienteFiltro;
             const matchesCubo = cuboFiltro.length === 0 || (item.codSubDepar && cuboFiltro.includes(item.codSubDepar));
             const matchesProceso = !procesoFiltro || item.proceso_nombre === procesoFiltro;
             const matchesHito = !hitoFiltro || item.hito_nombre === hitoFiltro;
+
             const matchesClave = !claveFiltro || (claveFiltro === 'true' ? Boolean(item.critico) : !Boolean(item.critico));
             const matchesObligatorio = !obligatorioFiltro || (obligatorioFiltro === 'true' ? Boolean(item.obligatorio) : !Boolean(item.obligatorio));
             const matchesFechaAnt = !fechaAntFiltro || (item.fecha_limite_anterior && item.fecha_limite_anterior.includes(fechaAntFiltro));
@@ -260,7 +235,7 @@ const HistorialAuditoria: FC = () => {
             const matchesMomento = !momentoFiltro || (item.momento_cambio === momentoFiltro);
             const matchesUsuario = !usuarioFiltro || (item.nombre_usuario === usuarioFiltro || item.usuario === usuarioFiltro);
 
-            return matchesCubo && matchesProceso && matchesHito && matchesClave && matchesObligatorio && matchesFechaAnt && matchesFechaAct && matchesMotivo && matchesMomento && matchesUsuario;
+            return matchesCliente && matchesCubo && matchesProceso && matchesHito && matchesClave && matchesObligatorio && matchesFechaAnt && matchesFechaAct && matchesMotivo && matchesMomento && matchesUsuario;
         });
 
         // Aplicar ordenación
@@ -268,7 +243,6 @@ const HistorialAuditoria: FC = () => {
             let aValue: any = a[sortField as keyof typeof a];
             let bValue: any = b[sortField as keyof typeof b];
 
-            // Manejo especial para fechas si es necesario
             if (sortField === 'fecha_modificacion' || sortField === 'fecha_limite_actual' || sortField === 'fecha_limite_anterior') {
                 aValue = aValue ? new Date(aValue).getTime() : 0;
                 bValue = bValue ? new Date(bValue).getTime() : 0;
@@ -281,7 +255,7 @@ const HistorialAuditoria: FC = () => {
             const comparison = aValue < bValue ? -1 : 1;
             return sortDirection === 'asc' ? comparison : -comparison;
         });
-    }, [auditoria, cuboFiltro, procesoFiltro, hitoFiltro, claveFiltro, obligatorioFiltro, fechaAntFiltro, fechaActFiltro, motivoFiltro, momentoFiltro, usuarioFiltro, sortField, sortDirection]);
+    }, [auditoria, clienteFiltro, cuboFiltro, procesoFiltro, hitoFiltro, claveFiltro, obligatorioFiltro, fechaAntFiltro, fechaActFiltro, motivoFiltro, momentoFiltro, usuarioFiltro, sortField, sortDirection]);
 
     // Paginación local
     const paginatedAuditoria = useMemo(() => {
@@ -338,7 +312,7 @@ const HistorialAuditoria: FC = () => {
                         <div className='d-flex align-items-center gap-3' style={{ justifyContent: 'flex-start' }}>
                             <button
                                 className="back-button"
-                                onClick={() => navigate(`/edicion-calendario/${clienteId}`)}
+                                onClick={() => navigate(`/clientes`)}
                                 style={getSecondaryButtonStyles()}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.backgroundColor = 'white'
@@ -350,7 +324,7 @@ const HistorialAuditoria: FC = () => {
                                 }}
                             >
                                 <i className="bi bi-arrow-left me-2" style={{ color: 'inherit' }}></i>
-                                Volver a Edición
+                                Volver a Clientes
                             </button>
                         </div>
 
@@ -380,7 +354,7 @@ const HistorialAuditoria: FC = () => {
                                 }}
                             >
                                 <i className="bi bi-clock-history" style={{ color: 'white' }}></i>
-                                Historial de Auditoría
+                                Historial de Auditoría Global
                             </h1>
                             <p
                                 style={{
@@ -395,7 +369,7 @@ const HistorialAuditoria: FC = () => {
                                     maxWidth: '100%'
                                 }}
                             >
-                                {clienteNombre || clienteId}
+                                General (Todos los clientes)
                             </p>
                         </div>
 
@@ -544,7 +518,25 @@ const HistorialAuditoria: FC = () => {
                         {/* Contenido del drawer */}
                         <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                            {/* Búsqueda General - Eliminada a petición */}
+                            {/* Cliente */}
+                            <div>
+                                <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Cliente</label>
+                                <select
+                                    id='filter-cliente-auditoria'
+                                    className="form-select form-select-sm"
+                                    value={clienteFiltro}
+                                    onChange={(e) => setClienteFiltro(e.target.value)}
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+                                >
+                                    <option value="" style={{ color: 'black' }}>Todos los clientes</option>
+                                    {Array.from(new Map(auditoria.filter(a => a.cliente_id && a.cliente_nombre).map(a => [a.cliente_id, a.cliente_nombre])).entries())
+                                        .sort((a, b) => (a[1] || '').localeCompare(b[1] || '', 'es'))
+                                        .map(([id, nombre]) => (
+                                            <option key={id} value={id} style={{ color: 'black' }}>{nombre}</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
 
                             {/* Fechas de actualización */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -657,66 +649,66 @@ const HistorialAuditoria: FC = () => {
                             {/* Crítico / Obligatorio */}
                             <div>
                                 <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px', display: 'block' }}>Características del hito</label>
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        {[
-                                            { value: '', label: 'Todos', icon: 'bi-list-ul' },
-                                            { value: 'true', label: 'Crítico', icon: 'bi-exclamation-triangle-fill', color: atisaStyles.colors.error },
-                                            { value: 'false', label: 'No crítico', icon: 'bi-check-circle', color: 'rgba(255,255,255,0.5)' },
-                                        ].map(opt => (
-                                            <div
-                                                key={`crit-${opt.value}`}
-                                                onClick={() => setClaveFiltro(opt.value)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    backgroundColor: claveFiltro === opt.value ? (opt.color || 'white') : 'rgba(255,255,255,0.1)',
-                                                    color: claveFiltro === opt.value ? (opt.color ? 'white' : atisaStyles.colors.primary) : 'white',
-                                                    border: `1px solid ${opt.color || 'white'}`,
-                                                    padding: '5px 12px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    opacity: claveFiltro === opt.value ? 1 : 0.65,
-                                                    transition: 'all 0.2s ease',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '5px'
-                                                }}
-                                            >
-                                                <i className={`bi ${opt.icon}`} style={{ fontSize: '11px' }}></i>
-                                                {opt.label}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                                        {[
-                                            { value: '', label: 'Todos', icon: 'bi-list-ul' },
-                                            { value: 'true', label: 'Obligatorio', icon: 'bi-asterisk', color: atisaStyles.colors.accent },
-                                            { value: 'false', label: 'No obligatorio', icon: 'bi-x-circle', color: 'rgba(255,255,255,0.5)' },
-                                        ].map(opt => (
-                                            <div
-                                                key={`obl-${opt.value}`}
-                                                onClick={() => setObligatorioFiltro(opt.value)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    backgroundColor: obligatorioFiltro === opt.value ? (opt.color || 'white') : 'rgba(255,255,255,0.1)',
-                                                    color: obligatorioFiltro === opt.value ? (opt.color ? 'white' : atisaStyles.colors.primary) : 'white',
-                                                    border: `1px solid ${opt.color || 'white'}`,
-                                                    padding: '5px 12px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    opacity: obligatorioFiltro === opt.value ? 1 : 0.65,
-                                                    transition: 'all 0.2s ease',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '5px'
-                                                }}
-                                            >
-                                                <i className={`bi ${opt.icon}`} style={{ fontSize: '11px' }}></i>
-                                                {opt.label}
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {[
+                                        { value: '', label: 'Todos', icon: 'bi-list-ul' },
+                                        { value: 'true', label: 'Crítico', icon: 'bi-exclamation-triangle-fill', color: atisaStyles.colors.error },
+                                        { value: 'false', label: 'No crítico', icon: 'bi-check-circle', color: 'rgba(255,255,255,0.5)' },
+                                    ].map(opt => (
+                                        <div
+                                            key={`crit-${opt.value}`}
+                                            onClick={() => setClaveFiltro(opt.value)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                backgroundColor: claveFiltro === opt.value ? (opt.color || 'white') : 'rgba(255,255,255,0.1)',
+                                                color: claveFiltro === opt.value ? (opt.color ? 'white' : atisaStyles.colors.primary) : 'white',
+                                                border: `1px solid ${opt.color || 'white'}`,
+                                                padding: '5px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                opacity: claveFiltro === opt.value ? 1 : 0.65,
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                            }}
+                                        >
+                                            <i className={`bi ${opt.icon}`} style={{ fontSize: '11px' }}></i>
+                                            {opt.label}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                                    {[
+                                        { value: '', label: 'Todos', icon: 'bi-list-ul' },
+                                        { value: 'true', label: 'Obligatorio', icon: 'bi-asterisk', color: atisaStyles.colors.accent },
+                                        { value: 'false', label: 'No obligatorio', icon: 'bi-x-circle', color: 'rgba(255,255,255,0.5)' },
+                                    ].map(opt => (
+                                        <div
+                                            key={`obl-${opt.value}`}
+                                            onClick={() => setObligatorioFiltro(opt.value)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                backgroundColor: obligatorioFiltro === opt.value ? (opt.color || 'white') : 'rgba(255,255,255,0.1)',
+                                                color: obligatorioFiltro === opt.value ? (opt.color ? 'white' : atisaStyles.colors.primary) : 'white',
+                                                border: `1px solid ${opt.color || 'white'}`,
+                                                padding: '5px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                opacity: obligatorioFiltro === opt.value ? 1 : 0.65,
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                            }}
+                                        >
+                                            <i className={`bi ${opt.icon}`} style={{ fontSize: '11px' }}></i>
+                                            {opt.label}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Fechas Límite Ant/Act */}
@@ -956,10 +948,10 @@ const HistorialAuditoria: FC = () => {
                                             color: atisaStyles.colors.primary
                                         }}
                                     >
+                                        <th className='cursor-pointer user-select-none' onClick={() => handleSort('cliente_id')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>Cliente {getSortIcon('cliente_id')}</th>
                                         <th className='cursor-pointer user-select-none' onClick={() => handleSort('cubo')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>Cubo {getSortIcon('cubo')}</th>
                                         <th className='cursor-pointer user-select-none' onClick={() => handleSort('proceso')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>Proceso {getSortIcon('proceso')}</th>
                                         <th className='cursor-pointer user-select-none' onClick={() => handleSort('hito')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>Hito {getSortIcon('hito')}</th>
-
                                         <th className='cursor-pointer user-select-none' onClick={() => handleSort('fecha_limite_anterior')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>F/H Anterior {getSortIcon('fecha_limite_anterior')}</th>
                                         <th className='cursor-pointer user-select-none' onClick={() => handleSort('fecha_limite_actual')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>F/H Actual {getSortIcon('fecha_limite_actual')}</th>
                                         <th className='cursor-pointer user-select-none' onClick={() => handleSort('motivo')} style={{ ...getTableHeaderStyles(), transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.accent; e.currentTarget.style.color = 'white' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = atisaStyles.colors.light; e.currentTarget.style.color = atisaStyles.colors.primary }}>Motivo {getSortIcon('motivo')}</th>
@@ -989,6 +981,9 @@ const HistorialAuditoria: FC = () => {
                                                 e.currentTarget.style.boxShadow = 'none'
                                             }}
                                         >
+                                            <td style={{ ...getTableCellStyles(), fontWeight: '600', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.cliente_nombre || item.cliente_id}>
+                                                {item.cliente_nombre || item.cliente_id || '-'}
+                                            </td>
                                             <td style={{ ...getTableCellStyles(), fontWeight: '600' }}>{getCuboString(item)}</td>
                                             <td style={getTableCellStyles()}>
                                                 <div style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '500' }} title={item.proceso_nombre}>
@@ -1102,5 +1097,3 @@ const HistorialAuditoria: FC = () => {
         </div>
     )
 }
-
-export default HistorialAuditoria

@@ -1,5 +1,7 @@
 import api from './axiosConfig'
 
+// ─── Interfaces ─────────────────────────────────────────────────────────────
+
 export interface Hito {
   id: number
   nombre: string
@@ -17,19 +19,21 @@ export interface HitosResponse {
   total: number
 }
 
+// ─── API Functions ───────────────────────────────────────────────────────────
+
 export const getAllHitos = async (
   page?: number,
   limit?: number,
   sortField?: string,
   sortDirection?: 'asc' | 'desc'
 ) => {
-  const params = new URLSearchParams();
-  if (page) params.append('page', page.toString());
-  if (limit) params.append('limit', limit.toString());
-  if (sortField) params.append('sort_field', sortField);
-  if (sortDirection) params.append('sort_direction', sortDirection);
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (limit) params.append('limit', limit.toString())
+  if (sortField) params.append('sort_field', sortField)
+  if (sortDirection) params.append('sort_direction', sortDirection)
 
-  const response = await api.get(`/hitos?${params.toString()}`)
+  const response = await api.get<HitosResponse>(`/hitos?${params}`)
   return response.data
 }
 

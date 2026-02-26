@@ -43,6 +43,8 @@ const DocumentosCategoriaList: FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 5 // Reducido para que quepa bien dentro del cuadro del modal
+  const [sortBy, setSortBy] = useState('fechaCreacion')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   // Upload States
   const [files, setFiles] = useState<File[]>([])
@@ -71,6 +73,8 @@ const DocumentosCategoriaList: FC<Props> = ({
       resetearFormulario()
       setSearchTerm('')
       setCurrentPage(1)
+      setSortBy('fechaCreacion')
+      setSortDirection('desc')
     }
   }, [show, carpetaId, clienteId])
 
@@ -147,15 +151,65 @@ const DocumentosCategoriaList: FC<Props> = ({
     }
   }
 
+  const handleSort = (field: string) => {
+    if (field === sortBy) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortDirection('asc')
+    }
+    setCurrentPage(1)
+  }
+
+  const getSortIcon = (field: string) => {
+    if (field === sortBy) {
+      return sortDirection === 'asc' ? 'bi bi-caret-up-fill text-dark' : 'bi bi-caret-down-fill text-dark'
+    }
+    return 'bi bi-arrow-down-up text-muted opacity-50'
+  }
+
   // Derived State for Filtering & Pagination
   const filteredDocumentos = useMemo(() => {
-    if (!searchTerm.trim()) return documentos
-    const term = searchTerm.toLowerCase()
-    return documentos.filter(doc =>
-      (doc.original_file_name || '').toLowerCase().includes(term) ||
-      (doc.autor || '').toLowerCase().includes(term)
-    )
-  }, [documentos, searchTerm])
+    let result = [...documentos]
+
+    // Filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase()
+      result = result.filter(doc =>
+        (doc.original_file_name || '').toLowerCase().includes(term) ||
+        (doc.autor || '').toLowerCase().includes(term)
+      )
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let aValue: any = ''
+      let bValue: any = ''
+
+      switch (sortBy) {
+        case 'nombre':
+          aValue = (a.original_file_name || '').toLowerCase()
+          bValue = (b.original_file_name || '').toLowerCase()
+          break
+        case 'fechaCreacion':
+          aValue = new Date(a.fecha_creacion || 0).getTime()
+          bValue = new Date(b.fecha_creacion || 0).getTime()
+          break
+        case 'autor':
+          aValue = (a.autor || '').toLowerCase()
+          bValue = (b.autor || '').toLowerCase()
+          break
+        default:
+          break
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return result
+  }, [documentos, searchTerm, sortBy, sortDirection])
 
   const paginatedDocumentos = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -466,14 +520,23 @@ const DocumentosCategoriaList: FC<Props> = ({
                                     color: atisaStyles.colors.primary
                                   }}
                                 >
-                                  <th style={{ ...getTableHeaderStyles(), borderTopLeftRadius: '12px' }}>
-                                    <i className="bi bi-file-earmark me-1"></i>Documento
+                                  <th style={{ ...getTableHeaderStyles(), borderTopLeftRadius: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => handleSort('nombre')} className="hover:bg-light transition-colors">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                      <span><i className="bi bi-file-earmark me-1"></i>Documento</span>
+                                      <i className={getSortIcon('nombre')} style={{ fontSize: '0.8rem' }}></i>
+                                    </div>
                                   </th>
-                                  <th style={getTableHeaderStyles()}>
-                                    <i className="bi bi-calendar-check me-1"></i>Fecha Creación
+                                  <th style={{ ...getTableHeaderStyles(), cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => handleSort('fechaCreacion')} className="hover:bg-light transition-colors">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                      <span><i className="bi bi-calendar-check me-1"></i>Fecha Creación</span>
+                                      <i className={getSortIcon('fechaCreacion')} style={{ fontSize: '0.8rem' }}></i>
+                                    </div>
                                   </th>
-                                  <th style={getTableHeaderStyles()}>
-                                    <i className="bi bi-person me-1"></i>Autor
+                                  <th style={{ ...getTableHeaderStyles(), cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => handleSort('autor')} className="hover:bg-light transition-colors">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                      <span><i className="bi bi-person me-1"></i>Autor</span>
+                                      <i className={getSortIcon('autor')} style={{ fontSize: '0.8rem' }}></i>
+                                    </div>
                                   </th>
                                   <th className="text-center" style={{ ...getTableHeaderStyles(), borderTopRightRadius: '12px' }}>
                                     <i className="bi bi-gear me-1"></i>Acciones

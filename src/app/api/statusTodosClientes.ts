@@ -69,3 +69,13 @@ export const getStatusTodosClientesByUser = async (email: string): Promise<Statu
   const response = await api.get<StatusTodosClientesResponse>(`/cliente-proceso-hitos/status-todos-clientes/hitos?${params.toString()}`)
   return response.data
 }
+
+/**
+ * Obtiene todos los hitos habilitados de un cliente en una sola llamada optimizada
+ */
+export const getStatusCliente = async (clienteId: string): Promise<StatusTodosClientesResponse> => {
+  const response = await api.get<StatusTodosClientesResponse>(
+    `/status-cliente/${clienteId}/hitos?ordenar_por=fecha_limite&orden=asc`
+  )
+  return response.data
+}

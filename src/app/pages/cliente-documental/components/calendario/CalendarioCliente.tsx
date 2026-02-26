@@ -78,6 +78,7 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
   const [activeKeys, setActiveKeys] = useState<string[]>([])
   const [todosAbiertos, setTodosAbiertos] = useState(false)
   const [downloadingCumplimientoId, setDownloadingCumplimientoId] = useState<number | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     getClienteById(clienteId).then(setCliente)
@@ -866,7 +867,46 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
           </div>
 
           {/* Columna derecha: Botones Ver Status y Ver Histórico */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
+            {/* Badge de filtros activos */}
+            {(filtrosActivos.size > 0 || fechaDesde || fechaHasta || busquedaNombre) && (
+              <span style={{
+                backgroundColor: '#f1416c',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '2px 10px',
+                fontSize: '12px',
+                fontWeight: '700'
+              }}>
+                {[
+                  filtrosActivos.size,
+                  fechaDesde ? 1 : 0,
+                  fechaHasta ? 1 : 0,
+                  busquedaNombre ? 1 : 0
+                ].reduce((a, b) => a + b, 0)} filtros activos
+              </span>
+            )}
+            <button
+              className="btn"
+              onClick={() => setShowFilters(true)}
+              style={{
+                backgroundColor: showFilters ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                fontFamily: atisaStyles.fonts.secondary,
+                fontWeight: '600',
+                padding: '12px 16px',
+                fontSize: '14px',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="bi bi-funnel"></i>
+              Filtros
+            </button>
             <button
               className="btn"
               onClick={() => navigate(`/status-cliente/${clienteId}`)}
@@ -1011,40 +1051,195 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                 )
               })}
             </div>
+
+            <div className="vr mx-2 bg-white" style={{ height: 24, opacity: 0.3, flexShrink: 0 }}></div>
+
+            <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="header-abrir-todos"
+                checked={todosAbiertos}
+                onChange={(e) => {
+                  const abrir = e.target.checked
+                  setTodosAbiertos(abrir)
+                  if (abrir) {
+                    const procesosVisibles = Object.entries(groupedProcesos)
+                      .map(([, grupo], idx) => {
+                        const procesosFiltrados = selectedPeriod
+                          ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
+                          : []
+                        return procesosFiltrados.length > 0 ? idx.toString() : null
+                      })
+                      .filter((key): key is string => key !== null)
+                    setActiveKeys(procesosVisibles)
+                  } else {
+                    setActiveKeys([])
+                  }
+                }}
+                style={{
+                  cursor: 'pointer',
+                  width: '18px',
+                  height: '18px',
+                  margin: 0,
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)'
+                }}
+              />
+              <label
+                className="form-check-label"
+                htmlFor="header-abrir-todos"
+                style={{
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontSize: '13px',
+                  color: 'white',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  margin: 0,
+                  userSelect: 'none'
+                }}
+              >
+                Abrir todos
+              </label>
+            </div>
           </div>
         </div>
-        {/* Sección de Filtros Integrada */}
-        <div style={{ marginTop: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '20px' }}>
-          <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
-            <div className="d-flex flex-wrap gap-2">
-              {/* Botón Todos */}
+      </header>
+
+      {/* Overlay transparente */}
+      {showFilters && (
+        <div
+          onClick={() => setShowFilters(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'transparent',
+            zIndex: 1040,
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+      )}
+
+      {/* Panel lateral de filtros (Drawer) */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: showFilters ? 0 : '-480px',
+          width: '460px',
+          height: '100vh',
+          background: 'linear-gradient(160deg, #00505c 0%, #007b8a 100%)',
+          boxShadow: showFilters ? '-8px 0 40px rgba(0,0,0,0.25)' : 'none',
+          zIndex: 1050,
+          transition: 'right 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto'
+        }}
+      >
+        {/* Cabecera del drawer */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid rgba(255,255,255,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className="bi bi-funnel-fill" style={{ color: 'white', fontSize: '18px' }}></i>
+            <span style={{ color: 'white', fontFamily: atisaStyles.fonts.primary, fontWeight: '700', fontSize: '1.2rem' }}>Filtros</span>
+          </div>
+          <button
+            onClick={() => setShowFilters(false)}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '8px',
+              color: 'white',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '18px',
+              transition: 'background 0.2s'
+            }}
+          >
+            <i className="bi bi-x"></i>
+          </button>
+        </div>
+
+        {/* Contenido del drawer */}
+        <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Búsqueda */}
+          <div>
+            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Búsqueda</label>
+            <div style={{ position: 'relative' }}>
+              <i className="bi bi-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }}></i>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Buscar por nombre..."
+                value={busquedaNombre}
+                onChange={(e) => setBusquedaNombre(e.target.value)}
+                style={{ paddingLeft: '36px', backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+              />
+            </div>
+          </div>
+
+          {/* Fechas */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Desde</label>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+                style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+              />
+            </div>
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px', display: 'block' }}>Fecha Hasta</label>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+                style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', borderRadius: '8px' }}
+              />
+            </div>
+          </div>
+
+          {/* Estado del Hito */}
+          <div>
+            <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px', display: 'block' }}>Estado del Hito</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               <div
                 onClick={activarTodos}
                 style={{
                   cursor: 'pointer',
-                  backgroundColor: filtrosActivos.size === 0 ? 'white' : 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: filtrosActivos.size === 0 ? 'white' : 'rgba(255,255,255,0.1)',
                   color: filtrosActivos.size === 0 ? atisaStyles.colors.primary : 'white',
                   border: '1px solid white',
-                  padding: '6px 12px',
+                  padding: '5px 12px',
                   borderRadius: '20px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  transition: 'all 0.2s ease'
                 }}
               >
                 Todos
               </div>
-
               {[
-                { id: 'vencido', label: 'Pendiente fuera de plazo', color: '#ef4444' },
-                { id: 'hoy', label: 'Vence hoy', color: '#f59e0b' },
-                { id: 'mañana', label: 'Vence mañana', color: '#8b5cf6' },
-                { id: 'en_plazo', label: 'Pendiente en plazo', color: '#10b981' },
-                { id: 'cumplido_plazo', label: 'Cumplimentado en plazo', color: '#16a34a' },
-                { id: 'cumplido_fuera', label: 'Cumplimentado fuera de plazo', color: '#b45309' }
+                { id: 'cumplido_plazo', label: 'Cumplido en Plazo', color: '#50cd89' },
+                { id: 'cumplido_fuera', label: 'Cumplido Fuera de Plazo', color: '#ffc107' },
+                { id: 'hoy', label: 'Vence Hoy', color: '#009ef7' },
+                { id: 'mañana', label: 'Vence Mañana', color: '#8b5cf6' },
+                { id: 'en_plazo', label: 'Pendiente en Plazo', color: '#7239ea' },
+                { id: 'vencido', label: 'Pendiente Fuera de Plazo', color: '#f1416c' }
               ].map((estado) => {
                 const isSelected = filtrosActivos.has(estado.id as any)
                 return (
@@ -1053,18 +1248,15 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                     onClick={() => toggleFiltroVencimiento(estado.id as any)}
                     style={{
                       cursor: 'pointer',
-                      backgroundColor: isSelected ? estado.color : 'rgba(255, 255, 255, 0.1)',
+                      backgroundColor: isSelected ? estado.color : 'rgba(255,255,255,0.1)',
                       color: 'white',
-                      border: `1px solid ${isSelected ? estado.color : 'rgba(255, 255, 255, 0.3)'}`,
-                      padding: '6px 12px',
+                      border: `1px solid ${estado.color}`,
+                      padding: '5px 12px',
                       borderRadius: '20px',
                       fontSize: '12px',
                       fontWeight: '600',
-                      opacity: isSelected ? 1 : 0.9,
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      opacity: isSelected ? 1 : 0.65,
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     {estado.label}
@@ -1072,159 +1264,32 @@ const CalendarioCliente: FC<Props> = ({ clienteId }) => {
                 )
               })}
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 260 }}>
-              <div className="form-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="abrirTodosProcesos"
-                  checked={todosAbiertos}
-                  onChange={(e) => {
-                    const abrir = e.target.checked
-                    setTodosAbiertos(abrir)
-                    if (abrir) {
-                      const procesosVisibles = Object.entries(groupedProcesos)
-                        .map(([, grupo], idx) => {
-                          const procesosFiltrados = selectedPeriod
-                            ? Object.entries(grupo.periodos).filter(([key]) => key === selectedPeriod)
-                            : []
-                          return procesosFiltrados.length > 0 ? idx.toString() : null
-                        })
-                        .filter((key): key is string => key !== null)
-                      setActiveKeys(procesosVisibles)
-                    } else {
-                      setActiveKeys([])
-                    }
-                  }}
-                  style={{
-                    cursor: 'pointer',
-                    width: '18px',
-                    height: '18px',
-                    margin: 0,
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    border: '1px solid rgba(255, 255, 255, 0.4)'
-                  }}
-                />
-                <label
-                  className="form-check-label"
-                  htmlFor="abrirTodosProcesos"
-                  style={{
-                    fontFamily: atisaStyles.fonts.secondary,
-                    fontSize: '13px',
-                    color: 'white',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    margin: 0,
-                    userSelect: 'none'
-                  }}
-                >
-                  Abrir todos
-                </label>
-              </div>
-              <input
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Buscar por nombre..."
-                value={busquedaNombre}
-                onChange={(e) => setBusquedaNombre(e.target.value)}
-                style={{
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '14px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  borderRadius: '6px',
-                  flex: 1
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Fila separada para filtros de fecha (Integrada) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-            <div style={{ fontFamily: atisaStyles.fonts.secondary, fontWeight: '600', color: 'white', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="bi bi-calendar-date"></i>
-              Filtros de Fecha Límite:
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <label style={{ fontFamily: atisaStyles.fonts.secondary, fontWeight: '500', color: 'rgba(255, 255, 255, 0.9)', fontSize: '13px', whiteSpace: 'nowrap' }}>Desde:</label>
-              <input
-                type="date"
-                className="form-control form-control-sm"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-                style={{
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '13px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  borderRadius: '6px',
-                  width: '140px'
-                }}
-              />
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <label style={{ fontFamily: atisaStyles.fonts.secondary, fontWeight: '500', color: 'rgba(255, 255, 255, 0.9)', fontSize: '13px', whiteSpace: 'nowrap' }}>Hasta:</label>
-              <input
-                type="date"
-                className="form-control form-control-sm"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-                style={{
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontSize: '13px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  borderRadius: '6px',
-                  width: '140px'
-                }}
-              />
-            </div>
-
-            {(fechaDesde || fechaHasta) && (
-              <button
-                className="btn btn-sm"
-                onClick={limpiarFiltrosFecha}
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '6px',
-                  fontFamily: atisaStyles.fonts.secondary,
-                  fontWeight: '600',
-                  padding: '4px 10px',
-                  fontSize: '12px',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 50, 50, 0.4)'
-                  e.currentTarget.style.borderColor = 'transparent'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
-                }}
-                title="Limpiar filtros de fecha"
-              >
-                <i className="bi bi-x"></i>
-                Limpiar
-              </button>
-            )}
-
           </div>
         </div>
-      </header>
 
-
-
+        {/* Footer del drawer */}
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid rgba(255,255,255,0.15)',
+          display: 'flex',
+          gap: '10px',
+          flexShrink: 0
+        }}>
+          <button
+            className="btn btn-sm w-100"
+            onClick={() => {
+              activarTodos()
+              limpiarFiltrosFecha()
+              setBusquedaNombre('')
+              setTodosAbiertos(false)
+              setActiveKeys([])
+            }}
+            style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', fontWeight: '600' }}
+          >
+            <i className="bi bi-arrow-clockwise me-1"></i> Limpiar Filtros
+          </button>
+        </div>
+      </div>
 
       <div style={{ flex: 1, padding: '24px', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
         <Accordion

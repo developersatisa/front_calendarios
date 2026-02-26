@@ -1,5 +1,7 @@
 import api from './axiosConfig'
 
+// ─── Interfaces ─────────────────────────────────────────────────────────────
+
 export interface Subdepartamento {
   id: number
   codidepar: string | null
@@ -19,6 +21,8 @@ export interface SubdepartamentoCliente {
   nombre: string
 }
 
+// ─── API Functions ───────────────────────────────────────────────────────────
+
 export const getAllSubdepartamentos = async (
   page?: number,
   limit?: number,
@@ -31,7 +35,7 @@ export const getAllSubdepartamentos = async (
   if (sort_field) params.append('sort_field', sort_field)
   if (sort_direction) params.append('sort_direction', sort_direction)
 
-  const response = await api.get<SubdepartamentosResponse>(`/subdepartamentos?${params.toString()}`)
+  const response = await api.get<SubdepartamentosResponse>(`/subdepartamentos?${params}`)
   return response.data
 }
 

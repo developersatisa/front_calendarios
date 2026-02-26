@@ -477,8 +477,37 @@ const ClientesList: FC = () => {
               </h3>
             </div>
 
-            {/* Derecha: Espacio vacío para balance */}
-            <div></div>
+            {/* Derecha: Botón Auditoría Global */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+              <button
+                type='button'
+                className='btn btn-sm'
+                id='btn-auditoria-global'
+                onClick={() => navigate('/auditoria-general')}
+                style={{
+                  backgroundColor: atisaStyles.colors.primary,
+                  border: `2px solid ${atisaStyles.colors.primary}`,
+                  color: 'white',
+                  fontFamily: atisaStyles.fonts.secondary,
+                  fontWeight: '600',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = atisaStyles.colors.secondary
+                  e.currentTarget.style.borderColor = atisaStyles.colors.secondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = atisaStyles.colors.primary
+                  e.currentTarget.style.borderColor = atisaStyles.colors.primary
+                }}
+              >
+                <i className="bi bi-shield-check me-2"></i>
+                Ver historial global
+              </button>
+            </div>
           </div>
         </div>
         <KTCardBody className='p-0'>
